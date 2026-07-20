@@ -1,22 +1,34 @@
 version: 1
 
 processes:
-  # Weekly campaign performance read + underperformer flagging, replacing the
-  # manual pull (budget set monthly, performance checked by hand today).
-  # NOTE: campaign_performance below is Zomato-only (V_STORE_CAMPAIGN_CURRENT).
-  # Swiggy/Meta/Google funnel data is not yet in the BigQuery warehouse (DP1) —
-  # add each as its own dataset_search entry here once it lands, keyed by
-  # source_table in technical_assets/catalog/link_datasets.yaml.
+  # Campaign Planning & Optimisation — read of currently-running ad-campaign
+  # performance by campaign and store, flagging underperformers (low ROI /
+  # zero sales) with a suggested optimisation.
+  # Reads V_STORE_CAMPAIGN_CURRENT (sql/views.sql), which pre-computes this
+  # calendar month's spend/sales/ROI/CTR/M2O/ROAS per (store, campaign) in
+  # SQL — no arithmetic asked of the LLM, only filtering/grouping/narration.
+  # NOTE: it's a live view scoped to CURRENT_DATE() (this month, campaigns
+  # running now) — no week-over-week comparison is available; there is no
+  # V_CAMPAIGN_WEEKLY_COMPARISON view in this DB.
+  # NOTE: still Zomato/Swiggy only (RAW_MARKETING_DATA via STORE_CHANNEL_MAPPING).
+  # Meta/Google funnel data is not yet in the BigQuery warehouse (DP1) —
+  # extend the view with a SOURCE_SYSTEM column once those feeds land, rather
+  # than adding a second process.
+  #
+  # Stepped/agentic mode: real `steps` with type agent|decision|notify and NO
+  # metadata.steps_display_only, so the EventAgent walks them (context_graph_client.py:725).
   - id: campaign_planning_optimisation
     name: Campaign Planning & Optimisation
-    description: |
-      Weekly read of ad-campaign funnel performance by campaign and by dark
-      store locality, flagging underperformers (low ROAS / low CTR) with a
-      suggested optimisation. After the reviewer confirms, the summary is
-      emailed to the marketing team.
+    description: >
+      Reads currently-running ad-campaign performance by campaign and by dark
+      store, flagging underperformers (low ROI / zero sales) with a suggested
+      optimisation. After the reviewer confirms, the summary is emailed to the
+      marketing team.
     domain: Marketing
     owner: marketing_team
+    definition_type: text
 
+    # Attach to every Store (the filter binding is what lets a manual run find it).
     applies_to:
       - entity: Store
       - entity: Store
@@ -24,64 +36,205 @@ processes:
           - { field: id, op: ne, value: __none__ }
 
     triggers:
+      # TODO: campaign_performance_review isn't emitted onto the process bus
+      # anywhere yet — the schedule and manual triggers are what actually fire.
       - { type: schedule, cron: "0 6 * * 1" }  # weekly, Monday 06:00
+      - { type: event, event_type: campaign_performance_review }
       - { type: manual, allowed_roles: [MarketingManager] }
 
-    metadata:
-      version: 1
-      effective_from: 2026-07-20
-      priority: 15
-      requires_human_approval: true
+    outputs:
+      - { name: report_decision, type: enum, values: [APPROVE, REJECT, ESCALATE] }
 
+    steps:
+      # 1. Filter/group the pre-computed campaign data and flag underperformers.
+      - id: collect_comparison
+        name: Collect & Flag Underperforming Campaigns
+        type: agent
+        description: Read currently-running campaign performance and flag underperformers.
+        instruction: >
+          `campaign_comparison` is ALREADY assembled: each row is one
+          (store, campaign) currently running this month, with AD_SPEND_RS,
+          AD_SALES_RS, AD_ORDERS, ROI, ROAS, CTR, ADS_M2O_PCT (menu-to-order
+          conversion driven by ads), and OVERALL_M2O_PCT (the store's overall
+          conversion) pre-computed month-to-date, plus TARGETING and SEGMENTS
+          describing who the campaign targets. Do NOT recompute ROI, ROAS,
+          CTR, or either M2O_PCT — they are already correct per row. This is
+          a live snapshot (this month,
+          campaigns running now) — there is no week-over-week comparison
+          available, so do not imply one. It covers Zomato/Swiggy campaigns
+          only (RAW_MARKETING_DATA); Meta/Google spend is not yet in the
+          BigQuery warehouse — state this gap explicitly, don't present the
+          numbers as full-funnel.
+
+          Do not call any tool, skill, or connector, and do not look up
+          `flagged_campaigns` or `flagged_summary` anywhere — they are not
+          entities and do not exist yet; you compute and output them
+          yourself from `campaign_comparison` alone, which already has every
+          field you need. If `campaign_comparison` is empty, skip everything
+          below: return `flagged_campaigns: []` and
+          `flagged_summary: "No campaigns are currently running."`.
+
+          Otherwise, walk EVERY row of `campaign_comparison` one at a time
+          and apply this exact decision tree per row (mutually exclusive —
+          stop at the first branch that matches):
+            1. If AD_SALES_RS = 0: flag it, suggested_action = "stop".
+            2. Else if ROI >= 1.2: do not flag it, skip to the next row.
+            3. Else (ROI < 1.2, some sales): flag it. Within its
+               (store, PRODUCT_TYPE) group, find the OTHER currently-running
+               campaign with the highest ROI (ties broken by ROAS, then by
+               lower AD_SPEND_RS). If one exists with a strictly higher ROI
+               than this campaign, suggested_action =
+               "reallocate_to:<that CAMPAIGN_ID>"; otherwise suggested_action
+               = "refresh_targeting". Treat rows with PRODUCT_TYPE = null as
+               their own single-member group (never a reallocation target).
+          For every flagged row, additionally check: if ADS_M2O_PCT is at
+          least 5 percentage points below OVERALL_M2O_PCT for that store,
+          note in the summary that ads are driving traffic that converts
+          materially worse than the store's average.
+
+          Output two fields. `flagged_campaigns` MUST be a JSON array of
+          objects, one per flagged campaign, each with exactly these keys:
+          store_name, CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM, ROI, AD_SALES_RS,
+          AD_SPEND_RS, ADS_M2O_PCT, suggested_action. This array is rendered
+          as a table for the reviewer — it is required output, not optional:
+          if zero campaigns are flagged this run, return flagged_campaigns
+          as an empty array `[]`. Never return null, a string, or omit the
+          field, even if everything is summarized in prose elsewhere.
+          `flagged_summary` is separate: plain business language naming the
+          specific stop/reallocate/refresh calls, e.g. "Store X: stop
+          Campaign 12 (zero sales), reallocate its budget to Campaign 47
+          (ROI 2.1, same store/product type)". Describe actions only — do
+          not paste the raw table or restate every metric already in
+          `flagged_campaigns`. The table is `flagged_campaigns`, the prose is
+          `flagged_summary`, both are required every run.
+        produces:
+          - flagged_campaigns
+          - flagged_summary
+
+      # 2. GATE — marketing owner reviews and approves / rejects / escalates.
+      - id: review
+        name: Marketing Owner Review
+        type: decision
+        after: collect_comparison
+        description: Marketing manager reviews flagged campaigns and approves / rejects / revises.
+        instruction: >
+          Review flagged_summary and flagged_campaigns. Recommend ESCALATE
+          only if `campaign_comparison` itself was empty this run (no
+          campaigns currently running at all — nothing to review). An empty
+          `flagged_campaigns` with a non-empty `campaign_comparison` is a
+          different, normal case — campaigns are running and all performed
+          above threshold — and is NOT a reason to escalate. In that case,
+          and in every other case, recommend APPROVE to send the performance
+          + optimisation summary to the marketing team, whether or not any
+          campaigns were flagged this run. Only recommend REJECT if
+          flagged_summary itself looks wrong or incomplete (e.g. contradicts
+          flagged_campaigns) and shouldn't go out as-is.
+        decision_options: [APPROVE, REJECT, ESCALATE]
+        rationale_from: flagged_summary
+        produces:
+          - report_decision
+        key_data:
+          - title: Flagged Campaigns
+            summary: Underperforming campaigns this month, by store and product type.
+            views:
+              - view: table
+                from: flagged_campaigns
+                columns: [store_name, CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, suggested_action]
+          # Authoring key_data here fully replaces the process-level default
+          # (_key_data_specs in event_agent.py) rather than merging with it —
+          # so the full campaign_comparison table must be repeated here too,
+          # or reviewers only ever see the flagged subset at this gate.
+          - title: Current Campaign Performance
+            summary: Month-to-date performance per (store, campaign) currently running.
+            views:
+              - view: table
+                from: campaign_comparison
+                columns: [store_name, PRODUCT_TYPE, PLATFORM, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT]
+
+      # 3. Email the summary to the marketing team — only on APPROVE.
+      - id: notify
+        name: Email Performance & Optimisation Summary
+        type: notify
+        after: review
+        condition: '{{report_decision}} == "APPROVE"'
+        description: On approve, email the marketing team the summary.
+        produces:
+          - report_sent
+        action:
+          type: email
+          config:
+            to: "rahul.ab@genzoic.com"
+            subject: "Campaign Performance & Optimisation — Month-to-Date"
+            body: >-
+              Campaign review completed — dark-store locations (Zomato/Swiggy
+              only, Meta/Google pending warehouse), month-to-date.
+              {{flagged_summary}}
+
+      # 4. Hold, no email — REJECT branch.
+      - id: hold_no_action
+        name: Hold Without Sending
+        type: notify
+        after: review
+        condition: '{{report_decision}} == "REJECT"'
+        description: Reviewed and held — no email sent this run.
+        action:
+          type: notify
+          config:
+            recipient: marketing_team
+            message: "Campaign performance reviewed and held — no email sent this run."
+
+      # 5. Escalate — ESCALATE branch (no campaign data this run).
+      - id: escalate_review
+        name: Escalate — No Campaign Data
+        type: notify
+        after: review
+        condition: '{{report_decision}} == "ESCALATE"'
+        description: No campaign performance data returned this run — escalate for review.
+        action:
+          type: simulated
+          config:
+            note: "Campaign planning & optimisation escalated — no campaign performance data returned this run."
+
+    metadata:
+      version: 3
+      priority: 15
+
+      # Pre-fetch currently-running campaigns per (store, campaign), already
+      # filtered to spend > 0 so the agent step isn't handed noise rows.
       context_package:
-        - key: campaign_performance
-          source: dataset_search
+        - key: campaign_comparison
           required: true
-          query:
-            entity_type: Store
-            dataset: V_STORE_CAMPAIGN_CURRENT
-            columns: [MASTER_STORE_ID, CAMPAIGN_ID, PRODUCT_TYPE, TARGETING, SEGMENTS, START_DATE, END_DATE, AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, AD_IMPRESSIONS, AD_CLICKS]
-            order_by: AD_SPEND_RS
-            order_dir: desc
-            limit: 5000
+          gather:
+            base:
+              entity: Store
+              dataset: V_STORE_CAMPAIGN_CURRENT
+              columns: [MASTER_STORE_ID, CAMPAIGN_ID, PLATFORM, PRODUCT_TYPE, TARGETING, SEGMENTS, DATE, AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, ROI, ADS_M2O_PCT, OVERALL_M2O_PCT, ROAS, CTR]
+              order_by: ROI
+              order_dir: asc
+              limit: 5000
           post:
             where:
               - { field: AD_SPEND_RS, op: gt, value: 0 }
-            sort_by: AD_SPEND_RS
+            # sort_by dropped here — gather.order_by already sorts by ROI and
+            # the where-filter above doesn't reorder, so a second sort was redundant.
             resolve:
               - { field: MASTER_STORE_ID, type: Store, as: store_name }
         - { key: scheduled_at, source: event, required: false }
 
-      policy_rules:
-        - "`campaign_performance` covers Zomato campaigns only (V_STORE_CAMPAIGN_CURRENT). Swiggy and Meta/Google spend are not yet in the BigQuery warehouse — state this gap explicitly, don't present the numbers as full-funnel."
-        - "Per row compute ROAS = AD_SALES_RS / AD_SPEND_RS and CTR = AD_CLICKS / AD_IMPRESSIONS. Flag a campaign as underperforming when ROAS < 1.5 or CTR < 1%."
-        - "Group flagged campaigns by store locality (`store_name`) and summarise in plain business language: how many campaigns flagged, weakest localities/product types, and one concrete optimisation per flagged campaign (pause, shift budget to a stronger locality, refresh targeting/segments). Do not paste the raw table."
-        - "Recommend APPROVE to send the weekly performance + optimisation summary to the marketing team. Recommend ESCALATE if `campaign_performance` is empty (no active campaign data this run)."
+      # Process-level "Data used" card (inherited by gates that don't override).
+      key_data:
+        - title: Current Campaign Performance
+          summary: Month-to-date performance per (store, campaign) currently running.
+          views:
+            - view: table
+              from: campaign_comparison
+              columns: [store_name, PRODUCT_TYPE, PLATFORM, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT]
 
-      actions:
-        - name: email_campaign_report
-          decision: APPROVE
-          connector: email
-          config:
-            type: email
-            to: "rahul.ab@genzoic.com"
-            subject: "Weekly Campaign Performance & Optimisation"
-            body: >-
-              Weekly campaign read across dark-store locations (Zomato only —
-              Swiggy/Meta/Google pending warehouse). Flagged underperformers
-              and suggested optimisations: {{facts.campaign_performance}}.
-
-        - name: hold_no_action
-          decision: REJECT
-          connector: notify
-          config:
-            type: notify
-            recipient: marketing_team
-            message: "Weekly campaign performance reviewed and held — no email sent this run."
-
-        - name: escalate_review
-          decision: ESCALATE
-          connector: simulated
-          config:
-            type: simulated
-            note: "Campaign planning & optimisation escalated — no campaign performance data returned this run."
+      # No skills or connectors needed — this process only filters/groups
+      # pre-computed rows from campaign_comparison. connectors: [] stops the
+      # agent from reaching for unrelated connected tools (e.g. HubSpot) that
+      # have nothing to do with this Zomato/Swiggy BigQuery data.
+      tools:
+        skills: []
+        allow_unlisted_skills: false
+        connectors: []

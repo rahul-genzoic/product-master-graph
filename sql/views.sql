@@ -167,33 +167,66 @@ JOIN `gen-lang-client-0520145261.ctx_upside_master_data.DIM_PRODUCT` p
 -- MARKETING (gen-lang-client-0520145261.bronze)  —  campaigns + segments
 -- =====================================================================
 
--- Store's currently-running campaigns this month. RAW_MARKETING_DATA is Zomato
--- ad data at the daily x campaign grain with no store id — RES_ID is the Zomato
--- restaurant id, resolved to MASTER_STORE_ID via STORE_CHANNEL_MAPPING.ZOMATO_ID
--- (INT64 -> STRING). Keeps only campaigns live today (CURRENT_DATE between
--- START/END) and sums this calendar month's daily rows to one row per campaign.
--- Dynamic on CURRENT_DATE(), so it re-scopes to "this month / running now" on
--- every render — this is a fast-moving lazy link, not materialised on apply.
+-- Store's currently-running campaigns this month. RAW_MARKETING_DATA is ad
+-- data at the daily x campaign grain with no store id — RES_ID is a
+-- platform-specific ad/restaurant id (Zomato/Urban Piper/Petpooja/Swiggy),
+-- resolved to MASTER_STORE_ID via STORE_CHANNEL_MAPPING, matching RES_ID
+-- against whichever of ZOMATO_ID/URBAN_PIPER_ID/PETPOOJA_ID/SWIGGY_ID it came
+-- from (INT64 -> STRING). Keeps only campaigns live today (CURRENT_DATE
+-- between START/END) and sums this calendar month's daily rows to one row
+-- per campaign. Dynamic on CURRENT_DATE(), so it re-scopes to "this month /
+-- running now" on every render — this is a fast-moving lazy link, not
+-- materialised on apply.
+-- matched_platform/RES_ID kept for traceability (which platform id resolved this row);
+-- ROI/ADS_M2O_PCT/OVERALL_M2O_PCT recomputed from the summed totals (SAFE_DIVIDE) rather
+-- than averaging RAW_MARKETING_DATA's daily per-row ratios, since this view is already
+-- collapsing daily rows to one this-month-to-date row per store x campaign. DATE here is
+-- MAX(r.DATE) — the most recent daily row rolled into this total, not a per-day value.
 CREATE OR REPLACE VIEW `gen-lang-client-0520145261.bronze.V_STORE_CAMPAIGN_CURRENT` AS
 SELECT
   m.MASTER_STORE_ID,
   r.CAMPAIGN_ID,
-  ANY_VALUE(r.PRODUCT_TYPE)          AS PRODUCT_TYPE,
-  ANY_VALUE(r.TARGETING)             AS TARGETING,
-  ANY_VALUE(r.SEGMENTS)              AS SEGMENTS,
-  MIN(r.START_DATE)                  AS START_DATE,
-  MAX(r.END_DATE)                    AS END_DATE,
-  ROUND(SUM(r.AD_SPEND_RS), 0)       AS AD_SPEND_RS,
-  ROUND(SUM(r.AD_SALES_RS), 0)       AS AD_SALES_RS,
-  SUM(r.AD_ORDERS)                   AS AD_ORDERS,
-  SUM(r.AD_IMPRESSIONS)              AS AD_IMPRESSIONS,
-  SUM(r.AD_CLICKS)                   AS AD_CLICKS
+  ANY_VALUE(r.RES_ID) AS RES_ID,
+  ANY_VALUE(
+    CASE
+      WHEN r.RES_ID = CAST(m.ZOMATO_ID AS STRING) THEN 'ZOMATO'
+      WHEN r.RES_ID = CAST(m.SWIGGY_ID AS STRING) THEN 'SWIGGY'
+      ELSE 'UNKNOWN'
+    END
+  ) AS PLATFORM,
+  ANY_VALUE(r.PRODUCT_TYPE) AS PRODUCT_TYPE,
+  ANY_VALUE(r.TARGETING) AS TARGETING,
+  ANY_VALUE(r.SEGMENTS) AS SEGMENTS,
+  MAX(r.DATE) AS DATE,
+  MIN(r.START_DATE) AS START_DATE,
+  MAX(r.END_DATE) AS END_DATE,
+  ROUND(SUM(r.AD_SPEND_RS), 0) AS AD_SPEND_RS,
+  ROUND(SUM(r.AD_SALES_RS), 0) AS AD_SALES_RS,
+  SUM(r.AD_ORDERS) AS AD_ORDERS,
+  SUM(r.AD_IMPRESSIONS) AS AD_IMPRESSIONS,
+  SUM(r.AD_CLICKS) AS AD_CLICKS,
+  SAFE_DIVIDE(SUM(r.AD_SALES_RS), SUM(r.AD_SPEND_RS)) AS ROI,
+  ANY_VALUE(CAST(r.ADS_M2O_PCT AS FLOAT64)) AS ADS_M2O_PCT,
+  ANY_VALUE(CAST(r.OVERALL_M2O_PCT AS FLOAT64)) AS OVERALL_M2O_PCT,
+  -- ROAS/CTR computed here (not by the campaign_planning_optimisation agent step)
+  -- because the process YAML's compute DSL has no arithmetic op (see days_until/
+  -- bucket only) — same reason ROI/ADS_M2O_PCT/OVERALL_M2O_PCT above are SAFE_DIVIDE
+  -- here rather than in the process. Keeping the agent step's job to "read this
+  -- number" instead of "compute this number" removes a place it was reaching for a
+  -- tool call instead.
+  SAFE_DIVIDE(SUM(r.AD_SALES_RS), SUM(r.AD_SPEND_RS)) AS ROAS,
+  SAFE_DIVIDE(SUM(r.AD_CLICKS), SUM(r.AD_IMPRESSIONS)) AS CTR
 FROM `gen-lang-client-0520145261.bronze.RAW_MARKETING_DATA` r
 JOIN `gen-lang-client-0520145261.bronze.STORE_CHANNEL_MAPPING` m
-  ON r.RES_ID = CAST(m.ZOMATO_ID AS STRING)
+  ON r.RES_ID IN (
+      CAST(m.ZOMATO_ID AS STRING),
+      CAST(m.SWIGGY_ID AS STRING)
+  )
 WHERE r.DATE >= DATE_TRUNC(CURRENT_DATE(), MONTH)
   AND CURRENT_DATE() BETWEEN r.START_DATE AND r.END_DATE
-GROUP BY m.MASTER_STORE_ID, r.CAMPAIGN_ID;
+GROUP BY
+  m.MASTER_STORE_ID,
+  r.CAMPAIGN_ID;
 
 -- segment_on_channel edge: MARKETING_SEGMENT_MASTER.CHANNEL ('SWIGGY'/'ZOMATO')
 -- resolves to the Channel node by name (DIM_CHANNEL.CHANNEL_NAME). Gives each
