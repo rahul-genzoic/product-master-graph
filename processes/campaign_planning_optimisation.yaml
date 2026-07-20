@@ -1,0 +1,87 @@
+version: 1
+
+processes:
+  # Weekly campaign performance read + underperformer flagging, replacing the
+  # manual pull (budget set monthly, performance checked by hand today).
+  # NOTE: campaign_performance below is Zomato-only (V_STORE_CAMPAIGN_CURRENT).
+  # Swiggy/Meta/Google funnel data is not yet in the BigQuery warehouse (DP1) —
+  # add each as its own dataset_search entry here once it lands, keyed by
+  # source_table in technical_assets/catalog/link_datasets.yaml.
+  - id: campaign_planning_optimisation
+    name: Campaign Planning & Optimisation
+    description: |
+      Weekly read of ad-campaign funnel performance by campaign and by dark
+      store locality, flagging underperformers (low ROAS / low CTR) with a
+      suggested optimisation. After the reviewer confirms, the summary is
+      emailed to the marketing team.
+    domain: Marketing
+    owner: marketing_team
+
+    applies_to:
+      - entity: Store
+      - entity: Store
+        where:
+          - { field: id, op: ne, value: __none__ }
+
+    triggers:
+      - { type: schedule, cron: "0 6 * * 1" }  # weekly, Monday 06:00
+      - { type: manual, allowed_roles: [MarketingManager] }
+
+    metadata:
+      version: 1
+      effective_from: 2026-07-20
+      priority: 15
+      requires_human_approval: true
+
+      context_package:
+        - key: campaign_performance
+          source: dataset_search
+          required: true
+          query:
+            entity_type: Store
+            dataset: V_STORE_CAMPAIGN_CURRENT
+            columns: [MASTER_STORE_ID, CAMPAIGN_ID, PRODUCT_TYPE, TARGETING, SEGMENTS, START_DATE, END_DATE, AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, AD_IMPRESSIONS, AD_CLICKS]
+            order_by: AD_SPEND_RS
+            order_dir: desc
+            limit: 5000
+          post:
+            where:
+              - { field: AD_SPEND_RS, op: gt, value: 0 }
+            sort_by: AD_SPEND_RS
+            resolve:
+              - { field: MASTER_STORE_ID, type: Store, as: store_name }
+        - { key: scheduled_at, source: event, required: false }
+
+      policy_rules:
+        - "`campaign_performance` covers Zomato campaigns only (V_STORE_CAMPAIGN_CURRENT). Swiggy and Meta/Google spend are not yet in the BigQuery warehouse — state this gap explicitly, don't present the numbers as full-funnel."
+        - "Per row compute ROAS = AD_SALES_RS / AD_SPEND_RS and CTR = AD_CLICKS / AD_IMPRESSIONS. Flag a campaign as underperforming when ROAS < 1.5 or CTR < 1%."
+        - "Group flagged campaigns by store locality (`store_name`) and summarise in plain business language: how many campaigns flagged, weakest localities/product types, and one concrete optimisation per flagged campaign (pause, shift budget to a stronger locality, refresh targeting/segments). Do not paste the raw table."
+        - "Recommend APPROVE to send the weekly performance + optimisation summary to the marketing team. Recommend ESCALATE if `campaign_performance` is empty (no active campaign data this run)."
+
+      actions:
+        - name: email_campaign_report
+          decision: APPROVE
+          connector: email
+          config:
+            type: email
+            to: "rahul.ab@genzoic.com"
+            subject: "Weekly Campaign Performance & Optimisation"
+            body: >-
+              Weekly campaign read across dark-store locations (Zomato only —
+              Swiggy/Meta/Google pending warehouse). Flagged underperformers
+              and suggested optimisations: {{facts.campaign_performance}}.
+
+        - name: hold_no_action
+          decision: REJECT
+          connector: notify
+          config:
+            type: notify
+            recipient: marketing_team
+            message: "Weekly campaign performance reviewed and held — no email sent this run."
+
+        - name: escalate_review
+          decision: ESCALATE
+          connector: simulated
+          config:
+            type: simulated
+            note: "Campaign planning & optimisation escalated — no campaign performance data returned this run."
