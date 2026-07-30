@@ -666,6 +666,56 @@ GROUP BY
   m.MASTER_STORE_ID,
   r.CAMPAIGN_ID;
 
+-- Seasonal/historical counterpart to V_STORE_CAMPAIGN_CURRENT, for
+-- seasonal_campaign_planning. Same underlying problem as above — RAW_MARKETING_DATA
+-- is daily ad data with no store id of its own (RES_ID is a platform ad/restaurant
+-- id) — resolved via the same STORE_CHANNEL_MAPPING join against ZOMATO_ID/
+-- SWIGGY_ID. The difference: this view drops V_STORE_CAMPAIGN_CURRENT's
+-- CURRENT_DATE()-scoped WHERE entirely and rolls up to one row per (store,
+-- campaign, CALENDAR MONTH) across ALL history instead of "this month, live
+-- now" — so last year's performance around any event date is queryable by MONTH.
+-- ROI/ROAS/CTR use the same SAFE_DIVIDE formulas as V_STORE_CAMPAIGN_CURRENT, for
+-- the same reason noted there: the process DSL has no arithmetic op, so these
+-- ratios must already be correct per row before an agent step ever reads them.
+CREATE OR REPLACE VIEW `gen-lang-client-0520145261.bronze.V_STORE_CAMPAIGN_HISTORY` AS
+SELECT
+  m.MASTER_STORE_ID,
+  r.CAMPAIGN_ID,
+  DATE_TRUNC(r.DATE, MONTH) AS MONTH,
+  ANY_VALUE(r.RES_ID) AS RES_ID,
+  ANY_VALUE(
+    CASE
+      WHEN r.RES_ID = CAST(m.ZOMATO_ID AS STRING) THEN 'ZOMATO'
+      WHEN r.RES_ID = CAST(m.SWIGGY_ID AS STRING) THEN 'SWIGGY'
+      ELSE 'UNKNOWN'
+    END
+  ) AS PLATFORM,
+  ANY_VALUE(r.PRODUCT_TYPE) AS PRODUCT_TYPE,
+  ANY_VALUE(r.TARGETING) AS TARGETING,
+  ANY_VALUE(r.SEGMENTS) AS SEGMENTS,
+  MIN(r.DATE) AS WINDOW_START,
+  MAX(r.DATE) AS WINDOW_END,
+  ROUND(SUM(r.AD_SPEND_RS), 0) AS AD_SPEND_RS,
+  ROUND(SUM(r.AD_SALES_RS), 0) AS AD_SALES_RS,
+  SUM(r.AD_ORDERS) AS AD_ORDERS,
+  SUM(r.AD_IMPRESSIONS) AS AD_IMPRESSIONS,
+  SUM(r.AD_CLICKS) AS AD_CLICKS,
+  SAFE_DIVIDE(SUM(r.AD_SALES_RS), SUM(r.AD_SPEND_RS)) AS ROI,
+  ANY_VALUE(CAST(r.ADS_M2O_PCT AS FLOAT64)) AS ADS_M2O_PCT,
+  ANY_VALUE(CAST(r.OVERALL_M2O_PCT AS FLOAT64)) AS OVERALL_M2O_PCT,
+  SAFE_DIVIDE(SUM(r.AD_SALES_RS) - SUM(r.AD_SPEND_RS), SUM(r.AD_SPEND_RS)) AS ROAS,
+  SAFE_DIVIDE(SUM(r.AD_CLICKS), SUM(r.AD_IMPRESSIONS)) AS CTR
+FROM `gen-lang-client-0520145261.bronze.RAW_MARKETING_DATA` r
+JOIN `gen-lang-client-0520145261.bronze.STORE_CHANNEL_MAPPING` m
+  ON r.RES_ID IN (
+      CAST(m.ZOMATO_ID AS STRING),
+      CAST(m.SWIGGY_ID AS STRING)
+  )
+GROUP BY
+  m.MASTER_STORE_ID,
+  r.CAMPAIGN_ID,
+  MONTH;
+
 -- segment_on_channel edge: MARKETING_SEGMENT_MASTER.CHANNEL ('SWIGGY'/'ZOMATO')
 -- resolves to the Channel node by name (DIM_CHANNEL.CHANNEL_NAME). Gives each
 -- CustomerSegment its Channel id (CH-012 Swiggy / CH-015 Zomato).

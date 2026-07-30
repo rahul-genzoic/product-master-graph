@@ -80,6 +80,16 @@ datasets:
       - { entity_attribute: id, table_column: STORE_ID }
     columns: [STORE_ID, SKU_ID, ITEM_SOURCE_NAME, QUANTITY, TOTAL, NET, ORDER_DATE, ORDER_STATE, ONLINE_ORDER_ID]
 
+  - entity_type: Store
+    name: Campaign history
+    description: Zomato/Swiggy ad campaign performance for this store across ALL history, rolled up to one row per (campaign, calendar month) — no CURRENT_DATE() scoping, unlike "Current campaigns" above (lazy). Read by seasonal_campaign_planning.yaml's seasonal_campaign_history context key to evaluate past comparable-window performance for an upcoming event.
+    source_table: V_STORE_CAMPAIGN_HISTORY
+    connection: live_bq
+    cardinality: "1:m"
+    join_keys:
+      - { entity_attribute: id, table_column: MASTER_STORE_ID }
+    columns: [MASTER_STORE_ID, CAMPAIGN_ID, MONTH, RES_ID, PLATFORM, PRODUCT_TYPE, TARGETING, SEGMENTS, WINDOW_START, WINDOW_END, AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, AD_IMPRESSIONS, AD_CLICKS, ROI, ADS_M2O_PCT, OVERALL_M2O_PCT, ROAS, CTR]
+
   # Same V_SEGMENT_BUDGET table as the CustomerSegment link below, joined by
   # STORE instead — lets a Store-anchored gather (e.g. campaign_planning_
   # optimisation.yaml's segment_budget context key) resolve it directly,
