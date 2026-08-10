@@ -73,11 +73,24 @@ processes:
       - { type: manual, allowed_roles: [MarketingManager] }
 
     outputs:
+      # report_decision: the Final Send Approval verdict (`review` step).
+      # APPROVE -> email the marketing team; REJECT -> hold, no email;
+      # ESCALATE -> no campaign data this run (or a stale live view).
       - {
           name: report_decision,
           type: enum,
           values: [APPROVE, REJECT, ESCALATE],
         }
+      # Every currently-running campaign, evaluated with one evidence-backed
+      # action (stop/reduce/maintain/increase/etc.) — from evaluate_campaigns.
+      - { name: campaign_action_suggestions, type: array }
+      # Proposed new campaigns — segment gaps at proven stores and unspent
+      # budget — from find_expansion_opportunities.
+      - { name: expansion_suggestions, type: array }
+      # The consolidated, approved action plan (concatenated + priority-sorted)
+      # actually emailed to the marketing team — from create_action_plan.
+      - { name: flagged_campaigns, type: array }
+      - { name: flagged_summary, type: string }
 
     steps:
       # 1. Read (context_package already fetched campaign_comparison, whose
@@ -96,11 +109,24 @@ processes:
           conversion) pre-computed month-to-date, plus TARGETING and SEGMENTS
           describing who the campaign targets. Do NOT recompute ROI, ROAS,
           CTR, or either M2O_PCT — they are already correct per row. This is
-          a live snapshot (this month, campaigns running now) — there is no
-          week-over-week trend available, so never invent or imply one. It
+          a live snapshot (this month, campaigns running now). It
           covers Zomato/Swiggy campaigns only (RAW_MARKETING_DATA);
           Meta/Google spend is not yet in the BigQuery warehouse — state
           this gap explicitly, don't present the numbers as full-funnel.
+
+          `campaign_history` gives one row per (store, campaign, calendar
+          MONTH) across all history (V_STORE_CAMPAIGN_HISTORY) — use it only
+          for trend context, never to override the ROI ladder below. For
+          each `campaign_comparison` row, look for the `campaign_history` row
+          at the SAME store_name + CAMPAIGN_ID whose MONTH is the calendar
+          month immediately before this one. If found, cite that row's ROI
+          and AD_SPEND_RS alongside this row's own figures in `reason` as a
+          month-over-month comparison (e.g. "ROI 1.8 this month vs 1.3 last
+          month"). If no such row exists (new campaign, or no spend last
+          month), state plainly there is no prior month to compare and rely
+          on this row's own figures alone. This is a month-over-month
+          comparison, not week-over-week — V_STORE_CAMPAIGN_HISTORY has no
+          weekly grain, so never state or imply a weekly trend.
 
           Do not call any tool, skill, or connector. Evaluate EVERY row in
           `campaign_comparison` — every store that has campaign data, not
@@ -215,10 +241,13 @@ processes:
               "stop": "~₹<AD_SPEND_RS>/month freed up if spend stops
               entirely"; "reduce_budget": "~₹<AD_SPEND_RS × campaign_rules
               .reduce_budget.reduce_pct%>/month saved, assuming ROI holds";
-              "increase_budget_cautious"/"increase_budget_confident":
-              "~₹<AD_SPEND_RS × increase_pct% × ROI>/month additional sales,
-              assuming ROI holds at the current level (returns typically
-              diminish as spend grows)"; "maintain"/"validate_outlier": null
+              "increase_budget_cautious": "~₹<AD_SPEND_RS × campaign_rules
+              .increase_budget_cautious.increase_pct%
+              × ROI>/month additional sales, assuming ROI holds at the
+              current level (returns typically diminish as spend grows)";
+              "increase_budget_confident": same formula using campaign_rules
+              .increase_budget_confident.increase_pct instead;
+              "maintain"/"validate_outlier": null
               (no directional call yet, so no number to attach).
 
           If `campaign_comparison` is empty, return
@@ -633,8 +662,8 @@ processes:
           config:
             type: skill
             skill:
-              "genzoic-email-formatter" # Skill.name (slug) — call_skill resolves by Skill.name (subprocess gets DB +
-              # app imports because it starts with "Genzoic")
+              "Genzoic Email Formatter" # Skill.name (DB-registered display name, not the folder slug) —
+              # call_skill resolves by exact Skill.name match (skill_invoker.py); the slug fails skill_not_found.
             operation: send
             args:
               to: "rahul.ab@genzoic.com"
@@ -777,6 +806,35 @@ processes:
           post:
             resolve:
               - { field: MASTER_STORE_ID, type: Store, as: store_name }
+        # Month-over-month trend context for evaluate_campaigns — reuses the
+        # existing V_STORE_CAMPAIGN_HISTORY view (sql/views.sql, already
+        # queried by seasonal_campaign_planning) instead of adding new SQL.
+        # One row per (store, campaign, calendar MONTH) across all history;
+        # the gather DSL has no date filter, so this pulls full history like
+        # seasonal_campaign_planning does — the agent step finds the one
+        # prior-month row itself.
+        - key: campaign_history
+          required: false
+          gather:
+            base:
+              entity: Store
+              dataset: V_STORE_CAMPAIGN_HISTORY
+              columns:
+                [
+                  MASTER_STORE_ID,
+                  CAMPAIGN_ID,
+                  MONTH,
+                  AD_SPEND_RS,
+                  AD_SALES_RS,
+                  AD_ORDERS,
+                  ROI,
+                ]
+              order_by: MONTH
+              order_dir: asc
+              limit: 20000
+          post:
+            resolve:
+              - { field: MASTER_STORE_ID, type: Store, as: store_name }
         # Real budget-pacing signal (V_SEGMENT_BUDGET, sql/views.sql) — this
         # month's allocated budget per (store, channel), so root-cause and
         # opportunity-discovery can reason from actual figures instead of
@@ -904,6 +962,6 @@ processes:
       # connectors: [] stop the agent from reaching for anything else (e.g.
       # HubSpot) that has nothing to do with this Zomato/Swiggy BigQuery data.
       tools:
-        skills: ["genzoic-email-formatter"]
+        skills: ["Genzoic Email Formatter"]
         allow_unlisted_skills: false
         connectors: []
