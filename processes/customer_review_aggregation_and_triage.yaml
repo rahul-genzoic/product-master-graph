@@ -66,7 +66,7 @@ processes:
       Recommend APPROVE at the overview gate to action the triage store by store;
       recommend REJECT (no action) only if both facts are empty.
     domain: Product Reviews & Complaints
-    owner: production_team & marketing_team
+    owner: cx_team
     definition_type: text
 
     # Attach to every Store. The bare `Store` binds the type; the filtered

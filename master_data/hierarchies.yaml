@@ -12,9 +12,16 @@ hierarchies:
       - { id: category,     label: Category,     order: 1 }
       - { id: product_line, label: "Product Line", order: 2 }
     members:
-      - { id: desserts,      label: "Desserts",      level: category }
+      # `attributes.owner` on desserts/snacks is a scoped-authority tag (not a
+      # new fact — the whole-hierarchy `owner: portfolio_team` above already
+      # names portfolio_team accountable for this taxonomy; this just points
+      # that authority at portfolio_team's placeholder Lead role for two
+      # categories, so the Organization page's scoped-responsibilities /
+      # governed-scopes panels have something real to render). Remove once
+      # per-category ownership is actually decided.
+      - { id: desserts,      label: "Desserts",      level: category, attributes: { owner: portfolio_team_lead, assignment_label: "Category owner (placeholder)" } }
       - { id: health_bars,   label: "Health Bars",   level: category }
-      - { id: snacks,        label: "Snacks",        level: category }
+      - { id: snacks,        label: "Snacks",        level: category, attributes: { owner: portfolio_team_lead, assignment_label: "Category owner (placeholder)" } }
       - { id: mithai,        label: "Mithai",        level: category }
       - { id: savories,      label: "Savories",      level: category }
       - { id: dessert_bites, label: "Dessert Bites", level: category }
@@ -27,9 +34,12 @@ hierarchies:
       - { id: region, label: Region, order: 1 }
       - { id: city,   label: City,   order: 2 }
     members:
+      # See the ProductCategory note above — mumbai/pune's `attributes.owner`
+      # is a placeholder scoped-authority tag pointed at supply_chain_team's
+      # Lead role, not a new fact beyond the hierarchy-level owner already set.
       - { id: india,   label: "India",   level: region }
-      - { id: mumbai,  label: "Mumbai",  level: city, parent: india }
-      - { id: pune,    label: "Pune",    level: city, parent: india }
+      - { id: mumbai,  label: "Mumbai",  level: city, parent: india, attributes: { owner: supply_chain_team_lead, assignment_label: "City owner (placeholder)" } }
+      - { id: pune,    label: "Pune",    level: city, parent: india, attributes: { owner: supply_chain_team_lead, assignment_label: "City owner (placeholder)" } }
       - { id: delhi,   label: "Delhi",   level: city, parent: india }
       - { id: bengaluru, label: "Bengaluru", level: city, parent: india }
 
@@ -41,8 +51,11 @@ hierarchies:
       - { id: mode,    label: Mode,    order: 1 }
       - { id: channel, label: Channel, order: 2 }
     members:
-      - { id: online,  label: "Online",  level: mode }
-      - { id: offline, label: "Offline", level: mode }
+      # See the ProductCategory note above — online/offline's `attributes.owner`
+      # is a placeholder scoped-authority tag pointed at sales_team's Lead
+      # role, not a new fact beyond the hierarchy-level owner already set.
+      - { id: online,  label: "Online",  level: mode, attributes: { owner: sales_team_lead, assignment_label: "Channel mode owner (placeholder)" } }
+      - { id: offline, label: "Offline", level: mode, attributes: { owner: sales_team_lead, assignment_label: "Channel mode owner (placeholder)" } }
       - { id: swiggy,    label: "Swiggy",    level: channel, parent: online }
       - { id: zomato,    label: "Zomato",    level: channel, parent: online }
       - { id: blinkit,   label: "Blinkit",   level: channel, parent: online }
@@ -52,3 +65,294 @@ hierarchies:
       - { id: horeca,    label: "HoReCa",    level: channel, parent: offline }
       - { id: qsr,       label: "QSR",       level: channel, parent: offline }
       - { id: gifting,   label: "Gifting",   level: channel, parent: offline }
+
+  # Org chart, reusing the same Hierarchy shape as the taxonomies above.
+  # Reserved id "Organization" (see operations/organization.py,
+  # _ORGANIZATION_HIERARCHY_ID) is what lets the Context Explorer's
+  # organization view resolve each existing flat `owner:` string (used
+  # throughout master_data/*.yaml and processes/*.yaml) into a real node —
+  # subtype, reporting line, and (where tagged) scoped taxonomy authority —
+  # instead of a bare, unclassified name.
+  #
+  # The "team" level is real (one node per flat owner id already in use
+  # elsewhere in this tenant's config). "function" is a reasonable grouping
+  # of those teams into 4 business units, not a confirmed org chart — revisit
+  # if the tenant's actual division structure differs. The "role" and
+  # "person" levels below carry a fictional demo roster (headcount requested
+  # per team; names/emails invented for demo purposes, not a real HRIS
+  # export) so the Governed-objects / organization view has something to
+  # render. Replace with the tenant's actual roster (name/email/division/
+  # authority) once real HR data is supplied — do not treat these names as
+  # real people.
+  - id: Organization
+    name: Organization
+    description: Reporting structure and accountability for this tenant's teams.
+    levels:
+      - { id: function, label: Function, order: 1 }
+      - { id: team,     label: Team,     order: 2 }
+      - { id: role,     label: Role,     order: 3 }
+      - { id: person,   label: Person,   order: 4 }
+    members:
+      # Functions — grouping of the 10 real teams into 4 business units.
+      - { id: commercial_function,       label: "Commercial",        level: function, attributes: { source: yaml } }
+      - { id: operations_function,       label: "Operations",        level: function, attributes: { source: yaml } }
+      - { id: product_function,          label: "Product",           level: function, attributes: { source: yaml } }
+      - { id: data_technology_function,  label: "Data & Technology", level: function, attributes: { source: yaml } }
+
+      - { id: compliance_team,      label: "Compliance",       level: team, parent: product_function,          attributes: { division: "Compliance",      source: yaml } }
+      - { id: cx_team,              label: "CX",               level: team, parent: commercial_function,       attributes: { division: "CX",               source: yaml } }
+      - { id: data_team,            label: "Data",             level: team, parent: data_technology_function,  attributes: { division: "Data",             source: yaml } }
+      - { id: demand_planning_team, label: "Demand Planning",  level: team, parent: operations_function,       attributes: { division: "Demand Planning",  source: yaml } }
+      - { id: marketing_team,       label: "Marketing",        level: team, parent: commercial_function,       attributes: { division: "Marketing",        source: yaml } }
+      - { id: npd_team,             label: "NPD",              level: team, parent: product_function,          attributes: { division: "NPD",              source: yaml } }
+      - { id: portfolio_team,       label: "Portfolio",        level: team, parent: product_function,          attributes: { division: "Portfolio",        source: yaml } }
+      - { id: procurement_team,     label: "Procurement",      level: team, parent: operations_function,       attributes: { division: "Procurement",      source: yaml } }
+      - { id: sales_team,           label: "Sales",            level: team, parent: commercial_function,       attributes: { division: "Sales",            source: yaml } }
+      - { id: supply_chain_team,    label: "Supply Chain",     level: team, parent: operations_function,       attributes: { division: "Supply Chain",     source: yaml } }
+
+      # Demo roster roles — one "Lead" per team plus extra headcount per the
+      # requested counts (Sales: 2, Marketing: 4, all other teams: 2). Lead
+      # roles are authority_kind: leadership; the rest are individual
+      # contributors (authority_kind: primary).
+      - id: compliance_team_lead
+        label: "Compliance Lead"
+        level: role
+        parent: compliance_team
+        attributes: { title: "Compliance Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: compliance_team_associate
+        label: "Compliance Associate"
+        level: role
+        parent: compliance_team
+        attributes: { title: "Compliance Associate", authority_kind: primary, status: active, source: yaml }
+
+      - id: cx_team_lead
+        label: "CX Lead"
+        level: role
+        parent: cx_team
+        attributes: { title: "CX Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: cx_team_associate
+        label: "CX Associate"
+        level: role
+        parent: cx_team
+        attributes: { title: "CX Associate", authority_kind: primary, status: active, source: yaml }
+
+      - id: data_team_lead
+        label: "Data Lead"
+        level: role
+        parent: data_team
+        attributes: { title: "Data Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: data_team_analyst
+        label: "Data Analyst"
+        level: role
+        parent: data_team
+        attributes: { title: "Data Analyst", authority_kind: primary, status: active, source: yaml }
+
+      - id: demand_planning_team_lead
+        label: "Demand Planning Lead"
+        level: role
+        parent: demand_planning_team
+        attributes: { title: "Demand Planning Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: demand_planning_team_analyst
+        label: "Demand Planning Analyst"
+        level: role
+        parent: demand_planning_team
+        attributes: { title: "Demand Planning Analyst", authority_kind: primary, status: active, source: yaml }
+
+      - id: marketing_team_lead
+        label: "Marketing Lead"
+        level: role
+        parent: marketing_team
+        attributes: { title: "Marketing Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: marketing_team_manager
+        label: "Marketing Manager"
+        level: role
+        parent: marketing_team
+        attributes: { title: "Marketing Manager", authority_kind: primary, status: active, source: yaml }
+      - id: marketing_team_content_associate
+        label: "Content Marketing Associate"
+        level: role
+        parent: marketing_team
+        attributes: { title: "Content Marketing Associate", authority_kind: primary, status: active, source: yaml }
+      - id: marketing_team_performance_associate
+        label: "Performance Marketing Associate"
+        level: role
+        parent: marketing_team
+        attributes: { title: "Performance Marketing Associate", authority_kind: primary, status: active, source: yaml }
+
+      - id: npd_team_lead
+        label: "NPD Lead"
+        level: role
+        parent: npd_team
+        attributes: { title: "NPD Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: npd_team_associate
+        label: "NPD Associate"
+        level: role
+        parent: npd_team
+        attributes: { title: "NPD Associate", authority_kind: primary, status: active, source: yaml }
+
+      - id: portfolio_team_lead
+        label: "Portfolio Lead"
+        level: role
+        parent: portfolio_team
+        attributes: { title: "Portfolio Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: portfolio_team_associate
+        label: "Portfolio Associate"
+        level: role
+        parent: portfolio_team
+        attributes: { title: "Portfolio Associate", authority_kind: primary, status: active, source: yaml }
+
+      - id: procurement_team_lead
+        label: "Procurement Lead"
+        level: role
+        parent: procurement_team
+        attributes: { title: "Procurement Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: procurement_team_associate
+        label: "Procurement Associate"
+        level: role
+        parent: procurement_team
+        attributes: { title: "Procurement Associate", authority_kind: primary, status: active, source: yaml }
+
+      - id: sales_team_lead
+        label: "Sales Lead"
+        level: role
+        parent: sales_team
+        attributes: { title: "Sales Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: sales_team_manager
+        label: "Sales Manager"
+        level: role
+        parent: sales_team
+        attributes: { title: "Sales Manager", authority_kind: primary, status: active, source: yaml }
+
+      - id: supply_chain_team_lead
+        label: "Supply Chain Lead"
+        level: role
+        parent: supply_chain_team
+        attributes: { title: "Supply Chain Lead", authority_kind: leadership, status: active, source: yaml }
+      - id: supply_chain_team_associate
+        label: "Supply Chain Associate"
+        level: role
+        parent: supply_chain_team
+        attributes: { title: "Supply Chain Associate", authority_kind: primary, status: active, source: yaml }
+
+      # Demo roster people — fictional names/emails (upsidehealth.example is
+      # a reserved, non-routable domain), one per role above. `status: active`
+      # is what flips these from "Pending" to "Governed" in the org view.
+      - id: compliance_team_lead_person
+        label: "Ananya Krishnan"
+        level: person
+        parent: compliance_team_lead
+        attributes: { title: "Compliance Lead", email: "ananya.krishnan@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: compliance_team_associate_person
+        label: "Rohit Bhatia"
+        level: person
+        parent: compliance_team_associate
+        attributes: { title: "Compliance Associate", email: "rohit.bhatia@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: cx_team_lead_person
+        label: "Meera Iyer"
+        level: person
+        parent: cx_team_lead
+        attributes: { title: "CX Lead", email: "meera.iyer@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: cx_team_associate_person
+        label: "Karan Malhotra"
+        level: person
+        parent: cx_team_associate
+        attributes: { title: "CX Associate", email: "karan.malhotra@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: data_team_lead_person
+        label: "Arjun Nair"
+        level: person
+        parent: data_team_lead
+        attributes: { title: "Data Lead", email: "arjun.nair@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: data_team_analyst_person
+        label: "Sneha Reddy"
+        level: person
+        parent: data_team_analyst
+        attributes: { title: "Data Analyst", email: "sneha.reddy@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: demand_planning_team_lead_person
+        label: "Vikram Desai"
+        level: person
+        parent: demand_planning_team_lead
+        attributes: { title: "Demand Planning Lead", email: "vikram.desai@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: demand_planning_team_analyst_person
+        label: "Pooja Menon"
+        level: person
+        parent: demand_planning_team_analyst
+        attributes: { title: "Demand Planning Analyst", email: "pooja.menon@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: marketing_team_lead_person
+        label: "Ritika Kapoor"
+        level: person
+        parent: marketing_team_lead
+        attributes: { title: "Marketing Lead", email: "ritika.kapoor@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: marketing_team_manager_person
+        label: "Aditya Rao"
+        level: person
+        parent: marketing_team_manager
+        attributes: { title: "Marketing Manager", email: "aditya.rao@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: marketing_team_content_associate_person
+        label: "Ishita Ghosh"
+        level: person
+        parent: marketing_team_content_associate
+        attributes: { title: "Content Marketing Associate", email: "ishita.ghosh@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: marketing_team_performance_associate_person
+        label: "Nikhil Verma"
+        level: person
+        parent: marketing_team_performance_associate
+        attributes: { title: "Performance Marketing Associate", email: "nikhil.verma@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: npd_team_lead_person
+        label: "Divya Pillai"
+        level: person
+        parent: npd_team_lead
+        attributes: { title: "NPD Lead", email: "divya.pillai@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: npd_team_associate_person
+        label: "Sameer Joshi"
+        level: person
+        parent: npd_team_associate
+        attributes: { title: "NPD Associate", email: "sameer.joshi@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: portfolio_team_lead_person
+        label: "Tanvi Shah"
+        level: person
+        parent: portfolio_team_lead
+        attributes: { title: "Portfolio Lead", email: "tanvi.shah@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: portfolio_team_associate_person
+        label: "Rahul Sinha"
+        level: person
+        parent: portfolio_team_associate
+        attributes: { title: "Portfolio Associate", email: "rahul.sinha@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: procurement_team_lead_person
+        label: "Kavita Agarwal"
+        level: person
+        parent: procurement_team_lead
+        attributes: { title: "Procurement Lead", email: "kavita.agarwal@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: procurement_team_associate_person
+        label: "Manoj Chauhan"
+        level: person
+        parent: procurement_team_associate
+        attributes: { title: "Procurement Associate", email: "manoj.chauhan@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: sales_team_lead_person
+        label: "Varun Oberoi"
+        level: person
+        parent: sales_team_lead
+        attributes: { title: "Sales Lead", email: "varun.oberoi@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: sales_team_manager_person
+        label: "Neha Bansal"
+        level: person
+        parent: sales_team_manager
+        attributes: { title: "Sales Manager", email: "neha.bansal@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+
+      - id: supply_chain_team_lead_person
+        label: "Rajesh Kulkarni"
+        level: person
+        parent: supply_chain_team_lead
+        attributes: { title: "Supply Chain Lead", email: "rajesh.kulkarni@upsidehealth.example", authority_kind: leadership, status: active, source: yaml }
+      - id: supply_chain_team_associate_person
+        label: "Simran Kaur"
+        level: person
+        parent: supply_chain_team_associate
+        attributes: { title: "Supply Chain Associate", email: "simran.kaur@upsidehealth.example", authority_kind: primary, status: active, source: yaml }

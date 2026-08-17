@@ -528,7 +528,13 @@ processes:
         after: evaluate_seasonal_performance
         description: Flag stores with proven seasonal demand last year but no budget allocated yet for this year's event month.
         instruction: >
-          `segment_budget` is fetched from V_SEGMENT_BUDGET — one row per
+          FIRST, check `event_lookup_ok`. If it is false/absent, or
+          `event_date_this_year` is missing, lookup_event_dates could not
+          resolve `event_name` — output `seasonal_budget_gaps: []` and stop;
+          there is no event month to check budget against. Do NOT guess a
+          month or invent a fallback.
+
+          Otherwise, `segment_budget` is fetched from V_SEGMENT_BUDGET — one row per
           (store, channel, BUDGET_MONTH) with ALLOCATED_BUDGET_RS. Keep only
           rows whose BUDGET_MONTH equals the calendar month of
           `event_date_this_year` — that is the budget that would fund
@@ -759,7 +765,9 @@ processes:
           type: skill
           config:
             type: skill
-            skill: "genzoic-email-formatter"
+            skill:
+              "Genzoic Email Formatter" # Skill.name (DB-registered display name, not the folder slug) —
+              # call_skill resolves by exact Skill.name match (skill_invoker.py); the slug fails skill_not_found.
             operation: send
             args:
               to: "rahul.ab@genzoic.com"
@@ -1051,6 +1059,6 @@ processes:
                 ]
 
       tools:
-        skills: ["genzoic-email-formatter"]
+        skills: ["Genzoic Email Formatter"]
         allow_unlisted_skills: false
         connectors: []
