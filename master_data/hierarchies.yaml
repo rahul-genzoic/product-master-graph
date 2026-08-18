@@ -124,6 +124,11 @@ hierarchies:
         level: role
         parent: compliance_team
         attributes: { title: "Compliance Associate", authority_kind: primary, status: active, source: yaml }
+      - id: compliance_team_analyst
+        label: "Compliance Analyst"
+        level: role
+        parent: compliance_team
+        attributes: { title: "Compliance Analyst", authority_kind: primary, status: active, source: yaml }
 
       - id: cx_team_lead
         label: "CX Lead"
@@ -135,6 +140,11 @@ hierarchies:
         level: role
         parent: cx_team
         attributes: { title: "CX Associate", authority_kind: primary, status: active, source: yaml }
+      - id: cx_team_analyst
+        label: "CX Analyst"
+        level: role
+        parent: cx_team
+        attributes: { title: "CX Analyst", authority_kind: primary, status: active, source: yaml }
 
       - id: data_team_lead
         label: "Data Lead"
@@ -146,6 +156,11 @@ hierarchies:
         level: role
         parent: data_team
         attributes: { title: "Data Analyst", authority_kind: primary, status: active, source: yaml }
+      - id: data_team_associate
+        label: "Data Associate"
+        level: role
+        parent: data_team
+        attributes: { title: "Data Associate", authority_kind: primary, status: active, source: yaml }
 
       - id: demand_planning_team_lead
         label: "Demand Planning Lead"
@@ -157,6 +172,11 @@ hierarchies:
         level: role
         parent: demand_planning_team
         attributes: { title: "Demand Planning Analyst", authority_kind: primary, status: active, source: yaml }
+      - id: demand_planning_team_associate
+        label: "Demand Planning Associate"
+        level: role
+        parent: demand_planning_team
+        attributes: { title: "Demand Planning Associate", authority_kind: primary, status: active, source: yaml }
 
       - id: marketing_team_lead
         label: "Marketing Lead"
@@ -189,6 +209,11 @@ hierarchies:
         level: role
         parent: npd_team
         attributes: { title: "NPD Associate", authority_kind: primary, status: active, source: yaml }
+      - id: npd_team_analyst
+        label: "NPD Analyst"
+        level: role
+        parent: npd_team
+        attributes: { title: "NPD Analyst", authority_kind: primary, status: active, source: yaml }
 
       - id: portfolio_team_lead
         label: "Portfolio Lead"
@@ -200,6 +225,11 @@ hierarchies:
         level: role
         parent: portfolio_team
         attributes: { title: "Portfolio Associate", authority_kind: primary, status: active, source: yaml }
+      - id: portfolio_team_analyst
+        label: "Portfolio Analyst"
+        level: role
+        parent: portfolio_team
+        attributes: { title: "Portfolio Analyst", authority_kind: primary, status: active, source: yaml }
 
       - id: procurement_team_lead
         label: "Procurement Lead"
@@ -211,6 +241,11 @@ hierarchies:
         level: role
         parent: procurement_team
         attributes: { title: "Procurement Associate", authority_kind: primary, status: active, source: yaml }
+      - id: procurement_team_analyst
+        label: "Procurement Analyst"
+        level: role
+        parent: procurement_team
+        attributes: { title: "Procurement Analyst", authority_kind: primary, status: active, source: yaml }
 
       - id: sales_team_lead
         label: "Sales Lead"
@@ -233,6 +268,11 @@ hierarchies:
         level: role
         parent: supply_chain_team
         attributes: { title: "Supply Chain Associate", authority_kind: primary, status: active, source: yaml }
+      - id: supply_chain_team_analyst
+        label: "Supply Chain Analyst"
+        level: role
+        parent: supply_chain_team
+        attributes: { title: "Supply Chain Analyst", authority_kind: primary, status: active, source: yaml }
 
       # Demo roster people — fictional names/emails (upsidehealth.example is
       # a reserved, non-routable domain), one per role above. `status: active`
@@ -247,6 +287,11 @@ hierarchies:
         level: person
         parent: compliance_team_associate
         attributes: { title: "Compliance Associate", email: "rohit.bhatia@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: compliance_team_analyst_person
+        label: "Aakash Bose"
+        level: person
+        parent: compliance_team_analyst
+        attributes: { title: "Compliance Analyst", email: "aakash.bose@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
 
       - id: cx_team_lead_person
         label: "Meera Iyer"
@@ -258,6 +303,11 @@ hierarchies:
         level: person
         parent: cx_team_associate
         attributes: { title: "CX Associate", email: "karan.malhotra@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: cx_team_analyst_person
+        label: "Priya Nambiar"
+        level: person
+        parent: cx_team_analyst
+        attributes: { title: "CX Analyst", email: "priya.nambiar@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
 
       - id: data_team_lead_person
         label: "Arjun Nair"
@@ -269,6 +319,11 @@ hierarchies:
         level: person
         parent: data_team_analyst
         attributes: { title: "Data Analyst", email: "sneha.reddy@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: data_team_associate_person
+        label: "Rohan Mehta"
+        level: person
+        parent: data_team_associate
+        attributes: { title: "Data Associate", email: "rohan.mehta@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
 
       - id: demand_planning_team_lead_person
         label: "Vikram Desai"
@@ -280,6 +335,11 @@ hierarchies:
         level: person
         parent: demand_planning_team_analyst
         attributes: { title: "Demand Planning Analyst", email: "pooja.menon@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: demand_planning_team_associate_person
+        label: "Anjali Bhatt"
+        level: person
+        parent: demand_planning_team_associate
+        attributes: { title: "Demand Planning Associate", email: "anjali.bhatt@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
 
       - id: marketing_team_lead_person
         label: "Ritika Kapoor"
@@ -312,6 +372,11 @@ hierarchies:
         level: person
         parent: npd_team_associate
         attributes: { title: "NPD Associate", email: "sameer.joshi@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: npd_team_analyst_person
+        label: "Vivek Thakur"
+        level: person
+        parent: npd_team_analyst
+        attributes: { title: "NPD Analyst", email: "vivek.thakur@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
 
       - id: portfolio_team_lead_person
         label: "Tanvi Shah"
@@ -323,6 +388,11 @@ hierarchies:
         level: person
         parent: portfolio_team_associate
         attributes: { title: "Portfolio Associate", email: "rahul.sinha@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: portfolio_team_analyst_person
+        label: "Shreya Bhattacharya"
+        level: person
+        parent: portfolio_team_analyst
+        attributes: { title: "Portfolio Analyst", email: "shreya.bhattacharya@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
 
       - id: procurement_team_lead_person
         label: "Kavita Agarwal"
@@ -334,6 +404,11 @@ hierarchies:
         level: person
         parent: procurement_team_associate
         attributes: { title: "Procurement Associate", email: "manoj.chauhan@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: procurement_team_analyst_person
+        label: "Amit Trivedi"
+        level: person
+        parent: procurement_team_analyst
+        attributes: { title: "Procurement Analyst", email: "amit.trivedi@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
 
       - id: sales_team_lead_person
         label: "Varun Oberoi"
@@ -356,3 +431,8 @@ hierarchies:
         level: person
         parent: supply_chain_team_associate
         attributes: { title: "Supply Chain Associate", email: "simran.kaur@upsidehealth.example", authority_kind: primary, status: active, source: yaml }
+      - id: supply_chain_team_analyst_person
+        label: "Deepak Choudhary"
+        level: person
+        parent: supply_chain_team_analyst
+        attributes: { title: "Supply Chain Analyst", email: "deepak.choudhary@upsidehealth.example", authority_kind: primary, status: active, source: yaml }

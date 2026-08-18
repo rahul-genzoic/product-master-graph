@@ -8,7 +8,7 @@ kpis:
   - id: WastageRisk
     name: Wastage Risk (units at risk)
     description: Quantity expiring within the store's risk window — the liquidation trigger.
-    owner: supply_chain_team
+    owner: supply_chain_team_lead
     applies_to: Store
     unit: units
     target: { value: 0, comparison: eq }
@@ -22,7 +22,7 @@ kpis:
   - id: ForecastAccuracy
     name: Demand Forecast Accuracy
     description: How close the ML forecast tracked actual sales (100 - MAPE). Higher is better.
-    owner: demand_planning_team
+    owner: demand_planning_team_lead
     applies_to: Product
     unit: percentage
     target: { value: 80, comparison: gte }
@@ -36,7 +36,7 @@ kpis:
   - id: AvgStoreRating
     name: Average Store Rating
     description: Mean customer star rating for a store.
-    owner: cx_team
+    owner: cx_team_lead
     applies_to: Store
     unit: rating
     target: { value: 4.0, comparison: gte }
@@ -49,7 +49,7 @@ kpis:
   - id: MarginPct
     name: Gross Margin %
     description: (MRP - COGS) / MRP, base or per-channel.
-    owner: portfolio_team
+    owner: portfolio_team_lead
     applies_to: Product
     unit: percentage
     target: { value: 60, comparison: gte }
@@ -79,7 +79,7 @@ kpis:
   - id: CertificationDaysToExpiry
     name: Certification Days To Expiry
     description: Days until a certificate lapses. Under 30 triggers the renewal workflow.
-    owner: compliance_team
+    owner: compliance_team_lead
     applies_to: Certification
     unit: days
     target: { value: 30, comparison: gte }
@@ -87,7 +87,7 @@ kpis:
   - id: ListingCoverage
     name: Listing Coverage
     description: Applicable channels a SKU is live on / target channels.
-    owner: sales_team
+    owner: sales_team_lead
     applies_to: Product
     unit: percentage
     target: { value: 90, comparison: gte }

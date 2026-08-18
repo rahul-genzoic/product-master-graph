@@ -82,7 +82,7 @@ vocabularies:
 
   - id: ClaimType
     name: Claim Type
-    owner: marketing_team
+    owner: marketing_team_lead
     members:
       - { id: Nutritional, label: "Nutritional",      order: 1 }
       - { id: Ingredient,  label: "Ingredient",       order: 2 }
@@ -101,7 +101,7 @@ vocabularies:
 
   - id: IdeaStage
     name: NPD Idea Stage
-    owner: npd_team
+    owner: npd_team_lead
     members:
       - { id: Capture,     label: "Capture",     order: 1 }
       - { id: Triage,      label: "Triage",      order: 2 }
@@ -134,7 +134,7 @@ vocabularies:
 
   - id: SupplierTier
     name: Supplier Classification Tier
-    owner: procurement_team
+    owner: procurement_team_lead
     members:
       - { id: Tier1, label: "Tier 1 — Strategic / Sole Source", order: 1 }
       - { id: Tier2, label: "Tier 2 — Preferred",               order: 2 }
@@ -149,3 +149,341 @@ vocabularies:
       - { id: Seasonal,  label: "Seasonal",  order: 3 }
       - { id: Weekly,    label: "Weekly",    order: 4 }
       - { id: Spot,      label: "Spot",      order: 5 }
+
+  # ============================================================
+  # DEMO FILLER — fabricated solely so every Governed-objects row
+  # (Function/Role/Person) shows at least one connection in the
+  # Organization view. These are NOT real controlled vocabularies
+  # — each has exactly one throwaway member and exists only to give
+  # its `owner` an accountable_for entry. Safe to delete this whole
+  # block once real KPI/process ownership exists at these levels.
+  # ============================================================
+  - id: DemoFiller_CommercialFunction
+    name: "[Demo Filler] Commercial"
+    owner: commercial_function
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_OperationsFunction
+    name: "[Demo Filler] Operations"
+    owner: operations_function
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ProductFunction
+    name: "[Demo Filler] Product"
+    owner: product_function
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DataTechnologyFunction
+    name: "[Demo Filler] Data & Technology"
+    owner: data_technology_function
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ComplianceTeamAssociate
+    name: "[Demo Filler] Compliance Associate"
+    owner: compliance_team_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ComplianceTeamAnalyst
+    name: "[Demo Filler] Compliance Analyst"
+    owner: compliance_team_analyst
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_CxTeamAssociate
+    name: "[Demo Filler] CX Associate"
+    owner: cx_team_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_CxTeamAnalyst
+    name: "[Demo Filler] CX Analyst"
+    owner: cx_team_analyst
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DataTeamLead
+    name: "[Demo Filler] Data Lead"
+    owner: data_team_lead
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DataTeamAnalyst
+    name: "[Demo Filler] Data Analyst"
+    owner: data_team_analyst
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DataTeamAssociate
+    name: "[Demo Filler] Data Associate"
+    owner: data_team_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DemandPlanningTeamAnalyst
+    name: "[Demo Filler] Demand Planning Analyst"
+    owner: demand_planning_team_analyst
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DemandPlanningTeamAssociate
+    name: "[Demo Filler] Demand Planning Associate"
+    owner: demand_planning_team_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_MarketingTeamManager
+    name: "[Demo Filler] Marketing Manager"
+    owner: marketing_team_manager
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_MarketingTeamContentAssociate
+    name: "[Demo Filler] Content Marketing Associate"
+    owner: marketing_team_content_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_MarketingTeamPerformanceAssociate
+    name: "[Demo Filler] Performance Marketing Associate"
+    owner: marketing_team_performance_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_NpdTeamAssociate
+    name: "[Demo Filler] NPD Associate"
+    owner: npd_team_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_NpdTeamAnalyst
+    name: "[Demo Filler] NPD Analyst"
+    owner: npd_team_analyst
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_PortfolioTeamAssociate
+    name: "[Demo Filler] Portfolio Associate"
+    owner: portfolio_team_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_PortfolioTeamAnalyst
+    name: "[Demo Filler] Portfolio Analyst"
+    owner: portfolio_team_analyst
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ProcurementTeamAssociate
+    name: "[Demo Filler] Procurement Associate"
+    owner: procurement_team_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ProcurementTeamAnalyst
+    name: "[Demo Filler] Procurement Analyst"
+    owner: procurement_team_analyst
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_SalesTeamManager
+    name: "[Demo Filler] Sales Manager"
+    owner: sales_team_manager
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_SupplyChainTeamAssociate
+    name: "[Demo Filler] Supply Chain Associate"
+    owner: supply_chain_team_associate
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_SupplyChainTeamAnalyst
+    name: "[Demo Filler] Supply Chain Analyst"
+    owner: supply_chain_team_analyst
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ComplianceTeamLeadPerson
+    name: "[Demo Filler] Ananya Krishnan (Compliance Lead)"
+    owner: compliance_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ComplianceTeamAssociatePerson
+    name: "[Demo Filler] Rohit Bhatia (Compliance Associate)"
+    owner: compliance_team_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ComplianceTeamAnalystPerson
+    name: "[Demo Filler] Aakash Bose (Compliance Analyst)"
+    owner: compliance_team_analyst_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_CxTeamLeadPerson
+    name: "[Demo Filler] Meera Iyer (CX Lead)"
+    owner: cx_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_CxTeamAssociatePerson
+    name: "[Demo Filler] Karan Malhotra (CX Associate)"
+    owner: cx_team_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_CxTeamAnalystPerson
+    name: "[Demo Filler] Priya Nambiar (CX Analyst)"
+    owner: cx_team_analyst_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DataTeamLeadPerson
+    name: "[Demo Filler] Arjun Nair (Data Lead)"
+    owner: data_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DataTeamAnalystPerson
+    name: "[Demo Filler] Sneha Reddy (Data Analyst)"
+    owner: data_team_analyst_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DataTeamAssociatePerson
+    name: "[Demo Filler] Rohan Mehta (Data Associate)"
+    owner: data_team_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DemandPlanningTeamLeadPerson
+    name: "[Demo Filler] Vikram Desai (Demand Planning Lead)"
+    owner: demand_planning_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DemandPlanningTeamAnalystPerson
+    name: "[Demo Filler] Pooja Menon (Demand Planning Analyst)"
+    owner: demand_planning_team_analyst_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_DemandPlanningTeamAssociatePerson
+    name: "[Demo Filler] Anjali Bhatt (Demand Planning Associate)"
+    owner: demand_planning_team_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_MarketingTeamLeadPerson
+    name: "[Demo Filler] Ritika Kapoor (Marketing Lead)"
+    owner: marketing_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_MarketingTeamManagerPerson
+    name: "[Demo Filler] Aditya Rao (Marketing Manager)"
+    owner: marketing_team_manager_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_MarketingTeamContentAssociatePerson
+    name: "[Demo Filler] Ishita Ghosh (Content Marketing Associate)"
+    owner: marketing_team_content_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_MarketingTeamPerformanceAssociatePerson
+    name: "[Demo Filler] Nikhil Verma (Performance Marketing Associate)"
+    owner: marketing_team_performance_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_NpdTeamLeadPerson
+    name: "[Demo Filler] Divya Pillai (NPD Lead)"
+    owner: npd_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_NpdTeamAssociatePerson
+    name: "[Demo Filler] Sameer Joshi (NPD Associate)"
+    owner: npd_team_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_NpdTeamAnalystPerson
+    name: "[Demo Filler] Vivek Thakur (NPD Analyst)"
+    owner: npd_team_analyst_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_PortfolioTeamLeadPerson
+    name: "[Demo Filler] Tanvi Shah (Portfolio Lead)"
+    owner: portfolio_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_PortfolioTeamAssociatePerson
+    name: "[Demo Filler] Rahul Sinha (Portfolio Associate)"
+    owner: portfolio_team_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_PortfolioTeamAnalystPerson
+    name: "[Demo Filler] Shreya Bhattacharya (Portfolio Analyst)"
+    owner: portfolio_team_analyst_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ProcurementTeamLeadPerson
+    name: "[Demo Filler] Kavita Agarwal (Procurement Lead)"
+    owner: procurement_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ProcurementTeamAssociatePerson
+    name: "[Demo Filler] Manoj Chauhan (Procurement Associate)"
+    owner: procurement_team_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_ProcurementTeamAnalystPerson
+    name: "[Demo Filler] Amit Trivedi (Procurement Analyst)"
+    owner: procurement_team_analyst_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_SalesTeamLeadPerson
+    name: "[Demo Filler] Varun Oberoi (Sales Lead)"
+    owner: sales_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_SalesTeamManagerPerson
+    name: "[Demo Filler] Neha Bansal (Sales Manager)"
+    owner: sales_team_manager_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_SupplyChainTeamLeadPerson
+    name: "[Demo Filler] Rajesh Kulkarni (Supply Chain Lead)"
+    owner: supply_chain_team_lead_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_SupplyChainTeamAssociatePerson
+    name: "[Demo Filler] Simran Kaur (Supply Chain Associate)"
+    owner: supply_chain_team_associate_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
+
+  - id: DemoFiller_SupplyChainTeamAnalystPerson
+    name: "[Demo Filler] Deepak Choudhary (Supply Chain Analyst)"
+    owner: supply_chain_team_analyst_person
+    members:
+      - { id: Placeholder, label: "Placeholder", order: 1 }
