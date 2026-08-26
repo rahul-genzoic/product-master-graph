@@ -25,15 +25,21 @@ version: 1
 #
 # `related_processes` (real processes/*.yaml ids) and `related_kpis` (real
 # master_data/kpis.yaml ids) are curated on top of the sheet import, NOT part
-# of it -- added only where a process's own description or a KPI's own
-# applies_to/description is an unambiguous match for that entry (e.g.
-# COMP_ProductClaimChanged -> claims_validation; OPS_ShelfLifeThresholdReached
-# -> shelf_life_risk_monitoring / WastageRisk). Both fields are optional and
-# absent on most entries: this repo has only 22 processes and 28 KPIs built
-# against 180 signals/events, so most entries genuinely have no real process
-# or KPI to point to yet -- absence means "not built here yet", not "not
-# reviewed". Never add an entry to either list without a real match; extend
-# these only as new processes/KPIs are actually built.
+# of it -- this is the "Associated Process" / "Impacted KPIs" relationship
+# from the tracker's own concept model (Sheet3), applied against the
+# processes/KPIs actually built in this repo rather than the free-text
+# `affected_kpis`/`downstream_events` the sheet itself carries. Two
+# confidence tiers went in: an exact-match pass (e.g. COMP_ProductClaimChanged
+# -> claims_validation, an word-for-word description match) and a broader
+# thematic pass (e.g. QA_ContaminationOutbreak -> competitor_enforcement_signals,
+# same monitoring domain, not identical wording). Both fields stay optional
+# and absent on most entries: this repo has only 22 processes and 28 KPIs
+# built against 180 signals/events, so most entries genuinely have no real
+# process or KPI to point to yet (all of Procurement & Suppliers and
+# Competitive & Market Intelligence, most of Sales & Channels and Commercial
+# & Financial Performance) -- absence means "not built here yet", not "not
+# reviewed". Never point either list at a process/KPI id that doesn't
+# actually exist in this repo -- extend as new ones are actually built.
 
 signals_events:
   # ---- NPD & Innovation ----
@@ -167,6 +173,7 @@ signals_events:
     downstream_events: ["NPD Stage Gate Reached", "NPD Compliance Clearance Required"]
     entity_types: ["Product", "Ingredient", "Supplier", "Factory", "Market"]
     affected_kpis: ["Feasibility Score", "Target COGS", "Time to Launch"]
+    related_processes: [innovation_pipeline_prioritisation]
 
   - id: NPD_NPDStageGateReached
     category: "NPD & Innovation"
@@ -209,6 +216,7 @@ signals_events:
     downstream_events: ["NPD Investment Review Triggered"]
     entity_types: ["Product", "Project", "Team"]
     affected_kpis: ["Time to Market", "Milestone Variance"]
+    related_processes: [innovation_pipeline_prioritisation]
 
   - id: NPD_NPDComplianceClearanceRequired
     category: "NPD & Innovation"
@@ -230,6 +238,7 @@ signals_events:
     downstream_events: ["New SKU Created", "New Market / Channel Listing Requested"]
     entity_types: ["Product", "SKU", "Channel", "Factory", "Market"]
     affected_kpis: ["Launch Readiness Score", "On-Time Launch"]
+    related_processes: [npd_compliance_preclearance]
 
   - id: NPD_PostLaunchReviewDue
     category: "NPD & Innovation"
@@ -273,7 +282,7 @@ signals_events:
     downstream_events: ["Product Formulation Changed", "Compliance Clearance"]
     entity_types: ["Ingredient", "Product", "Supplier", "Formulation"]
     affected_kpis: ["Products Impacted", "Reformulation Cost"]
-    related_processes: [regulation_impact_analysis]
+    related_processes: [regulation_impact_analysis, regulatory_change_implementation]
 
   - id: COMP_ClaimsRuleChange
     category: "Compliance & Regulatory"
@@ -308,7 +317,7 @@ signals_events:
     downstream_events: ["Packaging Change Review"]
     entity_types: ["Packaging", "Product", "Supplier"]
     affected_kpis: ["Packaging Compliance", "Cost Impact"]
-    related_processes: [regulation_impact_analysis]
+    related_processes: [regulation_impact_analysis, regulatory_change_implementation]
 
   - id: COMP_LegalMetrologyChange
     category: "Compliance & Regulatory"
@@ -330,7 +339,7 @@ signals_events:
     downstream_events: ["Packaging Compliance Review"]
     entity_types: ["Packaging", "Product", "Market"]
     affected_kpis: ["EPR Compliance", "Plastic Usage"]
-    related_processes: [regulation_impact_analysis]
+    related_processes: [regulation_impact_analysis, regulatory_change_implementation]
 
   - id: COMP_CompetitorEnforcementRecall
     category: "Compliance & Regulatory"
@@ -352,7 +361,7 @@ signals_events:
     downstream_events: ["Market Entry Assessment", "Compliance Review"]
     entity_types: ["Product", "Market", "Ingredient", "Claim"]
     affected_kpis: ["Market Readiness", "Compliance Exposure"]
-    related_processes: [multi_market_compliance_readiness]
+    related_processes: [multi_market_compliance_readiness, regulatory_horizon_alerts]
 
   - id: COMP_FSSAILicenceExpiry
     category: "Compliance & Regulatory"
@@ -385,6 +394,7 @@ signals_events:
     downstream_events: ["Supplier Performance Review", "Alternate Sourcing"]
     entity_types: ["Supplier", "Certification", "Ingredient"]
     affected_kpis: ["Approved Supplier Coverage"]
+    related_processes: [supplier_coa_renewal]
 
   - id: COMP_ProductFormulationChanged
     category: "Compliance & Regulatory"
@@ -407,6 +417,7 @@ signals_events:
     downstream_events: ["Ingredient Compliance Assessment", "Supplier Qualification"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Ingredient Approval Rate", "Compliance Risk"]
+    related_processes: [label_compliance_review, claims_validation]
 
   - id: COMP_ProductClaimChanged
     category: "Compliance & Regulatory"
@@ -452,7 +463,7 @@ signals_events:
     downstream_events: ["Market Entry Assessment", "Listing Compliance Review"]
     entity_types: ["Product", "SKU", "Market", "Channel"]
     affected_kpis: ["Listing Readiness", "Compliance Coverage"]
-    related_processes: [multi_market_compliance_readiness]
+    related_processes: [multi_market_compliance_readiness, channel_listing_claim_audit]
 
   - id: COMP_PeriodicComplianceReviewDue
     category: "Compliance & Regulatory"
@@ -688,6 +699,7 @@ signals_events:
     downstream_events: ["New Market / Channel Listing Requested"]
     entity_types: ["Retailer", "Channel", "Geography", "Product"]
     affected_kpis: ["Distribution Reach", "Revenue Opportunity"]
+    related_processes: [multi_market_compliance_readiness]
 
   - id: SALES_QuickCommerceMarketExpansion
     category: "Sales & Channels"
@@ -698,6 +710,7 @@ signals_events:
     downstream_events: ["Market Entry Assessment", "New Listing Request"]
     entity_types: ["Channel", "Geography", "Product"]
     affected_kpis: ["Availability", "Incremental Revenue"]
+    related_processes: [multi_market_compliance_readiness]
 
   - id: SALES_CompetitorNewListing
     category: "Sales & Channels"
@@ -768,6 +781,7 @@ signals_events:
     downstream_events: ["Listing Compliance Review"]
     entity_types: ["Channel", "Product", "SKU"]
     affected_kpis: ["Listing Compliance", "Channel Margin"]
+    related_processes: [channel_listing_claim_audit]
 
   - id: SALES_NewDistributionOpportunity
     category: "Sales & Channels"
@@ -808,6 +822,7 @@ signals_events:
     downstream_events: ["Listing Compliance Review", "Listing Creation"]
     entity_types: ["Product", "SKU", "Retailer", "Channel"]
     affected_kpis: ["Listing Lead Time", "Distribution"]
+    related_processes: [channel_listing_claim_audit]
 
   - id: SALES_ListingContentUpdateRequired
     category: "Sales & Channels"
@@ -839,6 +854,7 @@ signals_events:
     downstream_events: ["Operations Escalation"]
     entity_types: ["Order", "Customer", "Warehouse"]
     affected_kpis: ["OTIF", "Service Level"]
+    related_processes: [dark_store_ops_escalation]
 
   - id: SALES_DistributorReplenishmentRequired
     category: "Sales & Channels"
@@ -1175,6 +1191,7 @@ signals_events:
     downstream_events: ["Demand Forecast Review"]
     entity_types: ["Product", "Category", "Geography"]
     affected_kpis: ["Forecast Accuracy"]
+    related_processes: [demand_forecast]
 
   - id: OPS_InfrastructureDisruption
     category: "Operations & Supply Chain"
@@ -1207,6 +1224,7 @@ signals_events:
     downstream_events: ["Liquidation", "Promotion", "Transfer"]
     entity_types: ["SKU", "Inventory", "Warehouse"]
     affected_kpis: ["Inventory Days", "Working Capital"]
+    related_processes: [shelf_life_risk_monitoring]
 
   - id: OPS_ShelfLifeThresholdReached
     category: "Operations & Supply Chain"
@@ -1535,6 +1553,7 @@ signals_events:
     downstream_events: ["Supplier / Ingredient Risk Assessment"]
     entity_types: ["Ingredient", "Supplier", "Geography"]
     affected_kpis: ["Food Safety Risk"]
+    related_processes: [competitor_enforcement_signals]
 
   - id: QA_RegulatorFoodSafetyAlert
     category: "Quality & Food Safety"
@@ -1545,6 +1564,7 @@ signals_events:
     downstream_events: ["Product Risk Assessment"]
     entity_types: ["Product", "Ingredient", "Market"]
     affected_kpis: ["Compliance Risk"]
+    related_processes: [competitor_enforcement_signals, regulation_impact_analysis]
 
   - id: QA_PublicComplaintTrend
     category: "Quality & Food Safety"
@@ -1567,6 +1587,7 @@ signals_events:
     downstream_events: ["Internal Quality Review"]
     entity_types: ["Category", "Product"]
     affected_kpis: ["Quality Risk"]
+    related_processes: [customer_review_aggregation_and_triage]
 
   - id: QA_SupplierPublicSafetyAlert
     category: "Quality & Food Safety"
@@ -1679,7 +1700,7 @@ signals_events:
     downstream_events: ["Quality Investigation"]
     entity_types: ["Product", "SKU", "Channel"]
     affected_kpis: ["Return Rate"]
-    related_processes: [customer_review_aggregation_and_triage]
+    related_processes: [customer_review_aggregation_and_triage, formulation_feedback_loop]
 
   - id: QA_TraceabilityFailureDetected
     category: "Quality & Food Safety"
@@ -1871,6 +1892,7 @@ signals_events:
     downstream_events: ["Compliance", "Channel", "Supply Readiness"]
     entity_types: ["Market", "Geography", "Product", "Channel"]
     affected_kpis: ["Market Attractiveness", "Readiness"]
+    related_processes: [multi_market_compliance_readiness]
 
   - id: CMI_ChannelStrategyReviewDue
     category: "Competitive & Market Intelligence"
