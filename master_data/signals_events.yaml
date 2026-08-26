@@ -1982,7 +1982,7 @@ external_feeds:
   - id: MarketplaceBrowserAutomationFeed
     owner: sales_team
     name: "Marketplace Browser Automation Feed"
-    source: "Zomato, Swiggy, Blinkit, Instamart (browser automation)"
+    source: "Zomato, Swiggy, Blinkit, Instamart"
     description: "Browser-automation scrape of marketplace listing pages (Zomato, Swiggy, Blinkit, Instamart) for listing content, category rankings, and claim/label drift. Backs channel listing claim audit, quick commerce category monitoring, and listing visibility monitoring."
     cadence: "weekly (per source use case: \"Weekly scan\")"
     format: "Browser automation (headless browser)"
