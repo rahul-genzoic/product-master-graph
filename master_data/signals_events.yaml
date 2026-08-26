@@ -1,0 +1,1832 @@
+version: 1
+
+# Demo Signal & Event catalog, imported verbatim from the "Demo events / signals"
+# tab of the solution-design tracker (Google Sheet: Genzoic AI Use Case &
+# Signal/Event Tracker, gid=1856941780). Columns map 1:1 to the sheet:
+# Type -> category, Heading -> name, Signal/Event -> kind, Potential Downstream
+# Events -> downstream_events, Impacted Entity Types -> entity_types, Affected
+# KPI -> affected_kpis. Projected as meta.Signal / meta.Event nodes by
+# ingest_ontology (see migrations/0004_signals_events_catalog.yaml) the same way
+# policies/constraints.yaml projects as meta.Constraint.
+#
+# `downstream_events`, `entity_types` and `affected_kpis` are transcribed as free
+# text exactly as the sheet has them -- the sheet does not key them to this file's
+# generated `id`s (headings repeat across categories, e.g. "Competitor Product
+# Launch" appears under both NPD & Innovation and Competitive & Market
+# Intelligence), so do NOT treat downstream_events as a resolved graph reference --
+# it is documentation of the intended signal/event chain, same as constraints.yaml's
+# `rule: "documentation_only"` entries. Only entity_types values that exactly match
+# an ontology/entities.yaml `type` (Product, Category, Ingredient, Supplier, Channel,
+# Store, Campaign, Claim, Competitor, CompetitorProduct, ...) resolve to a real node
+# type today; the rest (Consumer Segment, Geography, Market, Formulation, ...) are
+# descriptive only.
+
+signals_events:
+  # ---- NPD & Innovation ----
+  - id: NPD_EmergingConsumerSearchTrend
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Emerging Consumer Search Trend"
+    kind: Signal
+    description: "Growth in searches for attributes, formats or needs."
+    downstream_events: ["Opportunity Assessment Required", "Portfolio Gap Assessment Due"]
+    entity_types: ["Product", "Category", "Consumer Segment", "Geography"]
+    affected_kpis: ["Search Growth", "Category Growth", "Opportunity Score"]
+
+  - id: NPD_SocialTrendAcceleration
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Social Trend Acceleration"
+    kind: Signal
+    description: "Emerging product, ingredient, flavor or consumption trend."
+    downstream_events: ["Opportunity Assessment Required"]
+    entity_types: ["Product", "Category", "Consumer Segment"]
+    affected_kpis: ["Trend Velocity", "Brand Relevance", "Opportunity Score"]
+
+  - id: NPD_EmergingIngredientTrend
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Emerging Ingredient Trend"
+    kind: Signal
+    description: "Growing interest in new functional/food ingredients."
+    downstream_events: ["Opportunity Assessment Required", "NPD Feasibility Assessment Due"]
+    entity_types: ["Ingredient", "Product", "Category", "Supplier"]
+    affected_kpis: ["Ingredient Demand Growth", "Innovation Pipeline Value"]
+
+  - id: NPD_EmergingFlavorTrend
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Emerging Flavor Trend"
+    kind: Signal
+    description: "Flavors gaining consumer interest."
+    downstream_events: ["Opportunity Assessment Required"]
+    entity_types: ["Product", "Category", "Consumer Segment"]
+    affected_kpis: ["Consumer Affinity", "Opportunity Score"]
+
+  - id: NPD_CompetitorProductLaunch
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Competitor Product Launch"
+    kind: Signal
+    description: "New competitor product or variant."
+    downstream_events: ["Portfolio Gap Assessment Due", "Competitive Review Due"]
+    entity_types: ["Competitor", "Product", "Category", "Channel"]
+    affected_kpis: ["Market Share", "Innovation Gap", "Share of Shelf"]
+
+  - id: NPD_CompetitorFormulationChange
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Competitor Formulation Change"
+    kind: Signal
+    description: "Competitor changes ingredients or nutrition profile."
+    downstream_events: ["Product Positioning Review Due", "Opportunity Assessment Required"]
+    entity_types: ["Competitor Product", "Ingredient", "Product", "Category"]
+    affected_kpis: ["Product Differentiation", "Consumer Preference"]
+
+  - id: NPD_CompetitorPackInnovation
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Competitor Pack Innovation"
+    kind: Signal
+    description: "New competitor pack size/format."
+    downstream_events: ["Product Positioning Review Due", "Portfolio Gap Assessment Due"]
+    entity_types: ["Product", "Pack", "Channel", "Competitor"]
+    affected_kpis: ["Price-Pack Index", "Pack Mix", "Market Share"]
+
+  - id: NPD_CategoryGrowthDecline
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Category Growth / Decline"
+    kind: Signal
+    description: "Material category/subcategory demand movement."
+    downstream_events: ["Opportunity Assessment Required", "Strategic Portfolio Review Due"]
+    entity_types: ["Category", "Product", "Geography", "Channel"]
+    affected_kpis: ["Category Growth", "Revenue Growth", "Market Share"]
+
+  - id: NPD_EmergingConsumerNeed
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Emerging Consumer Need"
+    kind: Signal
+    description: "Unmet needs identified from public consumer feedback."
+    downstream_events: ["Opportunity Assessment Required"]
+    entity_types: ["Consumer Segment", "Product", "Category", "Attribute"]
+    affected_kpis: ["Need Frequency", "Sentiment", "Opportunity Score"]
+
+  - id: NPD_NewIngredientTechnologyInnovation
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "New Ingredient / Technology Innovation"
+    kind: Signal
+    description: "New relevant ingredients or technology emerge."
+    downstream_events: ["NPD Feasibility Assessment Due"]
+    entity_types: ["Ingredient", "Technology", "Supplier", "Product"]
+    affected_kpis: ["Innovation Potential", "Cost Impact", "Feasibility Score"]
+
+  - id: NPD_NewIdeaSubmitted
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "New Idea Submitted"
+    kind: Event
+    description: "Initiate idea capture and triage."
+    downstream_events: ["Opportunity Assessment Required"]
+    entity_types: ["Idea", "Product Concept", "Category"]
+    affected_kpis: ["Idea Pipeline Count", "Idea Conversion Rate"]
+
+  - id: NPD_OpportunityAssessmentRequired
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Opportunity Assessment Required"
+    kind: Event
+    description: "Assess market/product opportunity."
+    downstream_events: ["NPD Feasibility Assessment Due", "NPD Investment Review Triggered"]
+    entity_types: ["Product Concept", "Category", "Consumer Segment", "Market"]
+    affected_kpis: ["Opportunity Score", "TAM", "Expected Revenue"]
+
+  - id: NPD_NPDFeasibilityAssessmentDue
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "NPD Feasibility Assessment Due"
+    kind: Event
+    description: "Assess technical, supply, financial and regulatory feasibility."
+    downstream_events: ["NPD Stage Gate Reached", "NPD Compliance Clearance Required"]
+    entity_types: ["Product", "Ingredient", "Supplier", "Factory", "Market"]
+    affected_kpis: ["Feasibility Score", "Target COGS", "Time to Launch"]
+
+  - id: NPD_NPDStageGateReached
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "NPD Stage Gate Reached"
+    kind: Event
+    description: "Review/approve progression to next development stage."
+    downstream_events: ["Product Ready for Launch Review"]
+    entity_types: ["Product", "Project", "Formulation"]
+    affected_kpis: ["Stage-Gate Cycle Time", "Approval Rate"]
+
+  - id: NPD_FormulationTrialCompleted
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Formulation Trial Completed"
+    kind: Event
+    description: "Evaluate formulation trial outcome."
+    downstream_events: ["NPD Stage Gate Reached", "Formulation COGS Above Target"]
+    entity_types: ["Product", "Formulation", "Ingredient", "Lab Trial"]
+    affected_kpis: ["Trial Success Rate", "Sensory Score", "COGS"]
+
+  - id: NPD_FormulationCOGSAboveTarget
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Formulation COGS Above Target"
+    kind: Event
+    description: "Formulation exceeds target economics."
+    downstream_events: ["NPD Investment Review Triggered", "Supplier Review"]
+    entity_types: ["Product", "Formulation", "Ingredient", "Supplier"]
+    affected_kpis: ["COGS", "Gross Margin", "Target Cost Variance"]
+
+  - id: NPD_NPDProjectDelayed
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "NPD Project Delayed"
+    kind: Event
+    description: "Product-development milestone missed."
+    downstream_events: ["NPD Investment Review Triggered"]
+    entity_types: ["Product", "Project", "Team"]
+    affected_kpis: ["Time to Market", "Milestone Variance"]
+
+  - id: NPD_NPDComplianceClearanceRequired
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "NPD Compliance Clearance Required"
+    kind: Event
+    description: "Perform compliance pre-clearance."
+    downstream_events: ["Product Ready for Launch Review"]
+    entity_types: ["Product", "Ingredient", "Claim", "Market"]
+    affected_kpis: ["Compliance Readiness", "Launch Readiness"]
+
+  - id: NPD_ProductReadyForLaunchReview
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Product Ready for Launch Review"
+    kind: Event
+    description: "Cross-functional launch readiness assessment."
+    downstream_events: ["New SKU Created", "New Market / Channel Listing Requested"]
+    entity_types: ["Product", "SKU", "Channel", "Factory", "Market"]
+    affected_kpis: ["Launch Readiness Score", "On-Time Launch"]
+
+  - id: NPD_PostLaunchReviewDue
+    category: "NPD & Innovation"
+    owner: npd_team
+    name: "Post-Launch Review Due"
+    kind: Event
+    description: "Evaluate performance after launch."
+    downstream_events: ["Strategic Portfolio Review Due"]
+    entity_types: ["Product", "SKU", "Channel", "Consumer Segment"]
+    affected_kpis: ["Revenue", "Repeat Rate", "Margin", "Distribution"]
+
+  # ---- Compliance & Regulatory ----
+  - id: COMP_FSSAIRegulationPublished
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "FSSAI Regulation Published"
+    kind: Signal
+    description: "New/amended FSSAI regulation."
+    downstream_events: ["Compliance Review", "Product Claim Changed", "Label / Artwork Changed"]
+    entity_types: ["Regulation", "Product", "Ingredient", "Claim", "Market"]
+    affected_kpis: ["Compliance Exposure", "Revenue at Risk"]
+
+  - id: COMP_DraftRegulationPublished
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Draft Regulation Published"
+    kind: Signal
+    description: "Proposed regulatory requirement."
+    downstream_events: ["Compliance Impact Assessment"]
+    entity_types: ["Regulation", "Product", "Ingredient", "Market"]
+    affected_kpis: ["Future Compliance Exposure", "Readiness Score"]
+
+  - id: COMP_IngredientAdditiveRuleChange
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Ingredient / Additive Rule Change"
+    kind: Signal
+    description: "Permitted ingredient/additive rules change."
+    downstream_events: ["Product Formulation Changed", "Compliance Clearance"]
+    entity_types: ["Ingredient", "Product", "Supplier", "Formulation"]
+    affected_kpis: ["Products Impacted", "Reformulation Cost"]
+
+  - id: COMP_ClaimsRuleChange
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Claims Rule Change"
+    kind: Signal
+    description: "Rules governing health/nutrition claims change."
+    downstream_events: ["Product Claim Changed", "Label / Artwork Changed"]
+    entity_types: ["Claim", "Product", "Brand", "Channel"]
+    affected_kpis: ["Claims Compliance Rate", "Revenue at Risk"]
+
+  - id: COMP_LabellingRuleChange
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Labelling Rule Change"
+    kind: Signal
+    description: "Mandatory labeling requirements change."
+    downstream_events: ["Label / Artwork Changed", "Listing Content Update Required"]
+    entity_types: ["Product", "SKU", "Label", "Channel"]
+    affected_kpis: ["Label Compliance Rate", "SKUs Impacted"]
+
+  - id: COMP_PackagingRegulationChange
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Packaging Regulation Change"
+    kind: Signal
+    description: "Packaging/food-contact requirements change."
+    downstream_events: ["Packaging Change Review"]
+    entity_types: ["Packaging", "Product", "Supplier"]
+    affected_kpis: ["Packaging Compliance", "Cost Impact"]
+
+  - id: COMP_LegalMetrologyChange
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Legal Metrology Change"
+    kind: Signal
+    description: "MRP/quantity/declaration requirements change."
+    downstream_events: ["Label / Artwork Changed"]
+    entity_types: ["SKU", "Pack", "Channel", "Market"]
+    affected_kpis: ["Listing Compliance", "Price Compliance"]
+
+  - id: COMP_EPREnvironmentalRegulationChange
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "EPR / Environmental Regulation Change"
+    kind: Signal
+    description: "Packaging waste/EPR requirements change."
+    downstream_events: ["Packaging Compliance Review"]
+    entity_types: ["Packaging", "Product", "Market"]
+    affected_kpis: ["EPR Compliance", "Plastic Usage"]
+
+  - id: COMP_CompetitorEnforcementRecall
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Competitor Enforcement / Recall"
+    kind: Signal
+    description: "Regulatory action involving comparable product."
+    downstream_events: ["Compliance Review", "Quality Investigation"]
+    entity_types: ["Competitor Product", "Ingredient", "Category", "Product"]
+    affected_kpis: ["Regulatory Risk Score"]
+
+  - id: COMP_InternationalRegulatoryChange
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "International Regulatory Change"
+    kind: Signal
+    description: "Relevant foreign regulation changes."
+    downstream_events: ["Market Entry Assessment", "Compliance Review"]
+    entity_types: ["Product", "Market", "Ingredient", "Claim"]
+    affected_kpis: ["Market Readiness", "Compliance Exposure"]
+
+  - id: COMP_FSSAILicenceExpiry
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "FSSAI Licence Expiry"
+    kind: Event
+    description: "Licence nearing expiration."
+    downstream_events: ["Licence Renewal / Operational Escalation"]
+    entity_types: ["Licence", "Factory", "Warehouse", "Dark Store"]
+    affected_kpis: ["Licence Coverage", "Days to Expiry"]
+
+  - id: COMP_SupplierCOAExpiry
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Supplier COA Expiry"
+    kind: Event
+    description: "Supplier COA requires renewal."
+    downstream_events: ["Supplier Compliance Review", "Material Hold"]
+    entity_types: ["Supplier", "Ingredient", "COA"]
+    affected_kpis: ["Supplier Compliance Rate", "Material Availability"]
+
+  - id: COMP_SupplierCertificationExpiry
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Supplier Certification Expiry"
+    kind: Event
+    description: "Supplier certification expiring."
+    downstream_events: ["Supplier Performance Review", "Alternate Sourcing"]
+    entity_types: ["Supplier", "Certification", "Ingredient"]
+    affected_kpis: ["Approved Supplier Coverage"]
+
+  - id: COMP_ProductFormulationChanged
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Product Formulation Changed"
+    kind: Event
+    description: "Internal formulation modified."
+    downstream_events: ["Compliance Clearance", "Claim Review", "Label Change"]
+    entity_types: ["Product", "Formulation", "Ingredient", "Claim"]
+    affected_kpis: ["Compliance Readiness", "Reformulation Cost"]
+
+  - id: COMP_NewIngredientIntroduced
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "New Ingredient Introduced"
+    kind: Event
+    description: "New ingredient added to product."
+    downstream_events: ["Ingredient Compliance Assessment", "Supplier Qualification"]
+    entity_types: ["Ingredient", "Supplier", "Product"]
+    affected_kpis: ["Ingredient Approval Rate", "Compliance Risk"]
+
+  - id: COMP_ProductClaimChanged
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Product Claim Changed"
+    kind: Event
+    description: "Product/marketing claim modified."
+    downstream_events: ["Marketing Claim Approval", "Label Change"]
+    entity_types: ["Product", "Claim", "Brand", "Channel"]
+    affected_kpis: ["Claims Approval Rate", "Compliance Risk"]
+
+  - id: COMP_LabelArtworkChanged
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Label / Artwork Changed"
+    kind: Event
+    description: "Product artwork modified."
+    downstream_events: ["Listing Content Update Required"]
+    entity_types: ["SKU", "Label", "Artwork", "Channel"]
+    affected_kpis: ["Artwork Approval Cycle Time", "Listing Accuracy"]
+
+  - id: COMP_NewSKUCreated
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "New SKU Created"
+    kind: Event
+    description: "New SKU established internally."
+    downstream_events: ["Compliance Clearance", "New Listing Request"]
+    entity_types: ["SKU", "Product", "Market", "Channel"]
+    affected_kpis: ["Launch Readiness", "Compliance Completion"]
+
+  - id: COMP_NewMarketChannelListingRequested
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "New Market / Channel Listing Requested"
+    kind: Event
+    description: "Product requested for new market/channel."
+    downstream_events: ["Market Entry Assessment", "Listing Compliance Review"]
+    entity_types: ["Product", "SKU", "Market", "Channel"]
+    affected_kpis: ["Listing Readiness", "Compliance Coverage"]
+
+  - id: COMP_PeriodicComplianceReviewDue
+    category: "Compliance & Regulatory"
+    owner: compliance_team
+    name: "Periodic Compliance Review Due"
+    kind: Event
+    description: "Scheduled portfolio compliance assessment."
+    downstream_events: ["Product / Label / Claim Remediation"]
+    entity_types: ["Product Portfolio", "Regulation", "Market"]
+    affected_kpis: ["Portfolio Compliance Score"]
+
+  # ---- Marketing & Consumer ----
+  - id: MKT_SearchVolumeSpike
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Search Volume Spike"
+    kind: Signal
+    description: "Significant consumer search-interest movement."
+    downstream_events: ["Opportunity Assessment", "Campaign Planning"]
+    entity_types: ["Product", "Category", "Keyword", "Geography"]
+    affected_kpis: ["Search Share", "Demand Index"]
+
+  - id: MKT_SocialConversationSpike
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Social Conversation Spike"
+    kind: Signal
+    description: "Brand/category conversation increases rapidly."
+    downstream_events: ["Campaign Optimization"]
+    entity_types: ["Brand", "Product", "Consumer Segment"]
+    affected_kpis: ["Share of Voice", "Engagement"]
+
+  - id: MKT_BrandSentimentShift
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Brand Sentiment Shift"
+    kind: Signal
+    description: "Public sentiment materially changes."
+    downstream_events: ["Product Positioning Review", "Campaign Optimization"]
+    entity_types: ["Brand", "Product", "Consumer Segment"]
+    affected_kpis: ["Sentiment Score", "NPS Proxy"]
+
+  - id: MKT_ConsumerTrendEmergence
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Consumer Trend Emergence"
+    kind: Signal
+    description: "New consumer behavior/preferences emerge."
+    downstream_events: ["Opportunity Assessment", "Portfolio Review"]
+    entity_types: ["Consumer Segment", "Product", "Category"]
+    affected_kpis: ["Trend Adoption", "Segment Growth"]
+
+  - id: MKT_InfluencerMention
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Influencer Mention"
+    kind: Signal
+    description: "Influential creator discusses product/category."
+    downstream_events: ["Campaign Optimization"]
+    entity_types: ["Brand", "Product", "Influencer"]
+    affected_kpis: ["Earned Reach", "Engagement"]
+
+  - id: MKT_CompetitorCampaignLaunch
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Competitor Campaign Launch"
+    kind: Signal
+    description: "Competitor launches significant campaign."
+    downstream_events: ["Campaign Optimization", "Competitive Review"]
+    entity_types: ["Competitor", "Brand", "Product", "Category"]
+    affected_kpis: ["Share of Voice", "Brand Consideration"]
+
+  - id: MKT_ViralContentCategoryTrend
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Viral Content / Category Trend"
+    kind: Signal
+    description: "Relevant topic becomes viral."
+    downstream_events: ["Campaign Planning", "Opportunity Assessment"]
+    entity_types: ["Category", "Product", "Consumer Segment"]
+    affected_kpis: ["Trend Velocity", "Engagement"]
+
+  - id: MKT_FestivalSeasonalOpportunity
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Festival / Seasonal Opportunity"
+    kind: Signal
+    description: "Upcoming occasion affects demand."
+    downstream_events: ["Seasonal Campaign Planning", "Forecast Review"]
+    entity_types: ["Product", "Category", "Geography", "Channel"]
+    affected_kpis: ["Seasonal Uplift", "Revenue Opportunity"]
+
+  - id: MKT_CulturalSportingEvent
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Cultural / Sporting Event"
+    kind: Signal
+    description: "Major event influences consumption."
+    downstream_events: ["Campaign Planning", "Forecast Review"]
+    entity_types: ["Product", "Category", "Geography"]
+    affected_kpis: ["Campaign Opportunity", "Demand Uplift"]
+
+  - id: MKT_ConsumerBehaviorShift
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Consumer Behavior Shift"
+    kind: Signal
+    description: "External purchasing/consumption behavior changes."
+    downstream_events: ["Segment Strategy Review"]
+    entity_types: ["Consumer Segment", "Product", "Channel"]
+    affected_kpis: ["Conversion", "Repeat Rate", "Basket Size"]
+
+  - id: MKT_CampaignPerformanceBelowTarget
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Campaign Performance Below Target"
+    kind: Event
+    description: "Campaign KPI misses target."
+    downstream_events: ["Campaign Optimization Review"]
+    entity_types: ["Campaign", "Product", "Channel", "Segment"]
+    affected_kpis: ["ROAS", "CTR", "Conversion"]
+
+  - id: MKT_CampaignBudgetThresholdReached
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Campaign Budget Threshold Reached"
+    kind: Event
+    description: "Spend reaches predefined threshold."
+    downstream_events: ["Budget Reallocation Review"]
+    entity_types: ["Campaign", "Budget", "Channel"]
+    affected_kpis: ["Spend Utilization", "ROAS"]
+
+  - id: MKT_CampaignOptimizationReviewDue
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Campaign Optimization Review Due"
+    kind: Event
+    description: "Reassess active campaign."
+    downstream_events: ["Content Refresh Due"]
+    entity_types: ["Campaign", "Creative", "Audience"]
+    affected_kpis: ["CTR", "CPA", "ROAS"]
+
+  - id: MKT_ContentApprovalRequired
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Content Approval Required"
+    kind: Event
+    description: "Marketing content requires approval."
+    downstream_events: ["Marketing Claim Approval"]
+    entity_types: ["Content", "Claim", "Brand"]
+    affected_kpis: ["Approval Cycle Time"]
+
+  - id: MKT_MarketingClaimApprovalRequired
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Marketing Claim Approval Required"
+    kind: Event
+    description: "Validate proposed marketing claims."
+    downstream_events: ["Label / Artwork Changed"]
+    entity_types: ["Claim", "Product", "Content"]
+    affected_kpis: ["Claims Approval Rate"]
+
+  - id: MKT_DTCConversionBelowTarget
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "DTC Conversion Below Target"
+    kind: Event
+    description: "DTC conversion underperforms."
+    downstream_events: ["Campaign Optimization", "Pricing Review"]
+    entity_types: ["Product", "DTC Channel", "Segment"]
+    affected_kpis: ["Conversion Rate", "CAC"]
+
+  - id: MKT_CustomerSegmentPerformanceChanged
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Customer Segment Performance Changed"
+    kind: Event
+    description: "Segment economics/engagement shifts."
+    downstream_events: ["Segment Strategy Review"]
+    entity_types: ["Segment", "Product", "Channel"]
+    affected_kpis: ["Revenue per Segment", "Retention"]
+
+  - id: MKT_SeasonalCampaignPlanningDue
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Seasonal Campaign Planning Due"
+    kind: Event
+    description: "Initiate seasonal planning."
+    downstream_events: ["Campaign Budget Approval", "Content Approval"]
+    entity_types: ["Campaign", "Product", "Geography"]
+    affected_kpis: ["Campaign Readiness"]
+
+  - id: MKT_ContentRefreshDue
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Content Refresh Due"
+    kind: Event
+    description: "Existing assets require updating."
+    downstream_events: ["Content Approval Required"]
+    entity_types: ["Content", "Product", "Channel"]
+    affected_kpis: ["Content Freshness", "Engagement"]
+
+  - id: MKT_CampaignPostMortemDue
+    category: "Marketing & Consumer"
+    owner: marketing_team
+    name: "Campaign Post-Mortem Due"
+    kind: Event
+    description: "Analyze completed campaign."
+    downstream_events: ["Future Campaign Planning"]
+    entity_types: ["Campaign", "Product", "Channel"]
+    affected_kpis: ["Incremental Revenue", "ROAS"]
+
+  # ---- Sales & Channels ----
+  - id: SALES_RetailerExpansionAnnouncement
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Retailer Expansion Announcement"
+    kind: Signal
+    description: "Retailer expands geography/store footprint."
+    downstream_events: ["New Market / Channel Listing Requested"]
+    entity_types: ["Retailer", "Channel", "Geography", "Product"]
+    affected_kpis: ["Distribution Reach", "Revenue Opportunity"]
+
+  - id: SALES_QuickCommerceMarketExpansion
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Quick-Commerce Market Expansion"
+    kind: Signal
+    description: "Q-commerce platform enters new geography."
+    downstream_events: ["Market Entry Assessment", "New Listing Request"]
+    entity_types: ["Channel", "Geography", "Product"]
+    affected_kpis: ["Availability", "Incremental Revenue"]
+
+  - id: SALES_CompetitorNewListing
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Competitor New Listing"
+    kind: Signal
+    description: "Competitor SKU enters channel."
+    downstream_events: ["Portfolio Gap Assessment", "Channel Strategy Review"]
+    entity_types: ["Competitor Product", "Channel", "Category"]
+    affected_kpis: ["Share of Shelf", "Market Share"]
+
+  - id: SALES_CompetitorListingRemoval
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Competitor Listing Removal"
+    kind: Signal
+    description: "Competitor SKU disappears."
+    downstream_events: ["Sales Opportunity Assessment"]
+    entity_types: ["Competitor Product", "Channel", "Product"]
+    affected_kpis: ["Availability Advantage", "Revenue Opportunity"]
+
+  - id: SALES_CompetitorSearchRankingChange
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Competitor Search Ranking Change"
+    kind: Signal
+    description: "Competitor digital visibility changes."
+    downstream_events: ["Channel Strategy Review"]
+    entity_types: ["Product", "Competitor", "Channel"]
+    affected_kpis: ["Search Rank", "Share of Shelf"]
+
+  - id: SALES_CompetitorOutOfStock
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Competitor Out-of-Stock"
+    kind: Signal
+    description: "Competitor unavailable externally."
+    downstream_events: ["Sales Opportunity / Promotion Review"]
+    entity_types: ["Competitor Product", "Channel", "Geography"]
+    affected_kpis: ["Conversion Opportunity", "Sales Uplift"]
+
+  - id: SALES_RetailCategoryGrowth
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Retail Category Growth"
+    kind: Signal
+    description: "Category accelerates at retailer."
+    downstream_events: ["Assortment Review"]
+    entity_types: ["Retailer", "Category", "Product"]
+    affected_kpis: ["Category Growth", "Share of Category"]
+
+  - id: SALES_CompetitorAssortmentChange
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Competitor Assortment Change"
+    kind: Signal
+    description: "Competitor modifies channel portfolio."
+    downstream_events: ["SKU Assortment Review"]
+    entity_types: ["Competitor", "Product", "Channel"]
+    affected_kpis: ["Assortment Coverage"]
+
+  - id: SALES_MarketplacePolicyChange
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Marketplace Policy Change"
+    kind: Signal
+    description: "Marketplace modifies commercial/listing rules."
+    downstream_events: ["Listing Compliance Review"]
+    entity_types: ["Channel", "Product", "SKU"]
+    affected_kpis: ["Listing Compliance", "Channel Margin"]
+
+  - id: SALES_NewDistributionOpportunity
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "New Distribution Opportunity"
+    kind: Signal
+    description: "New channel/distributor identified."
+    downstream_events: ["Market Entry Assessment"]
+    entity_types: ["Distributor", "Channel", "Geography"]
+    affected_kpis: ["Numeric Distribution", "Revenue Opportunity"]
+
+  - id: SALES_SalesTargetVariance
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Sales Target Variance"
+    kind: Event
+    description: "Actual sales deviate from target."
+    downstream_events: ["Channel Performance Review"]
+    entity_types: ["Product", "Sales Territory", "Channel", "Customer"]
+    affected_kpis: ["Revenue Attainment", "Volume Variance"]
+
+  - id: SALES_DistributorInventoryThresholdBreached
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Distributor Inventory Threshold Breached"
+    kind: Event
+    description: "Distributor stock outside tolerance."
+    downstream_events: ["Replenishment", "Inventory Transfer"]
+    entity_types: ["Distributor", "SKU", "Inventory"]
+    affected_kpis: ["Days of Inventory", "Fill Rate"]
+
+  - id: SALES_NewListingRequestReceived
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "New Listing Request Received"
+    kind: Event
+    description: "New channel listing requested."
+    downstream_events: ["Listing Compliance Review", "Listing Creation"]
+    entity_types: ["Product", "SKU", "Retailer", "Channel"]
+    affected_kpis: ["Listing Lead Time", "Distribution"]
+
+  - id: SALES_ListingContentUpdateRequired
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Listing Content Update Required"
+    kind: Event
+    description: "Channel information requires modification."
+    downstream_events: ["Digital Shelf Audit"]
+    entity_types: ["SKU", "Listing", "Channel"]
+    affected_kpis: ["Listing Accuracy"]
+
+  - id: SALES_RetailerOrderReceived
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Retailer Order Received"
+    kind: Event
+    description: "Customer order enters system."
+    downstream_events: ["Order Fulfillment"]
+    entity_types: ["Customer", "Order", "SKU"]
+    affected_kpis: ["Fill Rate", "OTIF"]
+
+  - id: SALES_OrderFulfillmentSLABreached
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Order Fulfillment SLA Breached"
+    kind: Event
+    description: "Fulfillment misses agreed SLA."
+    downstream_events: ["Operations Escalation"]
+    entity_types: ["Order", "Customer", "Warehouse"]
+    affected_kpis: ["OTIF", "Service Level"]
+
+  - id: SALES_DistributorReplenishmentRequired
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Distributor Replenishment Required"
+    kind: Event
+    description: "Distributor requires replenishment."
+    downstream_events: ["Production / Dispatch Planning"]
+    entity_types: ["Distributor", "SKU", "Warehouse"]
+    affected_kpis: ["Service Level", "Stock Availability"]
+
+  - id: SALES_SKUAssortmentReviewDue
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "SKU Assortment Review Due"
+    kind: Event
+    description: "Review SKU mix by channel."
+    downstream_events: ["Listing Creation/Removal"]
+    entity_types: ["Product", "SKU", "Channel"]
+    affected_kpis: ["Assortment Productivity"]
+
+  - id: SALES_ChannelPerformanceBelowTarget
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Channel Performance Below Target"
+    kind: Event
+    description: "Channel misses performance target."
+    downstream_events: ["Channel Strategy Review", "Pricing Review"]
+    entity_types: ["Channel", "Product", "Customer"]
+    affected_kpis: ["Revenue Growth", "Channel Margin"]
+
+  - id: SALES_AccountBusinessReviewDue
+    category: "Sales & Channels"
+    owner: sales_team
+    name: "Account Business Review Due"
+    kind: Event
+    description: "Periodic key-account review."
+    downstream_events: ["Assortment", "Pricing", "Trade-Spend Review"]
+    entity_types: ["Customer", "Account", "Product"]
+    affected_kpis: ["Account Revenue", "Account Margin"]
+
+  # ---- Commercial & Financial Performance ----
+  - id: FIN_CompetitorPriceChange
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Competitor Price Change"
+    kind: Signal
+    description: "Competitor changes external selling price."
+    downstream_events: ["Price Review Due"]
+    entity_types: ["Competitor Product", "Product", "Category", "Channel"]
+    affected_kpis: ["Price Index", "Market Share"]
+
+  - id: FIN_CompetitorPromotionLaunch
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Competitor Promotion Launch"
+    kind: Signal
+    description: "Competitor introduces offer/discount."
+    downstream_events: ["Promotion Review"]
+    entity_types: ["Competitor", "Product", "Channel"]
+    affected_kpis: ["Promo Intensity", "Market Share"]
+
+  - id: FIN_CommodityPriceMovement
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Commodity Price Movement"
+    kind: Signal
+    description: "Key input market price changes."
+    downstream_events: ["COGS Above Threshold", "Gross Margin Below Floor"]
+    entity_types: ["Commodity", "Ingredient", "Product", "Supplier"]
+    affected_kpis: ["COGS", "Gross Margin"]
+
+  - id: FIN_FXRateMovement
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "FX Rate Movement"
+    kind: Signal
+    description: "Currency changes affect economics."
+    downstream_events: ["COGS Above Threshold", "Pricing Review"]
+    entity_types: ["Currency", "Supplier", "Ingredient", "Market"]
+    affected_kpis: ["Landed Cost", "Margin"]
+
+  - id: FIN_InflationMovement
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Inflation Movement"
+    kind: Signal
+    description: "Broader inflation changes."
+    downstream_events: ["Pricing Review", "Portfolio Review"]
+    entity_types: ["Market", "Category", "Product"]
+    affected_kpis: ["Price Realization", "Volume Growth"]
+
+  - id: FIN_CompetitorPackSizeChange
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Competitor Pack-Size Change"
+    kind: Signal
+    description: "Competitor alters price-pack architecture."
+    downstream_events: ["Product Positioning Review"]
+    entity_types: ["Pack", "Product", "Competitor"]
+    affected_kpis: ["Price per Unit", "Pack Mix"]
+
+  - id: FIN_CompetitorBundleOffer
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Competitor Bundle / Offer"
+    kind: Signal
+    description: "Competitor launches bundle."
+    downstream_events: ["Promotion / Bundle Review"]
+    entity_types: ["Competitor", "Product", "Channel"]
+    affected_kpis: ["Basket Size", "Promo ROI"]
+
+  - id: FIN_CategoryPricingMovement
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Category Pricing Movement"
+    kind: Signal
+    description: "Category-level pricing changes."
+    downstream_events: ["Price Review Due"]
+    entity_types: ["Category", "Product", "Channel"]
+    affected_kpis: ["Price Index"]
+
+  - id: FIN_RetailerDiscountMovement
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Retailer Discount Movement"
+    kind: Signal
+    description: "Retailer discounting changes."
+    downstream_events: ["Trade-Spend Review"]
+    entity_types: ["Retailer", "Product", "Promotion"]
+    affected_kpis: ["Price Realization", "Trade Spend"]
+
+  - id: FIN_MacroeconomicDemandChange
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Macroeconomic Demand Change"
+    kind: Signal
+    description: "Economy indicates demand pressure/opportunity."
+    downstream_events: ["Revenue Forecast Review"]
+    entity_types: ["Market", "Category", "Product"]
+    affected_kpis: ["Revenue Forecast", "Volume Growth"]
+
+  - id: FIN_GrossMarginBelowFloor
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Gross Margin Below Floor"
+    kind: Event
+    description: "Margin falls below policy threshold."
+    downstream_events: ["Price Review", "COGS Optimization", "Sourcing Review"]
+    entity_types: ["Product", "SKU", "Channel"]
+    affected_kpis: ["Gross Margin", "Contribution Margin"]
+
+  - id: FIN_COGSAboveThreshold
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "COGS Above Threshold"
+    kind: Event
+    description: "Product cost exceeds threshold."
+    downstream_events: ["Formulation Optimization", "Supplier Review"]
+    entity_types: ["Product", "Ingredient", "Supplier"]
+    affected_kpis: ["COGS", "Cost Variance"]
+
+  - id: FIN_PromotionROIBelowTarget
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Promotion ROI Below Target"
+    kind: Event
+    description: "Promotion generates inadequate return."
+    downstream_events: ["Promotion Optimization"]
+    entity_types: ["Promotion", "Product", "Channel"]
+    affected_kpis: ["Promo ROI", "Incremental Margin"]
+
+  - id: FIN_TradeSpendBudgetExceeded
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Trade Spend Budget Exceeded"
+    kind: Event
+    description: "Trade spend breaches budget."
+    downstream_events: ["Trade-Spend Reallocation"]
+    entity_types: ["Customer", "Channel", "Promotion"]
+    affected_kpis: ["Trade Spend %", "ROI"]
+
+  - id: FIN_RevenueVarianceAboveThreshold
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Revenue Variance Above Threshold"
+    kind: Event
+    description: "Revenue deviates materially from plan."
+    downstream_events: ["Sales Review", "Forecast Review"]
+    entity_types: ["Product", "Geography", "Channel"]
+    affected_kpis: ["Revenue Variance"]
+
+  - id: FIN_SKUProfitabilityBelowThreshold
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "SKU Profitability Below Threshold"
+    kind: Event
+    description: "SKU economics fall below target."
+    downstream_events: ["Portfolio Rationalization Review"]
+    entity_types: ["SKU", "Product", "Channel"]
+    affected_kpis: ["SKU Margin", "Contribution"]
+
+  - id: FIN_PriceReviewDue
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Price Review Due"
+    kind: Event
+    description: "Pricing decision required."
+    downstream_events: ["Listing Price Update"]
+    entity_types: ["Product", "SKU", "Channel"]
+    affected_kpis: ["Price Realization", "Margin"]
+
+  - id: FIN_CustomerChannelProfitabilityBelowTarget
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Customer / Channel Profitability Below Target"
+    kind: Event
+    description: "Channel/customer economics deteriorate."
+    downstream_events: ["Account Review", "Assortment Review"]
+    entity_types: ["Customer", "Channel", "Product"]
+    affected_kpis: ["Customer Margin", "Channel Margin"]
+
+  - id: FIN_PortfolioRationalizationReviewDue
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "Portfolio Rationalization Review Due"
+    kind: Event
+    description: "Portfolio optimization required."
+    downstream_events: ["SKU Discontinuation / Investment Review"]
+    entity_types: ["Product", "SKU", "Category"]
+    affected_kpis: ["Portfolio ROI", "SKU Productivity"]
+
+  - id: FIN_NPDInvestmentReviewTriggered
+    category: "Commercial & Financial Performance"
+    owner: portfolio_team
+    name: "NPD Investment Review Triggered"
+    kind: Event
+    description: "Innovation economics require reassessment."
+    downstream_events: ["Continue/Pause/Stop NPD"]
+    entity_types: ["Product Concept", "Project"]
+    affected_kpis: ["NPV", "Expected Margin", "Investment ROI"]
+
+  # ---- Operations & Supply Chain ----
+  - id: OPS_WeatherAnomaly
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Weather Anomaly"
+    kind: Signal
+    description: "External weather deviates materially from normal."
+    downstream_events: ["Forecast Review", "Inventory Rebalancing"]
+    entity_types: ["Geography", "Product", "Inventory"]
+    affected_kpis: ["Forecast Accuracy", "Service Level"]
+
+  - id: OPS_SevereWeatherWarning
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Severe Weather Warning"
+    kind: Signal
+    description: "Flood, cyclone, heatwave etc."
+    downstream_events: ["Supplier Risk Review", "Logistics Response"]
+    entity_types: ["Geography", "Supplier", "Warehouse", "Route"]
+    affected_kpis: ["OTIF", "Supply Risk"]
+
+  - id: OPS_TransportPortDisruption
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Transport / Port Disruption"
+    kind: Signal
+    description: "External transport network disrupted."
+    downstream_events: ["Shipment Delay", "Material Shortage"]
+    entity_types: ["Shipment", "Route", "Supplier", "Warehouse"]
+    affected_kpis: ["Lead Time", "OTIF"]
+
+  - id: OPS_FuelPriceSpike
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Fuel Price Spike"
+    kind: Signal
+    description: "Transport input costs increase."
+    downstream_events: ["Logistics Cost / Margin Review"]
+    entity_types: ["Route", "Carrier", "Product"]
+    affected_kpis: ["Logistics Cost per Unit"]
+
+  - id: OPS_FestivalEventDemandSignal
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Festival / Event Demand Signal"
+    kind: Signal
+    description: "Upcoming event likely changes demand."
+    downstream_events: ["Forecast Review", "Production Planning"]
+    entity_types: ["Product", "Geography", "Channel"]
+    affected_kpis: ["Forecast Accuracy", "Sales Uplift"]
+
+  - id: OPS_RegionalDisruption
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Regional Disruption"
+    kind: Signal
+    description: "Strike/unrest affects region."
+    downstream_events: ["Logistics / Inventory Risk Review"]
+    entity_types: ["Geography", "Warehouse", "Distributor"]
+    affected_kpis: ["Service Level"]
+
+  - id: OPS_LogisticsMarketDisruption
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Logistics Market Disruption"
+    kind: Signal
+    description: "Freight capacity/availability disrupted."
+    downstream_events: ["Shipment Delay", "Fulfillment Risk"]
+    entity_types: ["Carrier", "Route", "Shipment"]
+    affected_kpis: ["Freight Cost", "OTIF"]
+
+  - id: OPS_IndustryWideShortage
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Industry-Wide Shortage"
+    kind: Signal
+    description: "External material/capacity shortage emerges."
+    downstream_events: ["Supplier Capacity Risk"]
+    entity_types: ["Ingredient", "Supplier", "Product"]
+    affected_kpis: ["Material Availability"]
+
+  - id: OPS_ExternalDemandTrend
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "External Demand Trend"
+    kind: Signal
+    description: "Market indicators signal demand movement."
+    downstream_events: ["Demand Forecast Review"]
+    entity_types: ["Product", "Category", "Geography"]
+    affected_kpis: ["Forecast Accuracy"]
+
+  - id: OPS_InfrastructureDisruption
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Infrastructure Disruption"
+    kind: Signal
+    description: "Road/rail/power disruption occurs."
+    downstream_events: ["Shipment/Production Disruption"]
+    entity_types: ["Factory", "Warehouse", "Route"]
+    affected_kpis: ["Production Uptime", "OTIF"]
+
+  - id: OPS_InventoryBelowSafetyStock
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Inventory Below Safety Stock"
+    kind: Event
+    description: "Stock falls below policy threshold."
+    downstream_events: ["Replenishment", "Production Planning"]
+    entity_types: ["SKU", "Inventory", "Warehouse"]
+    affected_kpis: ["Days of Cover", "Stockout Rate"]
+
+  - id: OPS_ExcessInventoryDetected
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Excess Inventory Detected"
+    kind: Event
+    description: "Inventory exceeds target."
+    downstream_events: ["Liquidation", "Promotion", "Transfer"]
+    entity_types: ["SKU", "Inventory", "Warehouse"]
+    affected_kpis: ["Inventory Days", "Working Capital"]
+
+  - id: OPS_ShelfLifeThresholdReached
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Shelf-Life Threshold Reached"
+    kind: Event
+    description: "Stock approaches expiry."
+    downstream_events: ["Liquidation", "Transfer", "Promotion"]
+    entity_types: ["Batch", "SKU", "Warehouse"]
+    affected_kpis: ["Expiry Risk", "Waste %"]
+
+  - id: OPS_ForecastVarianceAboveTolerance
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Forecast Variance Above Tolerance"
+    kind: Event
+    description: "Actual vs forecast diverges."
+    downstream_events: ["Forecast Recalculation"]
+    entity_types: ["Product", "Geography", "Channel"]
+    affected_kpis: ["Forecast Accuracy", "Bias"]
+
+  - id: OPS_ProductionBehindPlan
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Production Behind Plan"
+    kind: Event
+    description: "Output misses production plan."
+    downstream_events: ["Recovery Planning"]
+    entity_types: ["Factory", "Production Order", "SKU"]
+    affected_kpis: ["Schedule Adherence", "Service Level"]
+
+  - id: OPS_FactoryCapacityThresholdReached
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Factory Capacity Threshold Reached"
+    kind: Event
+    description: "Plant approaches capacity limit."
+    downstream_events: ["Capacity Reallocation"]
+    entity_types: ["Factory", "Line", "Product"]
+    affected_kpis: ["Capacity Utilization"]
+
+  - id: OPS_WarehouseCapacityThresholdReached
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Warehouse Capacity Threshold Reached"
+    kind: Event
+    description: "Storage capacity constrained."
+    downstream_events: ["Inventory Redistribution"]
+    entity_types: ["Warehouse", "Inventory"]
+    affected_kpis: ["Capacity Utilization"]
+
+  - id: OPS_ShipmentDelayed
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Shipment Delayed"
+    kind: Event
+    description: "Shipment misses schedule."
+    downstream_events: ["Fulfillment SLA Risk"]
+    entity_types: ["Shipment", "Order", "Customer"]
+    affected_kpis: ["OTIF", "Lead Time"]
+
+  - id: OPS_OrderBacklogThresholdBreached
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Order Backlog Threshold Breached"
+    kind: Event
+    description: "Orders accumulate beyond tolerance."
+    downstream_events: ["Production / Fulfillment Recovery"]
+    entity_types: ["Order", "Customer", "SKU"]
+    affected_kpis: ["Backlog", "Service Level"]
+
+  - id: OPS_InventoryImbalanceAcrossLocations
+    category: "Operations & Supply Chain"
+    owner: supply_chain_team
+    name: "Inventory Imbalance Across Locations"
+    kind: Event
+    description: "Stock misallocated geographically."
+    downstream_events: ["Inter-Store/DC Transfer"]
+    entity_types: ["SKU", "Warehouse", "Store"]
+    affected_kpis: ["Stock Availability", "Inventory Turns"]
+
+  # ---- Procurement & Suppliers ----
+  - id: PROC_CommodityPriceSpike
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Commodity Price Spike"
+    kind: Signal
+    description: "Major external raw-material price increase."
+    downstream_events: ["COGS Above Threshold", "Supplier Price Review"]
+    entity_types: ["Commodity", "Ingredient", "Supplier", "Product"]
+    affected_kpis: ["Purchase Price Variance", "COGS"]
+
+  - id: PROC_CommodityFuturesMovement
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Commodity Futures Movement"
+    kind: Signal
+    description: "Forward prices indicate future risk."
+    downstream_events: ["Procurement Planning", "Contract Review"]
+    entity_types: ["Commodity", "Ingredient", "Contract"]
+    affected_kpis: ["Forecast Purchase Cost"]
+
+  - id: PROC_SupplierFinancialRiskNews
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Financial Risk News"
+    kind: Signal
+    description: "Public information indicates supplier distress."
+    downstream_events: ["Supplier Risk Review", "Alternate Sourcing"]
+    entity_types: ["Supplier", "Ingredient", "Contract"]
+    affected_kpis: ["Supplier Risk Score"]
+
+  - id: PROC_SupplierGeopoliticalExposure
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Geopolitical Exposure"
+    kind: Signal
+    description: "Political events threaten supplier operations."
+    downstream_events: ["Supply Continuity Review"]
+    entity_types: ["Supplier", "Geography", "Ingredient"]
+    affected_kpis: ["Supply Risk"]
+
+  - id: PROC_SupplierRegionWeatherDisruption
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Region Weather Disruption"
+    kind: Signal
+    description: "Weather threatens supplier geography."
+    downstream_events: ["Lead-Time Risk", "Alternate Sourcing"]
+    entity_types: ["Supplier", "Geography", "Ingredient"]
+    affected_kpis: ["Lead Time", "Material Availability"]
+
+  - id: PROC_PortShippingDisruption
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Port / Shipping Disruption"
+    kind: Signal
+    description: "External shipping route disruption."
+    downstream_events: ["Purchase Order Delay"]
+    entity_types: ["Supplier", "Shipment", "Ingredient"]
+    affected_kpis: ["Inbound OTIF"]
+
+  - id: PROC_MarketMaterialShortage
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Market Material Shortage"
+    kind: Signal
+    description: "Input availability declines externally."
+    downstream_events: ["Supplier Capacity Risk"]
+    entity_types: ["Ingredient", "Supplier", "Product"]
+    affected_kpis: ["Material Availability"]
+
+  - id: PROC_NewAlternativeSupplierIdentified
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "New Alternative Supplier Identified"
+    kind: Signal
+    description: "New sourcing candidate discovered."
+    downstream_events: ["Supplier Qualification"]
+    entity_types: ["Supplier", "Ingredient"]
+    affected_kpis: ["Supplier Coverage", "Sourcing Optionality"]
+
+  - id: PROC_SupplierMAOwnershipChange
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier M&A / Ownership Change"
+    kind: Signal
+    description: "Supplier ownership materially changes."
+    downstream_events: ["Supplier Risk Review"]
+    entity_types: ["Supplier", "Contract"]
+    affected_kpis: ["Supplier Risk Score"]
+
+  - id: PROC_IndustryInputCostMovement
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Industry Input Cost Movement"
+    kind: Signal
+    description: "Industry-wide input cost changes."
+    downstream_events: ["COGS Review", "Contract Review"]
+    entity_types: ["Ingredient", "Supplier", "Product"]
+    affected_kpis: ["COGS", "Purchase Price Variance"]
+
+  - id: PROC_SupplierOTIFBelowThreshold
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier OTIF Below Threshold"
+    kind: Event
+    description: "Supplier delivery performance deteriorates."
+    downstream_events: ["Supplier Performance Review"]
+    entity_types: ["Supplier", "PO", "Ingredient"]
+    affected_kpis: ["Supplier OTIF"]
+
+  - id: PROC_SupplierLeadTimeAboveThreshold
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Lead Time Above Threshold"
+    kind: Event
+    description: "Supplier delivery lead time deteriorates."
+    downstream_events: ["Safety Stock Review", "Alternate Sourcing"]
+    entity_types: ["Supplier", "Ingredient"]
+    affected_kpis: ["Lead Time", "Service Risk"]
+
+  - id: PROC_SupplierQualityScoreDeclined
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Quality Score Declined"
+    kind: Event
+    description: "Supplier quality deteriorates."
+    downstream_events: ["Supplier Quality Review"]
+    entity_types: ["Supplier", "Ingredient", "Batch"]
+    affected_kpis: ["Supplier Quality Score"]
+
+  - id: PROC_PurchaseOrderDelayed
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Purchase Order Delayed"
+    kind: Event
+    description: "PO misses required delivery date."
+    downstream_events: ["Material Shortage", "Production Risk"]
+    entity_types: ["PO", "Supplier", "Ingredient"]
+    affected_kpis: ["PO On-Time Delivery"]
+
+  - id: PROC_SupplierContractApproachingExpiry
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Contract Approaching Expiry"
+    kind: Event
+    description: "Contract requires renewal."
+    downstream_events: ["Negotiation / Sourcing Process"]
+    entity_types: ["Supplier", "Contract", "Ingredient"]
+    affected_kpis: ["Contract Coverage", "Savings"]
+
+  - id: PROC_SingleSourceExposureAboveThreshold
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Single-Source Exposure Above Threshold"
+    kind: Event
+    description: "Critical dependency identified."
+    downstream_events: ["Alternate Supplier Qualification"]
+    entity_types: ["Ingredient", "Supplier", "Product"]
+    affected_kpis: ["Single-Source Exposure"]
+
+  - id: PROC_SupplierCapacityInsufficient
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Capacity Insufficient"
+    kind: Event
+    description: "Supplier cannot satisfy forecast demand."
+    downstream_events: ["Alternate Sourcing"]
+    entity_types: ["Supplier", "Ingredient", "Product"]
+    affected_kpis: ["Supplier Capacity Coverage"]
+
+  - id: PROC_SupplierPriceIncreaseReceived
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Price Increase Received"
+    kind: Event
+    description: "Supplier requests higher price."
+    downstream_events: ["Negotiation", "COGS Review"]
+    entity_types: ["Supplier", "Ingredient", "Contract"]
+    affected_kpis: ["Purchase Price Variance"]
+
+  - id: PROC_ProcurementCycleDue
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Procurement Cycle Due"
+    kind: Event
+    description: "Planned procurement process begins."
+    downstream_events: ["RFQ / PO / Supplier Selection"]
+    entity_types: ["Ingredient", "Supplier", "Contract"]
+    affected_kpis: ["Procurement Cycle Time"]
+
+  - id: PROC_SupplierPerformanceReviewDue
+    category: "Procurement & Suppliers"
+    owner: procurement_team
+    name: "Supplier Performance Review Due"
+    kind: Event
+    description: "Scheduled supplier assessment."
+    downstream_events: ["Corrective Action / Sourcing Decision"]
+    entity_types: ["Supplier"]
+    affected_kpis: ["Supplier Scorecard"]
+
+  # ---- Quality & Food Safety ----
+  - id: QA_IndustryProductRecall
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Industry Product Recall"
+    kind: Signal
+    description: "Similar external product recalled."
+    downstream_events: ["Internal Product Risk Assessment"]
+    entity_types: ["Product", "Ingredient", "Category"]
+    affected_kpis: ["Risk Exposure"]
+
+  - id: QA_CompetitorProductRecall
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Competitor Product Recall"
+    kind: Signal
+    description: "Competitor recall detected."
+    downstream_events: ["Product / Ingredient Risk Review"]
+    entity_types: ["Competitor Product", "Ingredient", "Product"]
+    affected_kpis: ["Product Risk Score"]
+
+  - id: QA_IngredientSafetyWarning
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Ingredient Safety Warning"
+    kind: Signal
+    description: "External ingredient safety concern."
+    downstream_events: ["Ingredient Risk Assessment", "Material Hold"]
+    entity_types: ["Ingredient", "Supplier", "Product"]
+    affected_kpis: ["Safety Risk"]
+
+  - id: QA_ContaminationOutbreak
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Contamination Outbreak"
+    kind: Signal
+    description: "External contamination incident."
+    downstream_events: ["Supplier / Ingredient Risk Assessment"]
+    entity_types: ["Ingredient", "Supplier", "Geography"]
+    affected_kpis: ["Food Safety Risk"]
+
+  - id: QA_RegulatorFoodSafetyAlert
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Regulator Food Safety Alert"
+    kind: Signal
+    description: "Regulator publishes safety warning."
+    downstream_events: ["Product Risk Assessment"]
+    entity_types: ["Product", "Ingredient", "Market"]
+    affected_kpis: ["Compliance Risk"]
+
+  - id: QA_PublicComplaintTrend
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Public Complaint Trend"
+    kind: Signal
+    description: "External consumers report emerging issue."
+    downstream_events: ["Quality Investigation"]
+    entity_types: ["Product", "SKU", "Attribute"]
+    affected_kpis: ["Complaint Rate", "Sentiment"]
+
+  - id: QA_CategoryQualityIssue
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Category Quality Issue"
+    kind: Signal
+    description: "Market-wide category quality problem."
+    downstream_events: ["Internal Quality Review"]
+    entity_types: ["Category", "Product"]
+    affected_kpis: ["Quality Risk"]
+
+  - id: QA_SupplierPublicSafetyAlert
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Supplier Public Safety Alert"
+    kind: Signal
+    description: "External alert involves supplier."
+    downstream_events: ["Supplier Quality Review", "Material Hold"]
+    entity_types: ["Supplier", "Ingredient"]
+    affected_kpis: ["Supplier Risk"]
+
+  - id: QA_ScientificSafetyFinding
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Scientific Safety Finding"
+    kind: Signal
+    description: "New scientific safety evidence emerges."
+    downstream_events: ["Ingredient / Formulation Risk Review"]
+    entity_types: ["Ingredient", "Product"]
+    affected_kpis: ["Safety Risk"]
+
+  - id: QA_InternationalFoodSafetyAlert
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "International Food Safety Alert"
+    kind: Signal
+    description: "Relevant global alert issued."
+    downstream_events: ["Product / Ingredient Risk Assessment"]
+    entity_types: ["Product", "Ingredient", "Market"]
+    affected_kpis: ["Market Risk"]
+
+  - id: QA_LabTestFailed
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Lab Test Failed"
+    kind: Event
+    description: "Internal lab result fails specification."
+    downstream_events: ["Batch Hold", "CAPA"]
+    entity_types: ["Batch", "Product", "Lab Test"]
+    affected_kpis: ["Pass Rate", "Batch Release Time"]
+
+  - id: QA_BatchSpecificationBreached
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Batch Specification Breached"
+    kind: Event
+    description: "Batch outside approved limits."
+    downstream_events: ["Batch Hold / Rejection", "CAPA"]
+    entity_types: ["Batch", "Product", "Factory"]
+    affected_kpis: ["Batch Conformance Rate"]
+
+  - id: QA_IncomingMaterialFailedQA
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Incoming Material Failed QA"
+    kind: Event
+    description: "Raw material fails inspection."
+    downstream_events: ["Material Rejection", "Supplier Review"]
+    entity_types: ["Ingredient", "Supplier", "Batch"]
+    affected_kpis: ["Incoming Quality Rate"]
+
+  - id: QA_BatchRejected
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Batch Rejected"
+    kind: Event
+    description: "Batch formally rejected."
+    downstream_events: ["CAPA", "Production Rescheduling"]
+    entity_types: ["Batch", "Product", "Factory"]
+    affected_kpis: ["Rejection Rate", "Yield"]
+
+  - id: QA_PackagingDefectAboveThreshold
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Packaging Defect Above Threshold"
+    kind: Event
+    description: "Packaging defects exceed tolerance."
+    downstream_events: ["Packaging Investigation"]
+    entity_types: ["Packaging", "Supplier", "Product"]
+    affected_kpis: ["Defect Rate"]
+
+  - id: QA_ProductionParameterOutsideTolerance
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Production Parameter Outside Tolerance"
+    kind: Event
+    description: "Manufacturing parameter deviates."
+    downstream_events: ["Batch Quality Review", "CAPA"]
+    entity_types: ["Production Line", "Batch", "Product"]
+    affected_kpis: ["Process Capability", "Yield"]
+
+  - id: QA_ConsumerComplaintsAboveThreshold
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Consumer Complaints Above Threshold"
+    kind: Event
+    description: "Internal complaint threshold breached."
+    downstream_events: ["Quality Investigation", "Batch Correlation"]
+    entity_types: ["Product", "SKU", "Batch"]
+    affected_kpis: ["Complaint Rate"]
+
+  - id: QA_ProductReturnsAboveThreshold
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Product Returns Above Threshold"
+    kind: Event
+    description: "Return rate breaches target."
+    downstream_events: ["Quality Investigation"]
+    entity_types: ["Product", "SKU", "Channel"]
+    affected_kpis: ["Return Rate"]
+
+  - id: QA_TraceabilityFailureDetected
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "Traceability Failure Detected"
+    kind: Event
+    description: "Product/batch lineage cannot be established."
+    downstream_events: ["Compliance Escalation", "CAPA"]
+    entity_types: ["Batch", "Ingredient", "Supplier", "Product"]
+    affected_kpis: ["Traceability Coverage"]
+
+  - id: QA_CAPAInvestigationDue
+    category: "Quality & Food Safety"
+    owner: compliance_team
+    name: "CAPA Investigation Due"
+    kind: Event
+    description: "Corrective/preventive process required."
+    downstream_events: ["Supplier / Manufacturing Corrective Action"]
+    entity_types: ["CAPA", "Factory", "Supplier"]
+    affected_kpis: ["CAPA Closure Time"]
+
+  # ---- Competitive & Market Intelligence ----
+  - id: CMI_CompetitorProductLaunch
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Product Launch"
+    kind: Signal
+    description: "Competitor introduces product/SKU."
+    downstream_events: ["Competitive Review", "Portfolio Gap Assessment"]
+    entity_types: ["Competitor", "Product", "Category", "Channel"]
+    affected_kpis: ["Market Share", "Innovation Gap"]
+
+  - id: CMI_CompetitorPriceChange
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Price Change"
+    kind: Signal
+    description: "Competitor pricing moves."
+    downstream_events: ["Competitive Pricing Review"]
+    entity_types: ["Competitor Product", "Product", "Channel"]
+    affected_kpis: ["Price Index"]
+
+  - id: CMI_CompetitorPromotion
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Promotion"
+    kind: Signal
+    description: "Competitor launches promotion."
+    downstream_events: ["Promotion Response Review"]
+    entity_types: ["Competitor", "Product", "Channel"]
+    affected_kpis: ["Promo Share", "Market Share"]
+
+  - id: CMI_CompetitorClaimChange
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Claim Change"
+    kind: Signal
+    description: "Competitor positioning/claim changes."
+    downstream_events: ["Product Positioning Review"]
+    entity_types: ["Competitor Product", "Claim", "Product"]
+    affected_kpis: ["Brand Differentiation"]
+
+  - id: CMI_CompetitorFormulationChange
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Formulation Change"
+    kind: Signal
+    description: "Competitor changes product composition."
+    downstream_events: ["Product / NPD Review"]
+    entity_types: ["Competitor Product", "Ingredient", "Product"]
+    affected_kpis: ["Product Differentiation"]
+
+  - id: CMI_CompetitorGeographicExpansion
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Geographic Expansion"
+    kind: Signal
+    description: "Competitor enters new geography."
+    downstream_events: ["Market Entry / Defense Review"]
+    entity_types: ["Competitor", "Geography", "Channel"]
+    affected_kpis: ["Regional Market Share"]
+
+  - id: CMI_CompetitorChannelExpansion
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Channel Expansion"
+    kind: Signal
+    description: "Competitor enters new channel."
+    downstream_events: ["Channel Strategy Review"]
+    entity_types: ["Competitor", "Channel", "Product"]
+    affected_kpis: ["Channel Share"]
+
+  - id: CMI_CompetitorFundingMA
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Funding / M&A"
+    kind: Signal
+    description: "Competitor capital/ownership changes."
+    downstream_events: ["Strategic Competitive Review"]
+    entity_types: ["Competitor", "Category", "Market"]
+    affected_kpis: ["Competitive Threat Score"]
+
+  - id: CMI_NewChallengerBrandEmerging
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "New Challenger Brand Emerging"
+    kind: Signal
+    description: "Fast-growing new entrant detected."
+    downstream_events: ["Competitive Review", "Portfolio Gap Assessment"]
+    entity_types: ["Competitor", "Brand", "Category"]
+    affected_kpis: ["Share Growth"]
+
+  - id: CMI_CategoryMarketGrowthShift
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Category / Market Growth Shift"
+    kind: Signal
+    description: "Category trajectory changes."
+    downstream_events: ["Category Performance Review", "Portfolio Review"]
+    entity_types: ["Category", "Market", "Product"]
+    affected_kpis: ["Category Growth", "Market Share"]
+
+  - id: CMI_CompetitiveReviewDue
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitive Review Due"
+    kind: Event
+    description: "Structured competitor assessment required."
+    downstream_events: ["Positioning / Pricing / Portfolio Review"]
+    entity_types: ["Competitor", "Product", "Category"]
+    affected_kpis: ["Competitive Position Score"]
+
+  - id: CMI_MarketShareVarianceAboveThreshold
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Market Share Variance Above Threshold"
+    kind: Event
+    description: "Internal share KPI deviates."
+    downstream_events: ["Category Review", "Competitive Review"]
+    entity_types: ["Product", "Category", "Geography"]
+    affected_kpis: ["Market Share"]
+
+  - id: CMI_CategoryPerformanceReviewTriggered
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Category Performance Review Triggered"
+    kind: Event
+    description: "Category requires strategic review."
+    downstream_events: ["Portfolio / Assortment / NPD Review"]
+    entity_types: ["Category", "Product", "Channel"]
+    affected_kpis: ["Category Growth", "Margin"]
+
+  - id: CMI_ProductPositioningReviewDue
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Product Positioning Review Due"
+    kind: Event
+    description: "Positioning requires reassessment."
+    downstream_events: ["Claim / Pack / Marketing Review"]
+    entity_types: ["Product", "Brand", "Claim"]
+    affected_kpis: ["Brand Consideration"]
+
+  - id: CMI_CompetitivePricingReviewTriggered
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitive Pricing Review Triggered"
+    kind: Event
+    description: "Pricing response needs assessment."
+    downstream_events: ["Price Review Due"]
+    entity_types: ["Product", "Competitor", "Channel"]
+    affected_kpis: ["Price Index", "Margin"]
+
+  - id: CMI_PortfolioGapAssessmentDue
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Portfolio Gap Assessment Due"
+    kind: Event
+    description: "Compare portfolio against market opportunities."
+    downstream_events: ["Opportunity Assessment / NPD"]
+    entity_types: ["Product Portfolio", "Category"]
+    affected_kpis: ["Portfolio Coverage", "Opportunity Value"]
+
+  - id: CMI_MarketEntryAssessmentInitiated
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Market Entry Assessment Initiated"
+    kind: Event
+    description: "New geography/category evaluated."
+    downstream_events: ["Compliance", "Channel", "Supply Readiness"]
+    entity_types: ["Market", "Geography", "Product", "Channel"]
+    affected_kpis: ["Market Attractiveness", "Readiness"]
+
+  - id: CMI_ChannelStrategyReviewDue
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Channel Strategy Review Due"
+    kind: Event
+    description: "Channel strategy reassessment required."
+    downstream_events: ["Assortment / Listing / Pricing Review"]
+    entity_types: ["Channel", "Product", "Customer"]
+    affected_kpis: ["Channel Growth", "Channel Margin"]
+
+  - id: CMI_CompetitorResponseAssessmentAssigned
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Competitor Response Assessment Assigned"
+    kind: Event
+    description: "Competitor move requires response."
+    downstream_events: ["Pricing / Marketing / NPD Response"]
+    entity_types: ["Competitor", "Product", "Category"]
+    affected_kpis: ["Threat Score", "Expected Revenue Impact"]
+
+  - id: CMI_StrategicPortfolioReviewDue
+    category: "Competitive & Market Intelligence"
+    owner: portfolio_team
+    name: "Strategic Portfolio Review Due"
+    kind: Event
+    description: "Portfolio strategy reassessment."
+    downstream_events: ["Rationalization / NPD Investment"]
+    entity_types: ["Product Portfolio", "Category"]
+    affected_kpis: ["Portfolio ROI", "Growth", "Margin"]

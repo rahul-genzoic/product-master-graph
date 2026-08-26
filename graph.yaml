@@ -17,9 +17,10 @@ ontology:
 master_data:
   dir: ./master_data
   files:
-    vocabularies: vocabularies.yaml
-    hierarchies:  hierarchies.yaml
-    kpis:         kpis.yaml
+    vocabularies:    vocabularies.yaml
+    hierarchies:     hierarchies.yaml
+    kpis:            kpis.yaml
+    signals_events:  signals_events.yaml
   cache_dir: .contextgraph/refdata_cache
 
 # Business constraints (projected as meta.Constraint nodes; not enforced).

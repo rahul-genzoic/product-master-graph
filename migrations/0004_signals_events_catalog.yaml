@@ -1,0 +1,17 @@
+# Re-projects the ontology after adding master_data/signals_events.yaml.
+# ingest_ontology is idempotent per-migration; 0001-0003 already ran, so this
+# new master_data file needs its own migration id to be picked up.
+
+id: 0004_signals_events_catalog
+description: |
+  Adds the Demo Signal & Event catalog (master_data/signals_events.yaml),
+  imported from the "Demo events / signals" tab of the solution-design
+  tracker: 180 entries (90 Signal, 90 Event) across 9 business categories
+  (NPD & Innovation, Compliance & Regulatory, Marketing & Consumer, Sales &
+  Channels, Commercial & Financial Performance, Operations & Supply Chain,
+  Procurement & Suppliers, Quality & Food Safety, Competitive & Market
+  Intelligence). Projected as meta.Signal / meta.Event nodes, same as
+  policies/constraints.yaml projects as meta.Constraint.
+created_at: 2026-08-26
+operations:
+  - kind: ingest_ontology
