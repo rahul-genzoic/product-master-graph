@@ -22,6 +22,18 @@ version: 1
 # Impacted Entity Types -> entity_types, Affected KPI -> affected_kpis.
 # Projected by ingest_ontology (see migrations/0004_signals_events_catalog.yaml)
 # the same way policies/constraints.yaml projects as meta.Constraint.
+#
+# `related_processes` (real processes/*.yaml ids) and `related_kpis` (real
+# master_data/kpis.yaml ids) are curated on top of the sheet import, NOT part
+# of it -- added only where a process's own description or a KPI's own
+# applies_to/description is an unambiguous match for that entry (e.g.
+# COMP_ProductClaimChanged -> claims_validation; OPS_ShelfLifeThresholdReached
+# -> shelf_life_risk_monitoring / WastageRisk). Both fields are optional and
+# absent on most entries: this repo has only 22 processes and 28 KPIs built
+# against 180 signals/events, so most entries genuinely have no real process
+# or KPI to point to yet -- absence means "not built here yet", not "not
+# reviewed". Never add an entry to either list without a real match; extend
+# these only as new processes/KPIs are actually built.
 
 signals_events:
   # ---- NPD & Innovation ----
@@ -134,6 +146,7 @@ signals_events:
     downstream_events: ["Opportunity Assessment Required"]
     entity_types: ["Idea", "Product Concept", "Category"]
     affected_kpis: ["Idea Pipeline Count", "Idea Conversion Rate"]
+    related_processes: [idea_capture_triage]
 
   - id: NPD_OpportunityAssessmentRequired
     category: "NPD & Innovation"
@@ -164,6 +177,8 @@ signals_events:
     downstream_events: ["Product Ready for Launch Review"]
     entity_types: ["Product", "Project", "Formulation"]
     affected_kpis: ["Stage-Gate Cycle Time", "Approval Rate"]
+    related_processes: [innovation_pipeline_prioritisation]
+    related_kpis: [PipelineAgingDays, StalledBriefCount]
 
   - id: NPD_FormulationTrialCompleted
     category: "NPD & Innovation"
@@ -204,6 +219,7 @@ signals_events:
     downstream_events: ["Product Ready for Launch Review"]
     entity_types: ["Product", "Ingredient", "Claim", "Market"]
     affected_kpis: ["Compliance Readiness", "Launch Readiness"]
+    related_processes: [npd_compliance_preclearance]
 
   - id: NPD_ProductReadyForLaunchReview
     category: "NPD & Innovation"
@@ -235,6 +251,7 @@ signals_events:
     downstream_events: ["Compliance Review", "Product Claim Changed", "Label / Artwork Changed"]
     entity_types: ["Regulation", "Product", "Ingredient", "Claim", "Market"]
     affected_kpis: ["Compliance Exposure", "Revenue at Risk"]
+    related_processes: [regulation_impact_analysis]
 
   - id: COMP_DraftRegulationPublished
     category: "Compliance & Regulatory"
@@ -245,6 +262,7 @@ signals_events:
     downstream_events: ["Compliance Impact Assessment"]
     entity_types: ["Regulation", "Product", "Ingredient", "Market"]
     affected_kpis: ["Future Compliance Exposure", "Readiness Score"]
+    related_processes: [regulatory_horizon_alerts]
 
   - id: COMP_IngredientAdditiveRuleChange
     category: "Compliance & Regulatory"
@@ -255,6 +273,7 @@ signals_events:
     downstream_events: ["Product Formulation Changed", "Compliance Clearance"]
     entity_types: ["Ingredient", "Product", "Supplier", "Formulation"]
     affected_kpis: ["Products Impacted", "Reformulation Cost"]
+    related_processes: [regulation_impact_analysis]
 
   - id: COMP_ClaimsRuleChange
     category: "Compliance & Regulatory"
@@ -265,6 +284,8 @@ signals_events:
     downstream_events: ["Product Claim Changed", "Label / Artwork Changed"]
     entity_types: ["Claim", "Product", "Brand", "Channel"]
     affected_kpis: ["Claims Compliance Rate", "Revenue at Risk"]
+    related_processes: [regulation_impact_analysis, claims_validation]
+    related_kpis: [ClaimSubstantiationRate, ContradictedClaimCount]
 
   - id: COMP_LabellingRuleChange
     category: "Compliance & Regulatory"
@@ -275,6 +296,8 @@ signals_events:
     downstream_events: ["Label / Artwork Changed", "Listing Content Update Required"]
     entity_types: ["Product", "SKU", "Label", "Channel"]
     affected_kpis: ["Label Compliance Rate", "SKUs Impacted"]
+    related_processes: [regulation_impact_analysis, label_compliance_review]
+    related_kpis: [MandatoryNutrientCompleteness, PanelBasisKnownShare]
 
   - id: COMP_PackagingRegulationChange
     category: "Compliance & Regulatory"
@@ -285,6 +308,7 @@ signals_events:
     downstream_events: ["Packaging Change Review"]
     entity_types: ["Packaging", "Product", "Supplier"]
     affected_kpis: ["Packaging Compliance", "Cost Impact"]
+    related_processes: [regulation_impact_analysis]
 
   - id: COMP_LegalMetrologyChange
     category: "Compliance & Regulatory"
@@ -295,6 +319,7 @@ signals_events:
     downstream_events: ["Label / Artwork Changed"]
     entity_types: ["SKU", "Pack", "Channel", "Market"]
     affected_kpis: ["Listing Compliance", "Price Compliance"]
+    related_processes: [regulation_impact_analysis, label_compliance_review]
 
   - id: COMP_EPREnvironmentalRegulationChange
     category: "Compliance & Regulatory"
@@ -305,6 +330,7 @@ signals_events:
     downstream_events: ["Packaging Compliance Review"]
     entity_types: ["Packaging", "Product", "Market"]
     affected_kpis: ["EPR Compliance", "Plastic Usage"]
+    related_processes: [regulation_impact_analysis]
 
   - id: COMP_CompetitorEnforcementRecall
     category: "Compliance & Regulatory"
@@ -315,6 +341,7 @@ signals_events:
     downstream_events: ["Compliance Review", "Quality Investigation"]
     entity_types: ["Competitor Product", "Ingredient", "Category", "Product"]
     affected_kpis: ["Regulatory Risk Score"]
+    related_processes: [competitor_enforcement_signals]
 
   - id: COMP_InternationalRegulatoryChange
     category: "Compliance & Regulatory"
@@ -325,6 +352,7 @@ signals_events:
     downstream_events: ["Market Entry Assessment", "Compliance Review"]
     entity_types: ["Product", "Market", "Ingredient", "Claim"]
     affected_kpis: ["Market Readiness", "Compliance Exposure"]
+    related_processes: [multi_market_compliance_readiness]
 
   - id: COMP_FSSAILicenceExpiry
     category: "Compliance & Regulatory"
@@ -335,6 +363,7 @@ signals_events:
     downstream_events: ["Licence Renewal / Operational Escalation"]
     entity_types: ["Licence", "Factory", "Warehouse", "Dark Store"]
     affected_kpis: ["Licence Coverage", "Days to Expiry"]
+    related_processes: [dark_store_licence_management]
 
   - id: COMP_SupplierCOAExpiry
     category: "Compliance & Regulatory"
@@ -345,6 +374,7 @@ signals_events:
     downstream_events: ["Supplier Compliance Review", "Material Hold"]
     entity_types: ["Supplier", "Ingredient", "COA"]
     affected_kpis: ["Supplier Compliance Rate", "Material Availability"]
+    related_processes: [supplier_coa_renewal]
 
   - id: COMP_SupplierCertificationExpiry
     category: "Compliance & Regulatory"
@@ -365,6 +395,8 @@ signals_events:
     downstream_events: ["Compliance Clearance", "Claim Review", "Label Change"]
     entity_types: ["Product", "Formulation", "Ingredient", "Claim"]
     affected_kpis: ["Compliance Readiness", "Reformulation Cost"]
+    related_processes: [label_compliance_review, claims_validation]
+    related_kpis: [AllergenUnderdeclarationRate]
 
   - id: COMP_NewIngredientIntroduced
     category: "Compliance & Regulatory"
@@ -385,6 +417,8 @@ signals_events:
     downstream_events: ["Marketing Claim Approval", "Label Change"]
     entity_types: ["Product", "Claim", "Brand", "Channel"]
     affected_kpis: ["Claims Approval Rate", "Compliance Risk"]
+    related_processes: [claims_validation]
+    related_kpis: [ClaimSubstantiationRate, ContradictedClaimCount]
 
   - id: COMP_LabelArtworkChanged
     category: "Compliance & Regulatory"
@@ -395,6 +429,8 @@ signals_events:
     downstream_events: ["Listing Content Update Required"]
     entity_types: ["SKU", "Label", "Artwork", "Channel"]
     affected_kpis: ["Artwork Approval Cycle Time", "Listing Accuracy"]
+    related_processes: [label_compliance_review]
+    related_kpis: [MandatoryNutrientCompleteness, PanelBasisKnownShare]
 
   - id: COMP_NewSKUCreated
     category: "Compliance & Regulatory"
@@ -405,6 +441,7 @@ signals_events:
     downstream_events: ["Compliance Clearance", "New Listing Request"]
     entity_types: ["SKU", "Product", "Market", "Channel"]
     affected_kpis: ["Launch Readiness", "Compliance Completion"]
+    related_kpis: [ListingReadyShare, BlockingGapsPerSku]
 
   - id: COMP_NewMarketChannelListingRequested
     category: "Compliance & Regulatory"
@@ -415,6 +452,7 @@ signals_events:
     downstream_events: ["Market Entry Assessment", "Listing Compliance Review"]
     entity_types: ["Product", "SKU", "Market", "Channel"]
     affected_kpis: ["Listing Readiness", "Compliance Coverage"]
+    related_processes: [multi_market_compliance_readiness]
 
   - id: COMP_PeriodicComplianceReviewDue
     category: "Compliance & Regulatory"
@@ -506,6 +544,7 @@ signals_events:
     downstream_events: ["Seasonal Campaign Planning", "Forecast Review"]
     entity_types: ["Product", "Category", "Geography", "Channel"]
     affected_kpis: ["Seasonal Uplift", "Revenue Opportunity"]
+    related_processes: [seasonal_campaign_planning]
 
   - id: MKT_CulturalSportingEvent
     category: "Marketing & Consumer"
@@ -516,6 +555,7 @@ signals_events:
     downstream_events: ["Campaign Planning", "Forecast Review"]
     entity_types: ["Product", "Category", "Geography"]
     affected_kpis: ["Campaign Opportunity", "Demand Uplift"]
+    related_processes: [seasonal_campaign_planning]
 
   - id: MKT_ConsumerBehaviorShift
     category: "Marketing & Consumer"
@@ -536,6 +576,8 @@ signals_events:
     downstream_events: ["Campaign Optimization Review"]
     entity_types: ["Campaign", "Product", "Channel", "Segment"]
     affected_kpis: ["ROAS", "CTR", "Conversion"]
+    related_processes: [campaign_planning_optimisation]
+    related_kpis: [BlendedCampaignRoi, ZeroReturnAdSpend, AdsConversionGapPct]
 
   - id: MKT_CampaignBudgetThresholdReached
     category: "Marketing & Consumer"
@@ -546,6 +588,8 @@ signals_events:
     downstream_events: ["Budget Reallocation Review"]
     entity_types: ["Campaign", "Budget", "Channel"]
     affected_kpis: ["Spend Utilization", "ROAS"]
+    related_processes: [campaign_planning_optimisation]
+    related_kpis: [ZeroReturnAdSpend]
 
   - id: MKT_CampaignOptimizationReviewDue
     category: "Marketing & Consumer"
@@ -556,6 +600,8 @@ signals_events:
     downstream_events: ["Content Refresh Due"]
     entity_types: ["Campaign", "Creative", "Audience"]
     affected_kpis: ["CTR", "CPA", "ROAS"]
+    related_processes: [campaign_planning_optimisation]
+    related_kpis: [BlendedCampaignRoi, ZeroReturnAdSpend, AdsConversionGapPct]
 
   - id: MKT_ContentApprovalRequired
     category: "Marketing & Consumer"
@@ -576,6 +622,8 @@ signals_events:
     downstream_events: ["Label / Artwork Changed"]
     entity_types: ["Claim", "Product", "Content"]
     affected_kpis: ["Claims Approval Rate"]
+    related_processes: [claims_validation]
+    related_kpis: [ClaimSubstantiationRate, ContradictedClaimCount]
 
   - id: MKT_DTCConversionBelowTarget
     category: "Marketing & Consumer"
@@ -606,6 +654,7 @@ signals_events:
     downstream_events: ["Campaign Budget Approval", "Content Approval"]
     entity_types: ["Campaign", "Product", "Geography"]
     affected_kpis: ["Campaign Readiness"]
+    related_processes: [seasonal_campaign_planning]
 
   - id: MKT_ContentRefreshDue
     category: "Marketing & Consumer"
@@ -626,6 +675,8 @@ signals_events:
     downstream_events: ["Future Campaign Planning"]
     entity_types: ["Campaign", "Product", "Channel"]
     affected_kpis: ["Incremental Revenue", "ROAS"]
+    related_processes: [campaign_planning_optimisation]
+    related_kpis: [BlendedCampaignRoi]
 
   # ---- Sales & Channels ----
   - id: SALES_RetailerExpansionAnnouncement
@@ -767,6 +818,7 @@ signals_events:
     downstream_events: ["Digital Shelf Audit"]
     entity_types: ["SKU", "Listing", "Channel"]
     affected_kpis: ["Listing Accuracy"]
+    related_processes: [channel_listing_claim_audit]
 
   - id: SALES_RetailerOrderReceived
     category: "Sales & Channels"
@@ -938,6 +990,7 @@ signals_events:
     downstream_events: ["Price Review", "COGS Optimization", "Sourcing Review"]
     entity_types: ["Product", "SKU", "Channel"]
     affected_kpis: ["Gross Margin", "Contribution Margin"]
+    related_kpis: [MarginPct]
 
   - id: FIN_COGSAboveThreshold
     category: "Commercial & Financial Performance"
@@ -948,6 +1001,7 @@ signals_events:
     downstream_events: ["Formulation Optimization", "Supplier Review"]
     entity_types: ["Product", "Ingredient", "Supplier"]
     affected_kpis: ["COGS", "Cost Variance"]
+    related_kpis: [MarginPct]
 
   - id: FIN_PromotionROIBelowTarget
     category: "Commercial & Financial Performance"
@@ -988,6 +1042,7 @@ signals_events:
     downstream_events: ["Portfolio Rationalization Review"]
     entity_types: ["SKU", "Product", "Channel"]
     affected_kpis: ["SKU Margin", "Contribution"]
+    related_kpis: [MarginPct]
 
   - id: FIN_PriceReviewDue
     category: "Commercial & Financial Performance"
@@ -1079,6 +1134,7 @@ signals_events:
     downstream_events: ["Forecast Review", "Production Planning"]
     entity_types: ["Product", "Geography", "Channel"]
     affected_kpis: ["Forecast Accuracy", "Sales Uplift"]
+    related_processes: [demand_forecast]
 
   - id: OPS_RegionalDisruption
     category: "Operations & Supply Chain"
@@ -1139,6 +1195,8 @@ signals_events:
     downstream_events: ["Replenishment", "Production Planning"]
     entity_types: ["SKU", "Inventory", "Warehouse"]
     affected_kpis: ["Days of Cover", "Stockout Rate"]
+    related_processes: [demand_forecast, shelf_life_risk_monitoring]
+    related_kpis: [LowStockIncidenceRate, CriticalLowCount]
 
   - id: OPS_ExcessInventoryDetected
     category: "Operations & Supply Chain"
@@ -1159,6 +1217,8 @@ signals_events:
     downstream_events: ["Liquidation", "Transfer", "Promotion"]
     entity_types: ["Batch", "SKU", "Warehouse"]
     affected_kpis: ["Expiry Risk", "Waste %"]
+    related_processes: [shelf_life_risk_monitoring]
+    related_kpis: [WastageRisk, ExpiryValueAtRisk, ExpiredStockUnits, SellThroughGap]
 
   - id: OPS_ForecastVarianceAboveTolerance
     category: "Operations & Supply Chain"
@@ -1169,6 +1229,8 @@ signals_events:
     downstream_events: ["Forecast Recalculation"]
     entity_types: ["Product", "Geography", "Channel"]
     affected_kpis: ["Forecast Accuracy", "Bias"]
+    related_processes: [demand_forecast]
+    related_kpis: [ForecastAccuracy, ForecastCoverageDays]
 
   - id: OPS_ProductionBehindPlan
     category: "Operations & Supply Chain"
@@ -1441,6 +1503,7 @@ signals_events:
     downstream_events: ["Internal Product Risk Assessment"]
     entity_types: ["Product", "Ingredient", "Category"]
     affected_kpis: ["Risk Exposure"]
+    related_processes: [competitor_enforcement_signals]
 
   - id: QA_CompetitorProductRecall
     category: "Quality & Food Safety"
@@ -1451,6 +1514,7 @@ signals_events:
     downstream_events: ["Product / Ingredient Risk Review"]
     entity_types: ["Competitor Product", "Ingredient", "Product"]
     affected_kpis: ["Product Risk Score"]
+    related_processes: [competitor_enforcement_signals]
 
   - id: QA_IngredientSafetyWarning
     category: "Quality & Food Safety"
@@ -1491,6 +1555,8 @@ signals_events:
     downstream_events: ["Quality Investigation"]
     entity_types: ["Product", "SKU", "Attribute"]
     affected_kpis: ["Complaint Rate", "Sentiment"]
+    related_processes: [customer_review_aggregation_and_triage, formulation_feedback_loop]
+    related_kpis: [LowRatingShare, OpsComplaintShare, NearExpiryComplaintShare]
 
   - id: QA_CategoryQualityIssue
     category: "Quality & Food Safety"
@@ -1601,6 +1667,8 @@ signals_events:
     downstream_events: ["Quality Investigation", "Batch Correlation"]
     entity_types: ["Product", "SKU", "Batch"]
     affected_kpis: ["Complaint Rate"]
+    related_processes: [customer_review_aggregation_and_triage, formulation_feedback_loop, dark_store_ops_escalation]
+    related_kpis: [LowRatingShare, OpsComplaintShare, StoresOverOpsComplaintBar]
 
   - id: QA_ProductReturnsAboveThreshold
     category: "Quality & Food Safety"
@@ -1611,6 +1679,7 @@ signals_events:
     downstream_events: ["Quality Investigation"]
     entity_types: ["Product", "SKU", "Channel"]
     affected_kpis: ["Return Rate"]
+    related_processes: [customer_review_aggregation_and_triage]
 
   - id: QA_TraceabilityFailureDetected
     category: "Quality & Food Safety"
