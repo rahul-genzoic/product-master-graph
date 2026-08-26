@@ -44,9 +44,21 @@ version: 1
 # processes/KPIs actually built in this repo rather than the free-text
 # `affected_kpis`/`downstream_events` the sheet itself carries. Two
 # confidence tiers went in: an exact-match pass (e.g. COMP_ProductClaimChanged
-# -> claims_validation, an word-for-word description match) and a broader
+# -> claims_validation, an word-for-word description match), a broader
 # thematic pass (e.g. QA_ContaminationOutbreak -> competitor_enforcement_signals,
-# same monitoring domain, not identical wording). Both fields stay optional
+# same monitoring domain, not identical wording), and a KPI near-match pass:
+# affected_kpis text that's a wording variant of a real KPI's own name --
+# "Forecast Accuracy" (sheet) vs. "Demand Forecast Accuracy" (ForecastAccuracy's
+# real name), "Gross Margin" vs. "Portfolio Gross Margin %" (MarginPct) -- gets
+# related_kpis pointed at that real KPI. affected_kpis itself is untouched
+# (321 mentions, 0 exact matches to the 28 real KPIs). Whether the other 213
+# unique concepts (e.g. "Opportunity Score", "COGS", "Search Growth") have
+# real BigQuery columns/tables to eventually build a KPI from
+# (gen-lang-client-0520145261's bronze/silver/gold/ctx_upside_master_data)
+# is an open question -- a bulk schema pull across those datasets to check
+# was blocked by this session's own safety tooling as a bulk-extraction-shaped
+# use of a live service-account credential; it needs a narrower, explicit
+# per-candidate check instead of a blanket dump. Both fields stay optional
 # and absent on most entries: this repo has only 22 processes and 28 KPIs
 # built against 180 signals/events, so most entries genuinely have no real
 # process or KPI to point to yet (all of Procurement & Suppliers and
@@ -220,6 +232,7 @@ signals_events:
     downstream_events: ["NPD Investment Review Triggered", "Supplier Review"]
     entity_types: ["Product", "Ingredient", "Supplier"]
     affected_kpis: ["COGS", "Gross Margin", "Target Cost Variance"]
+    related_kpis: [MarginPct]
 
   - id: NPD_NPDProjectDelayed
     category: "NPD & Innovation"
@@ -940,6 +953,7 @@ signals_events:
     downstream_events: ["COGS Above Threshold", "Gross Margin Below Floor"]
     entity_types: ["Ingredient", "Product", "Supplier"]
     affected_kpis: ["COGS", "Gross Margin"]
+    related_kpis: [MarginPct]
 
   - id: FIN_FXRateMovement
     category: "Commercial & Financial Performance"
@@ -1124,6 +1138,7 @@ signals_events:
     downstream_events: ["Forecast Review", "Inventory Rebalancing"]
     entity_types: ["Product"]
     affected_kpis: ["Forecast Accuracy", "Service Level"]
+    related_kpis: [ForecastAccuracy]
 
   - id: OPS_SevereWeatherWarning
     category: "Operations & Supply Chain"
@@ -1165,6 +1180,7 @@ signals_events:
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Forecast Accuracy", "Sales Uplift"]
     related_processes: [demand_forecast]
+    related_kpis: [ForecastAccuracy]
 
   - id: OPS_RegionalDisruption
     category: "Operations & Supply Chain"
@@ -1206,6 +1222,7 @@ signals_events:
     entity_types: ["Product", "Category"]
     affected_kpis: ["Forecast Accuracy"]
     related_processes: [demand_forecast]
+    related_kpis: [ForecastAccuracy]
 
   - id: OPS_InfrastructureDisruption
     category: "Operations & Supply Chain"
