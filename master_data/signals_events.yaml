@@ -1,25 +1,27 @@
 version: 1
 
-# Demo Signal & Event catalog, imported verbatim from the "Demo events / signals"
-# tab of the solution-design tracker (Google Sheet: Genzoic AI Use Case &
-# Signal/Event Tracker, gid=1856941780). Columns map 1:1 to the sheet:
-# Type -> category, Heading -> name, Signal/Event -> kind, Potential Downstream
-# Events -> downstream_events, Impacted Entity Types -> entity_types, Affected
-# KPI -> affected_kpis. Projected as meta.Signal / meta.Event nodes by
-# ingest_ontology (see migrations/0004_signals_events_catalog.yaml) the same way
-# policies/constraints.yaml projects as meta.Constraint.
+# The signals & events catalog: external market/consumer signals and internal
+# operational events, what each can trigger downstream, and the entity types/
+# KPIs it touches. `downstream_events`, `entity_types` and `affected_kpis` are
+# free-text labels (matched by `name` at apply time for the `downstream_events`
+# graph edges) — they are not validated against ontology/entities.yaml or
+# master_data/kpis.yaml, so this catalog can be authored ahead of (or
+# independently from) those definitions.
 #
-# `downstream_events`, `entity_types` and `affected_kpis` are transcribed as free
-# text exactly as the sheet has them -- the sheet does not key them to this file's
-# generated `id`s (headings repeat across categories, e.g. "Competitor Product
-# Launch" appears under both NPD & Innovation and Competitive & Market
-# Intelligence), so do NOT treat downstream_events as a resolved graph reference --
-# it is documentation of the intended signal/event chain, same as constraints.yaml's
-# `rule: "documentation_only"` entries. Only entity_types values that exactly match
-# an ontology/entities.yaml `type` (Product, Category, Ingredient, Supplier, Channel,
-# Store, Campaign, Claim, Competitor, CompetitorProduct, ...) resolve to a real node
-# type today; the rest (Consumer Segment, Geography, Market, Formulation, ...) are
-# descriptive only.
+# `kind` is either "Signal" (something observed, often external) or "Event"
+# (something that happened, usually internal) — projected as meta.Signal /
+# meta.Event nodes respectively. `id` must be unique across the whole file;
+# `name` does not need to be — the same name can recur under a different
+# `category` with a different meaning. `owner` is a plain team/role id, the
+# same convention KPIs and goals use.
+#
+# Imported verbatim from the "Demo events / signals" tab of the solution-design
+# tracker (Google Sheet: Genzoic AI Use Case & Signal/Event Tracker,
+# gid=1856941780). Sheet columns map 1:1: Type -> category, Heading -> name,
+# Signal/Event -> kind, Potential Downstream Events -> downstream_events,
+# Impacted Entity Types -> entity_types, Affected KPI -> affected_kpis.
+# Projected by ingest_ontology (see migrations/0004_signals_events_catalog.yaml)
+# the same way policies/constraints.yaml projects as meta.Constraint.
 
 signals_events:
   # ---- NPD & Innovation ----
@@ -1830,3 +1832,134 @@ signals_events:
     downstream_events: ["Rationalization / NPD Investment"]
     entity_types: ["Product Portfolio", "Category"]
     affected_kpis: ["Portfolio ROI", "Growth", "Margin"]
+
+# The external feeds catalog: data feeds ingested from outside the tenant (a
+# system, API, or file drop) — the upstream source a signal or event is often
+# derived from, though there is no edge linking a feed to the signals/events
+# it produces today; each is a separate, independently-authored list.
+# `entity_types` and `affected_kpis` are free-text labels, same treatment as
+# above. `id` must be unique across the whole file. `cadence` is a free-text
+# label (e.g. "hourly", "daily", "streaming") and `format` describes the
+# feed's transport/shape (e.g. "REST", "CSV", "Kafka", "Webhook"). `owner` is
+# a plain team/role id, the same convention KPIs and goals use.
+#
+# Sourced from the "Integration Required" column of the same tracker's Sheet1
+# (Use Case list), not the "Demo events / signals" tab — that column names the
+# feed each use case leans on. Several source rows only say "?" or a bare
+# capability name with no concrete provider chosen yet (e.g. "News site ?",
+# "External Data Provider"); those are transcribed here with
+# cadence/format left as "not yet decided" rather than invented, same as this
+# repo's constraints.yaml `rule: "documentation_only"` entries and the
+# seasonal_campaign_planning.yaml convention of marking an unresolved input
+# plainly instead of guessing. This is planning-stage data, not a live
+# integration — the confirmed, extraction-backed sources are
+# integrations/live_bq.yaml and integrations/pim_bq.yaml.
+
+external_feeds:
+  - id: FssaiRegulatoryGazetteFeed
+    owner: compliance_team
+    name: "FSSAI Regulatory Gazette Feed"
+    description: "FSSAI gazette notifications, draft regulations and state-level advisories, scraped directly from fssai.gov.in. Feeds FSSAI / regulatory feed monitoring, regulation impact analysis, label compliance review, and new-product compliance pre-clearance."
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
+    entity_types: ["Regulation", "Ingredient", "Claim", "Product"]
+    affected_kpis: ["Compliance Exposure", "Revenue at Risk"]
+
+  - id: StateComplianceParserFeed
+    owner: compliance_team
+    name: "State-Level Compliance Portal Feed"
+    description: "State-level food-safety authority advisories and restrictions, parsed per state beyond central FSSAI coverage. Source tracker names it only as \"local complaince parser\" [sic] with no cadence decided."
+    cadence: "not yet decided"
+    format: "Web scrape"
+    entity_types: ["Regulation", "Geography", "Product"]
+    affected_kpis: ["Compliance Exposure"]
+
+  - id: RegulatoryCompetitorNewsFeed
+    owner: compliance_team
+    name: "Regulatory & Competitor Enforcement News Feed"
+    description: "News-site monitoring for competitor FSSAI enforcement/recall actions and pre-rule legislative/advisory-committee signals. Source tracker marks the provider \"News site ?\" — not yet selected."
+    cadence: "not yet decided"
+    format: "not yet decided"
+    entity_types: ["Competitor Product", "Regulation", "Category"]
+    affected_kpis: ["Regulatory Risk Score"]
+
+  - id: ComplianceOpsMessagingFeed
+    owner: compliance_team
+    name: "Compliance Ops Inbox (Email / WhatsApp)"
+    description: "Inbound dark-store FSSAI licence and supplier COA renewal documents/reminders over email and WhatsApp."
+    cadence: "as-received"
+    format: "Email / WhatsApp"
+    entity_types: ["Licence", "Certification", "Supplier"]
+    affected_kpis: ["Licence Coverage", "Supplier Compliance Rate"]
+
+  - id: DtcCustomerMessagingFeed
+    owner: marketing_team
+    name: "DTC Customer Messaging Feed"
+    description: "Outbound/inbound DTC customer engagement over email, WhatsApp and SMS text."
+    cadence: "as-triggered"
+    format: "Email / WhatsApp / SMS"
+    entity_types: ["Customer", "Campaign"]
+    affected_kpis: ["Engagement", "Conversion Rate"]
+
+  - id: MarketplaceBrowserAutomationFeed
+    owner: sales_team
+    name: "Marketplace Browser Automation Feed"
+    description: "Browser-automation scrape of marketplace listing pages (Zomato, Swiggy, Blinkit, Instamart) for listing content, category rankings, and claim/label drift. Backs channel listing claim audit, quick commerce category monitoring, and listing visibility monitoring."
+    cadence: "weekly (per source use case: \"Weekly scan\")"
+    format: "Browser automation (headless browser)"
+    entity_types: ["Channel", "Product", "Competitor Product"]
+    affected_kpis: ["Share of Shelf", "Listing Accuracy"]
+
+  - id: MarketplaceChannelApiFeed
+    owner: sales_team
+    name: "Marketplace Channel API Feed"
+    description: "Channel-platform integrations for listing creation/update, pricing and bundle/combo data across Blinkit, Zomato, Swiggy and Shopify."
+    cadence: "event-triggered (on product/price change), daily sync"
+    format: "REST API / Webhook"
+    entity_types: ["Channel", "Product", "SKU"]
+    affected_kpis: ["Listing Accuracy", "Price Realization"]
+
+  - id: ErpNextFeed
+    owner: supply_chain_team
+    name: "ERPNext Integration Feed"
+    description: "Procurement cycle and production-to-inventory sync with ERPNext."
+    cadence: "daily"
+    format: "REST API"
+    entity_types: ["Supplier", "InventoryBatch", "Product"]
+    affected_kpis: ["PO On-Time Delivery", "Production Uptime"]
+
+  - id: PetpoojaPosFeed
+    owner: supply_chain_team
+    name: "Petpooja POS Feed"
+    description: "Dark-store inventory reconciliation against the Petpooja point-of-sale system."
+    cadence: "daily"
+    format: "REST API"
+    entity_types: ["Store", "InventoryBatch"]
+    affected_kpis: ["Inventory Accuracy"]
+
+  - id: AdPlatformFeed
+    owner: marketing_team
+    name: "Ad Platform Feed (Meta Ads / Google Ads)"
+    description: "DTC performance-marketing monitoring from Meta Ads and Google Ads."
+    cadence: "daily"
+    format: "REST API"
+    entity_types: ["Campaign", "Channel"]
+    affected_kpis: ["ROAS", "CTR", "CAC"]
+
+  - id: ReviewAggregationFeed
+    owner: cx_team
+    name: "Customer Review & Marketplace Feedback Feed"
+    description: "Inbound customer reviews and complaints aggregated from email, Swiggy, Zomato and Amazon.in."
+    cadence: "daily"
+    format: "Email / REST API"
+    entity_types: ["Review", "Complaint", "Store"]
+    affected_kpis: ["Average Store Rating", "Complaint Rate"]
+
+  - id: ExternalMarketDataProviderFeed
+    owner: npd_team
+    name: "External Market Data Provider Feed"
+    description: "Third-party market/consumer data provider feeding NPD opportunity-assessment briefs. Source tracker names it only as \"External Data Provider\" — specific vendor not yet selected."
+    cadence: "not yet decided"
+    format: "not yet decided"
+    entity_types: ["Category", "Consumer Segment"]
+    affected_kpis: ["Opportunity Score", "TAM"]
