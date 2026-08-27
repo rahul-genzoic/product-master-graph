@@ -78,10 +78,12 @@ version: 1
 # related_kpis ever change, don't hand-edit them out of sync.
 #
 # `source`, `cadence`, `format` (on every signals_events entry) and
-# `category`, `kind: Feed` (on every external_feeds entry) give both lists
-# the SAME field set, so every entry -- Signal, Event, or Feed -- carries
-# who/what it's from, how often it arrives, and what shape it's in,
-# regardless of which list it's authored in. These are NOT tracker-sourced --
+# `category`, `kind: Signal` (every external_feeds entry is treated as a
+# Signal -- a feed IS an ongoing external signal source) give both lists the
+# SAME field set, so every entry -- Signal, Event, or the feed entries that
+# carry `kind: Signal` too -- carries who/what it's from, how often it
+# arrives, and what shape it's in, regardless of which list it's authored
+# in. These are NOT tracker-sourced --
 # the original sheet import never had a cadence/format/source column for
 # signals/events or a category column for feeds. They're authored here:
 # for a signals_events entry with a `sourced_from_feeds` link, its
@@ -107,7 +109,6 @@ signals_events:
     category: "NPD & Innovation"
     owner: npd_team
     name: "Emerging Consumer Search Trend"
-    kind: Signal
     description: "Growth in searches for attributes, formats or needs."
     source: "External data provider (not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
     cadence: "not yet decided"
@@ -2610,7 +2611,7 @@ external_feeds:
   - id: FssaiRegulatoryGazetteFeed
     owner: compliance_team
     category: "Compliance & Regulatory"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "FSSAI Regulatory Gazette Feed"
     source: "fssai.gov.in"
     description: "FSSAI gazette notifications, draft regulations and state-level advisories, scraped directly from fssai.gov.in. Feeds FSSAI / regulatory feed monitoring, regulation impact analysis, label compliance review, and new-product compliance pre-clearance."
@@ -2623,7 +2624,7 @@ external_feeds:
   - id: StateComplianceParserFeed
     owner: compliance_team
     category: "Compliance & Regulatory"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "State-Level Compliance Portal Feed"
     source: "State FSSAI / food-safety authority portals (per state, provider not yet decided)"
     description: "State-level food-safety authority advisories and restrictions, parsed per state beyond central FSSAI coverage. Source tracker names it only as \"local complaince parser\" [sic] with no cadence decided."
@@ -2636,7 +2637,7 @@ external_feeds:
   - id: RegulatoryCompetitorNewsFeed
     owner: compliance_team
     category: "Compliance & Regulatory"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "Regulatory & Competitor Enforcement News Feed"
     source: "News site (provider not yet decided)"
     description: "News-site monitoring for competitor FSSAI enforcement/recall actions and pre-rule legislative/advisory-committee signals. Source tracker marks the provider \"News site ?\" — not yet selected."
@@ -2649,7 +2650,7 @@ external_feeds:
   - id: ComplianceOpsMessagingFeed
     owner: compliance_team
     category: "Compliance & Regulatory"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "Compliance Ops Inbox (Email / WhatsApp)"
     source: "Email / WhatsApp"
     description: "Inbound dark-store FSSAI licence and supplier COA renewal documents/reminders over email and WhatsApp."
@@ -2662,7 +2663,7 @@ external_feeds:
   - id: DtcCustomerMessagingFeed
     owner: marketing_team
     category: "Marketing & Consumer"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "DTC Customer Messaging Feed"
     source: "Email / WhatsApp / SMS"
     description: "Outbound/inbound DTC customer engagement over email, WhatsApp and SMS text."
@@ -2675,7 +2676,7 @@ external_feeds:
   - id: MarketplaceBrowserAutomationFeed
     owner: sales_team
     category: "Sales & Channels"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "Marketplace Browser Automation Feed"
     source: "Zomato, Swiggy, Blinkit, Instamart"
     description: "Browser-automation scrape of marketplace listing pages (Zomato, Swiggy, Blinkit, Instamart) for listing content, category rankings, and claim/label drift. Backs channel listing claim audit, quick commerce category monitoring, and listing visibility monitoring."
@@ -2688,7 +2689,7 @@ external_feeds:
   - id: MarketplaceChannelApiFeed
     owner: sales_team
     category: "Sales & Channels"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "Marketplace Channel API Feed"
     source: "Blinkit, Zomato, Swiggy, Shopify"
     description: "Channel-platform integrations for listing creation/update, pricing and bundle/combo data across Blinkit, Zomato, Swiggy and Shopify."
@@ -2701,7 +2702,7 @@ external_feeds:
   - id: ErpNextFeed
     owner: supply_chain_team
     category: "Operations & Supply Chain"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "ERPNext Integration Feed"
     source: "ERPNext"
     description: "Procurement cycle and production-to-inventory sync with ERPNext."
@@ -2714,7 +2715,7 @@ external_feeds:
   - id: PetpoojaPosFeed
     owner: supply_chain_team
     category: "Operations & Supply Chain"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "Petpooja POS Feed"
     source: "Petpooja"
     description: "Dark-store inventory reconciliation against the Petpooja point-of-sale system."
@@ -2727,7 +2728,7 @@ external_feeds:
   - id: AdPlatformFeed
     owner: marketing_team
     category: "Marketing & Consumer"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "Ad Platform Feed (Meta Ads / Google Ads)"
     source: "Meta Ads, Google Ads"
     description: "DTC performance-marketing monitoring from Meta Ads and Google Ads."
@@ -2740,7 +2741,7 @@ external_feeds:
   - id: ReviewAggregationFeed
     owner: cx_team
     category: "Quality & Food Safety"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "Customer Review & Marketplace Feedback Feed"
     source: "Email, Swiggy, Zomato, Amazon.in"
     description: "Inbound customer reviews and complaints aggregated from email, Swiggy, Zomato and Amazon.in."
@@ -2753,7 +2754,7 @@ external_feeds:
   - id: ExternalMarketDataProviderFeed
     owner: npd_team
     category: "NPD & Innovation"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
-    kind: Feed
+    kind: Signal
     name: "External Market Data Provider Feed"
     source: "External data provider (not yet decided)"
     description: "Third-party market/consumer data provider feeding NPD opportunity-assessment briefs. Source tracker names it only as \"External Data Provider\" — specific vendor not yet selected."
