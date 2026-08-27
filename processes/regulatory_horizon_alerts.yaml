@@ -92,6 +92,8 @@ processes:
             summary: 'Added {{product}} to the regulatory horizon watchlist'
             findings: '{{exposure_findings}}'
 
+    related_signals_events: [COMP_DraftRegulationPublished, COMP_InternationalRegulatoryChange]   # reverse of master_data/signals_events.yaml related_processes for regulatory_horizon_alerts
+
     metadata:
       version: 1
       priority: 10

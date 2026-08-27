@@ -94,6 +94,8 @@ processes:
     related_kpis: [WastageRisk]   # must reference KPIs defined in master_data/kpis.yaml (unknown = fatal at apply)
 
     # Everything the orchestrator actually reads at run time.
+    related_signals_events: [OPS_InventoryBelowSafetyStock, OPS_ExcessInventoryDetected, OPS_ShelfLifeThresholdReached]   # reverse of master_data/signals_events.yaml related_processes for shelf_life_risk_monitoring
+
     metadata:
       version: 1
       effective_from: 2026-07-15

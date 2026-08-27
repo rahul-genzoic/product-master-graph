@@ -274,6 +274,8 @@ processes:
             label_changes: '{{label_changes}}'
             alternatives: '{{compliant_alternatives}}'
 
+    related_signals_events: [COMP_FSSAIRegulationPublished, COMP_IngredientAdditiveRuleChange, COMP_ClaimsRuleChange, COMP_LabellingRuleChange, COMP_PackagingRegulationChange, COMP_LegalMetrologyChange, COMP_EPREnvironmentalRegulationChange, QA_RegulatorFoodSafetyAlert]   # reverse of master_data/signals_events.yaml related_processes for regulation_impact_analysis
+
     metadata:
       version: 1
       priority: 10

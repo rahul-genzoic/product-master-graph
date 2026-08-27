@@ -96,6 +96,8 @@ processes:
             summary: 'Amendment applications drafted for dark store {{store}}.'
             findings: '{{licence_findings}}'
 
+    related_signals_events: [COMP_FSSAILicenceExpiry]   # reverse of master_data/signals_events.yaml related_processes for dark_store_licence_management
+
     metadata:
       version: 1
       priority: 10

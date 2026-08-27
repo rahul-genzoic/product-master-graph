@@ -831,6 +831,8 @@ processes:
           config:
             note: "Seasonal campaign planning escalated — either event_name's date could not be resolved, or no historical campaign data was found for the computed window."
 
+    related_signals_events: [MKT_FestivalSeasonalOpportunity, MKT_CulturalSportingEvent, MKT_SeasonalCampaignPlanningDue]   # reverse of master_data/signals_events.yaml related_processes for seasonal_campaign_planning
+
     metadata:
       version: 1
       priority: 15

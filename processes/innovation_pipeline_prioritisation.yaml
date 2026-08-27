@@ -571,6 +571,8 @@ processes:
               IDEA_ID: "{{IDEA_ID}}"
               STAGE: Pipeline
 
+    related_signals_events: [NPD_NPDFeasibilityAssessmentDue, NPD_NPDStageGateReached, NPD_NPDProjectDelayed]   # reverse of master_data/signals_events.yaml related_processes for innovation_pipeline_prioritisation
+
     metadata:
       version: 1
       effective_from: 2026-08-05

@@ -440,6 +440,8 @@ processes:
             # TODO: no PRODUCT_LABEL.STATUS to write yet — simulated record only.
             new_status: Printed
 
+    related_signals_events: [COMP_LabellingRuleChange, COMP_LegalMetrologyChange, COMP_ProductFormulationChanged, COMP_NewIngredientIntroduced, COMP_LabelArtworkChanged]   # reverse of master_data/signals_events.yaml related_processes for label_compliance_review
+
     metadata:
       version: 1
       priority: 10

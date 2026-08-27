@@ -21,6 +21,7 @@ kpis:
         WHERE IS_ACTIVE
       view: V_LISTING_PACKAGE
     refresh: { cache_ttl: 12h }
+    related_signals_events: [COMP_NewSKUCreated]   # reverse of master_data/signals_events.yaml related_kpis for ListingReadyShare
 
   - id: BlockingGapsPerSku
     name: Blocking Gaps per Active SKU
@@ -40,6 +41,7 @@ kpis:
         FROM `gen-lang-client-0520145261.ctx_upside_master_data.V_LISTING_PACKAGE`
         WHERE IS_ACTIVE
     refresh: { cache_ttl: 12h }
+    related_signals_events: [COMP_NewSKUCreated]   # reverse of master_data/signals_events.yaml related_kpis for BlockingGapsPerSku
 
   - id: AllergenUnderdeclarationRate
     name: Allergen Under-Declaration Rate
@@ -61,6 +63,7 @@ kpis:
       column: ALLERGEN_UNDERDECLARED
     refresh: { cache_ttl: 12h }
     related_processes: [label_compliance_review]
+    related_signals_events: [COMP_ProductFormulationChanged]   # reverse of master_data/signals_events.yaml related_kpis for AllergenUnderdeclarationRate
 
   - id: ClaimSubstantiationRate
     name: Claim Substantiation Rate
@@ -80,6 +83,7 @@ kpis:
         FROM `gen-lang-client-0520145261.ctx_upside_master_data.V_LISTING_CLAIM_CHECK`
     refresh: { cache_ttl: 12h }
     related_processes: [label_compliance_review]
+    related_signals_events: [COMP_ClaimsRuleChange, COMP_ProductClaimChanged, MKT_MarketingClaimApprovalRequired]   # reverse of master_data/signals_events.yaml related_kpis for ClaimSubstantiationRate
 
   - id: ContradictedClaimCount
     name: Unpublishable Claim Count
@@ -95,6 +99,7 @@ kpis:
         FROM `gen-lang-client-0520145261.ctx_upside_master_data.V_LISTING_CLAIM_CHECK`
     refresh: { cache_ttl: 12h }
     related_processes: [label_compliance_review]
+    related_signals_events: [COMP_ClaimsRuleChange, COMP_ProductClaimChanged, MKT_MarketingClaimApprovalRequired]   # reverse of master_data/signals_events.yaml related_kpis for ContradictedClaimCount
 
   - id: OwnRecipeShare
     name: Own-Recipe SKU Share
@@ -136,6 +141,7 @@ kpis:
       column: NUTRIENT_BASIS
     refresh: { cache_ttl: 24h }
     related_processes: [label_compliance_review]
+    related_signals_events: [COMP_LabellingRuleChange, COMP_LabelArtworkChanged]   # reverse of master_data/signals_events.yaml related_kpis for PanelBasisKnownShare
 
   - id: MandatoryNutrientCompleteness
     name: FSSAI Mandatory Nutrient Completeness
@@ -155,6 +161,7 @@ kpis:
       column: MANDATORY_NUTRIENTS_BLANK
     refresh: { cache_ttl: 24h }
     related_processes: [label_compliance_review]
+    related_signals_events: [COMP_LabellingRuleChange, COMP_LabelArtworkChanged]   # reverse of master_data/signals_events.yaml related_kpis for MandatoryNutrientCompleteness
 
   # ---- Shelf life & availability (V_STOCKED_AT / LOW_STOCK_CONFIG) ----
   - id: WastageRisk
@@ -175,6 +182,7 @@ kpis:
       column: QTY_EXPIRING_WITHIN_RISK_DAYS
     refresh: { cache_ttl: 6h }
     related_processes: [shelf_life_risk_monitoring, demand_forecast]
+    related_signals_events: [OPS_ShelfLifeThresholdReached]   # reverse of master_data/signals_events.yaml related_kpis for WastageRisk
 
   - id: ExpiryValueAtRisk
     name: Expiry Value at Risk (INR)
@@ -192,6 +200,7 @@ kpis:
           ON p.SKU = s.SKU_ID
     refresh: { cache_ttl: 6h }
     related_processes: [demand_forecast]
+    related_signals_events: [OPS_ShelfLifeThresholdReached]   # reverse of master_data/signals_events.yaml related_kpis for ExpiryValueAtRisk
 
   - id: ExpiredStockUnits
     name: Expired Stock on the Books (units)
@@ -211,6 +220,7 @@ kpis:
       column: EXPIRED_STOCK
     refresh: { cache_ttl: 6h }
     related_processes: [shelf_life_risk_monitoring, demand_forecast]
+    related_signals_events: [OPS_ShelfLifeThresholdReached]   # reverse of master_data/signals_events.yaml related_kpis for ExpiredStockUnits
 
   - id: LowStockIncidenceRate
     name: Low-Stock Incidence Rate
@@ -232,6 +242,7 @@ kpis:
           ON c.SKU_ID = s.SKU_ID AND c.STORE_ID = s.MASTER_STORE_ID
     refresh: { cache_ttl: 6h }
     related_processes: [shelf_life_risk_monitoring, demand_forecast]
+    related_signals_events: [OPS_InventoryBelowSafetyStock]   # reverse of master_data/signals_events.yaml related_kpis for LowStockIncidenceRate
 
   - id: CriticalLowCount
     name: Critically-Low (SKU, store) Pairs
@@ -249,6 +260,7 @@ kpis:
           ON c.SKU_ID = s.SKU_ID AND c.STORE_ID = s.MASTER_STORE_ID
     refresh: { cache_ttl: 6h }
     related_processes: [shelf_life_risk_monitoring, demand_forecast]
+    related_signals_events: [OPS_InventoryBelowSafetyStock]   # reverse of master_data/signals_events.yaml related_kpis for CriticalLowCount
 
   - id: SellThroughGap
     name: Sell-Through Gap on At-Risk Stock (units)
@@ -288,6 +300,7 @@ kpis:
         WHERE DATE_DIFF(i.soonest, CURRENT_DATE(), DAY) BETWEEN 0 AND 3
     refresh: { cache_ttl: 6h }
     related_processes: [demand_forecast]
+    related_signals_events: [OPS_ShelfLifeThresholdReached]   # reverse of master_data/signals_events.yaml related_kpis for SellThroughGap
 
   # ---- Customer voice (CUSTOMER_REVIEW_EVENTS / CUSTOMER_COMPLAINT_EVENTS) ----
   - id: AvgStoreRating
@@ -321,6 +334,7 @@ kpis:
         WHERE SAFE_CAST(REVIEW_DATE AS DATE) >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)
     refresh: { cache_ttl: 12h }
     related_processes: [customer_review_aggregation_and_triage]
+    related_signals_events: [QA_PublicComplaintTrend, QA_ConsumerComplaintsAboveThreshold]   # reverse of master_data/signals_events.yaml related_kpis for LowRatingShare
 
   - id: OpsComplaintShare
     name: Last-Mile Complaint Share
@@ -342,6 +356,7 @@ kpis:
         WHERE SAFE_CAST(COMPLAINT_RECEIVED_AT AS DATE)
               >= DATE_SUB(CURRENT_DATE(), INTERVAL 60 DAY)
     refresh: { cache_ttl: 12h }
+    related_signals_events: [QA_PublicComplaintTrend, QA_ConsumerComplaintsAboveThreshold]   # reverse of master_data/signals_events.yaml related_kpis for OpsComplaintShare
 
   - id: StoresOverOpsComplaintBar
     name: Stores Over the Ops-Complaint Bar
@@ -364,6 +379,7 @@ kpis:
         )
         SELECT COUNTIF(ops >= 3) AS VALUE FROM per_store
     refresh: { cache_ttl: 12h }
+    related_signals_events: [QA_ConsumerComplaintsAboveThreshold]   # reverse of master_data/signals_events.yaml related_kpis for StoresOverOpsComplaintBar
 
   - id: NearExpiryComplaintShare
     name: Near-Expiry Product Complaint Share
@@ -417,6 +433,7 @@ kpis:
         FROM traced
     refresh: { cache_ttl: 12h }
     related_processes: [customer_review_aggregation_and_triage, shelf_life_risk_monitoring]
+    related_signals_events: [QA_PublicComplaintTrend]   # reverse of master_data/signals_events.yaml related_kpis for NearExpiryComplaintShare
 
   # ---- Demand planning & marketing spend ----
   - id: ForecastAccuracy
@@ -458,6 +475,7 @@ kpis:
           AND f.d >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
     refresh: { cache_ttl: 12h }
     related_processes: [demand_forecast]
+    related_signals_events: [OPS_WeatherAnomaly, OPS_FestivalEventDemandSignal, OPS_ExternalDemandTrend, OPS_ForecastVarianceAboveTolerance]   # reverse of master_data/signals_events.yaml related_kpis for ForecastAccuracy
 
   - id: ForecastCoverageDays
     name: Forecast Coverage (days ahead)
@@ -476,6 +494,7 @@ kpis:
         WHERE IS_LATEST_FORECAST
     refresh: { cache_ttl: 6h }
     related_processes: [demand_forecast]
+    related_signals_events: [OPS_ForecastVarianceAboveTolerance]   # reverse of master_data/signals_events.yaml related_kpis for ForecastCoverageDays
 
   - id: BlendedCampaignRoi
     name: Blended Campaign ROI
@@ -493,6 +512,7 @@ kpis:
         FROM `gen-lang-client-0520145261.bronze.V_STORE_CAMPAIGN_CURRENT`
     refresh: { cache_ttl: 6h }
     related_processes: [campaign_planning_optimisation]
+    related_signals_events: [MKT_CampaignPerformanceBelowTarget, MKT_CampaignOptimizationReviewDue, MKT_CampaignPostMortemDue]   # reverse of master_data/signals_events.yaml related_kpis for BlendedCampaignRoi
 
   - id: ZeroReturnAdSpend
     name: Zero-Return Ad Spend (INR)
@@ -509,6 +529,7 @@ kpis:
         FROM `gen-lang-client-0520145261.bronze.V_STORE_CAMPAIGN_CURRENT`
     refresh: { cache_ttl: 6h }
     related_processes: [campaign_planning_optimisation]
+    related_signals_events: [MKT_CampaignPerformanceBelowTarget, MKT_CampaignBudgetThresholdReached, MKT_CampaignOptimizationReviewDue]   # reverse of master_data/signals_events.yaml related_kpis for ZeroReturnAdSpend
 
   - id: AdsConversionGapPct
     name: Ads Conversion Gap (pp)
@@ -527,6 +548,7 @@ kpis:
         WHERE ADS_M2O_PCT IS NOT NULL AND OVERALL_M2O_PCT IS NOT NULL
     refresh: { cache_ttl: 6h }
     related_processes: [campaign_planning_optimisation]
+    related_signals_events: [MKT_CampaignPerformanceBelowTarget, MKT_CampaignOptimizationReviewDue]   # reverse of master_data/signals_events.yaml related_kpis for AdsConversionGapPct
 
   - id: MarginPct
     name: Portfolio Gross Margin %
@@ -545,6 +567,7 @@ kpis:
         FROM `gen-lang-client-0520145261.ctx_upside_master_data.V_PRODUCT_ENRICHED`
         WHERE IS_ACTIVE AND MRP_INR > 0
     refresh: { cache_ttl: 24h }
+    related_signals_events: [NPD_FormulationCOGSAboveTarget, FIN_CommodityPriceMovement, FIN_GrossMarginBelowFloor, FIN_COGSAboveThreshold, FIN_SKUProfitabilityBelowThreshold]   # reverse of master_data/signals_events.yaml related_kpis for MarginPct
 
   # ---- Innovation pipeline (V_IDEA_PRIORITY_INPUTS, active briefs only) ----
   - id: PipelineAgingDays
@@ -563,6 +586,7 @@ kpis:
       column: DAYS_IN_STAGE
     refresh: { cache_ttl: 24h }
     related_processes: [innovation_pipeline_prioritisation, idea_capture_triage]
+    related_signals_events: [NPD_NPDStageGateReached]   # reverse of master_data/signals_events.yaml related_kpis for PipelineAgingDays
 
   - id: StalledBriefCount
     name: Stalled Brief Count
@@ -578,6 +602,7 @@ kpis:
         FROM `gen-lang-client-0520145261.ctx_upside_master_data.V_IDEA_PRIORITY_INPUTS`
     refresh: { cache_ttl: 24h }
     related_processes: [innovation_pipeline_prioritisation]
+    related_signals_events: [NPD_NPDStageGateReached]   # reverse of master_data/signals_events.yaml related_kpis for StalledBriefCount
 
   - id: BriefScorableShare
     name: Scorable Brief Share

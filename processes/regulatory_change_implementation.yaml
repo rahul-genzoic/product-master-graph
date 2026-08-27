@@ -91,6 +91,8 @@ processes:
             summary: 'Approved change plan for regulation {{regulation}}'
             findings: '{{change_findings}}'
 
+    related_signals_events: [COMP_IngredientAdditiveRuleChange, COMP_PackagingRegulationChange, COMP_EPREnvironmentalRegulationChange]   # reverse of master_data/signals_events.yaml related_processes for regulatory_change_implementation
+
     metadata:
       version: 1
       priority: 10

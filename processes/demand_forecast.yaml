@@ -144,6 +144,8 @@ processes:
 
     related_kpis: [ForecastAccuracy, WastageRisk]
 
+    related_signals_events: [OPS_FestivalEventDemandSignal, OPS_ExternalDemandTrend, OPS_InventoryBelowSafetyStock, OPS_ForecastVarianceAboveTolerance]   # reverse of master_data/signals_events.yaml related_processes for demand_forecast
+
     metadata:
       version: 3
       effective_from: 2026-07-23

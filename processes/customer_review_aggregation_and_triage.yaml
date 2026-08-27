@@ -222,6 +222,8 @@ processes:
 
     related_kpis: [AvgStoreRating]   # must exist in master_data/kpis.yaml (unknown = fatal at apply)
 
+    related_signals_events: [QA_PublicComplaintTrend, QA_CategoryQualityIssue, QA_ConsumerComplaintsAboveThreshold, QA_ProductReturnsAboveThreshold]   # reverse of master_data/signals_events.yaml related_processes for customer_review_aggregation_and_triage
+
     metadata:
       version: 4
       effective_from: 2026-07-24

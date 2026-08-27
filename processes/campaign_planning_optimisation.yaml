@@ -723,6 +723,8 @@ processes:
           config:
             note: "Campaign planning & optimisation escalated — no campaign performance data returned this run."
 
+    related_signals_events: [MKT_CampaignPerformanceBelowTarget, MKT_CampaignBudgetThresholdReached, MKT_CampaignOptimizationReviewDue, MKT_CampaignPostMortemDue]   # reverse of master_data/signals_events.yaml related_processes for campaign_planning_optimisation
+
     metadata:
       version: 8
       priority: 15

@@ -94,6 +94,8 @@ processes:
             summary: 'Correction tasks recorded for {{product}} listings requiring updates.'
             findings: '{{drift_findings}}'
 
+    related_signals_events: [COMP_NewMarketChannelListingRequested, SALES_MarketplacePolicyChange, SALES_NewListingRequestReceived, SALES_ListingContentUpdateRequired]   # reverse of master_data/signals_events.yaml related_processes for channel_listing_claim_audit
+
     metadata:
       version: 1
       priority: 10

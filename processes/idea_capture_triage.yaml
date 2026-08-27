@@ -529,6 +529,8 @@ processes:
         rationale_from: decision_summary
         decision_options: [APPROVE, REJECT, ESCALATE]
 
+    related_signals_events: [NPD_NewIdeaSubmitted]   # reverse of master_data/signals_events.yaml related_processes for idea_capture_triage
+
     metadata:
       version: 17
       effective_from: 2026-08-13

@@ -95,6 +95,8 @@ processes:
             summary: 'Own exposure flagged for {{product}} based on competitor enforcement signals'
             findings: '{{exposure_findings}}'
 
+    related_signals_events: [COMP_CompetitorEnforcementRecall, QA_IndustryProductRecall, QA_CompetitorProductRecall, QA_ContaminationOutbreak, QA_RegulatorFoodSafetyAlert]   # reverse of master_data/signals_events.yaml related_processes for competitor_enforcement_signals
+
     metadata:
       version: 1
       priority: 10

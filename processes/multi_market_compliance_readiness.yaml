@@ -95,6 +95,8 @@ processes:
             summary: 'Market entry approved for {{product}} with resolved compliance gaps.'
             findings: '{{compliance_gap_findings}}'
 
+    related_signals_events: [COMP_InternationalRegulatoryChange, COMP_NewMarketChannelListingRequested, SALES_RetailerExpansionAnnouncement, SALES_QuickCommerceMarketExpansion, CMI_MarketEntryAssessmentInitiated]   # reverse of master_data/signals_events.yaml related_processes for multi_market_compliance_readiness
+
     metadata:
       version: 1
       priority: 10

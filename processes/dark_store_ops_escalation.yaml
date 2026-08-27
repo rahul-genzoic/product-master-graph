@@ -89,6 +89,8 @@ processes:
 
     related_kpis: [AvgStoreRating]
 
+    related_signals_events: [SALES_OrderFulfillmentSLABreached, QA_ConsumerComplaintsAboveThreshold]   # reverse of master_data/signals_events.yaml related_processes for dark_store_ops_escalation
+
     metadata:
       version: 1
       effective_from: 2026-07-27

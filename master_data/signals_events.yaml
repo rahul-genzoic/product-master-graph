@@ -66,6 +66,16 @@ version: 1
 # & Financial Performance) -- absence means "not built here yet", not "not
 # reviewed". Never point either list at a process/KPI id that doesn't
 # actually exist in this repo -- extend as new ones are actually built.
+#
+# Both edges are now mirrored back on the target side, so the relationship is
+# traversable in both directions regardless of what the graph engine does
+# with directed edges at query time: every processes/*.yaml entry named by a
+# related_processes list carries the reverse as `related_signals_events`
+# (right before its `metadata:` block), and every master_data/kpis.yaml entry
+# named by a related_kpis list carries the same field name next to its own
+# `related_processes`. These reverse fields are mechanically derived from
+# the two lists here -- regenerate them from this file if related_processes/
+# related_kpis ever change, don't hand-edit them out of sync.
 
 signals_events:
   # ---- NPD & Innovation ----
@@ -78,6 +88,7 @@ signals_events:
     downstream_events: ["Opportunity Assessment Required", "Portfolio Gap Assessment Due"]
     entity_types: ["Product", "Category", "CustomerSegment"]
     affected_kpis: ["Search Growth", "Category Growth", "Opportunity Score"]
+    sourced_from_feeds: [ExternalMarketDataProviderFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: NPD_SocialTrendAcceleration
     category: "NPD & Innovation"
@@ -88,6 +99,7 @@ signals_events:
     downstream_events: ["Opportunity Assessment Required"]
     entity_types: ["Product", "Category", "CustomerSegment"]
     affected_kpis: ["Trend Velocity", "Brand Relevance", "Opportunity Score"]
+    sourced_from_feeds: [ExternalMarketDataProviderFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: NPD_EmergingIngredientTrend
     category: "NPD & Innovation"
@@ -148,6 +160,7 @@ signals_events:
     downstream_events: ["Opportunity Assessment Required", "Strategic Portfolio Review Due"]
     entity_types: ["Category", "Product", "Channel"]
     affected_kpis: ["Category Growth", "Revenue Growth", "Market Share"]
+    sourced_from_feeds: [ExternalMarketDataProviderFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: NPD_EmergingConsumerNeed
     category: "NPD & Innovation"
@@ -158,6 +171,7 @@ signals_events:
     downstream_events: ["Opportunity Assessment Required"]
     entity_types: ["CustomerSegment", "Product", "Category"]
     affected_kpis: ["Need Frequency", "Sentiment", "Opportunity Score"]
+    sourced_from_feeds: [ExternalMarketDataProviderFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: NPD_NewIngredientTechnologyInnovation
     category: "NPD & Innovation"
@@ -189,6 +203,7 @@ signals_events:
     downstream_events: ["NPD Feasibility Assessment Due", "NPD Investment Review Triggered"]
     entity_types: ["Category", "CustomerSegment"]
     affected_kpis: ["Opportunity Score", "TAM", "Expected Revenue"]
+    sourced_from_feeds: [ExternalMarketDataProviderFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: NPD_NPDFeasibilityAssessmentDue
     category: "NPD & Innovation"
@@ -288,6 +303,7 @@ signals_events:
     entity_types: ["Regulation", "Product", "Ingredient", "Claim"]
     affected_kpis: ["Compliance Exposure", "Revenue at Risk"]
     related_processes: [regulation_impact_analysis]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed, StateComplianceParserFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_DraftRegulationPublished
     category: "Compliance & Regulatory"
@@ -299,6 +315,7 @@ signals_events:
     entity_types: ["Regulation", "Product", "Ingredient"]
     affected_kpis: ["Future Compliance Exposure", "Readiness Score"]
     related_processes: [regulatory_horizon_alerts]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed, StateComplianceParserFeed, RegulatoryCompetitorNewsFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_IngredientAdditiveRuleChange
     category: "Compliance & Regulatory"
@@ -310,6 +327,7 @@ signals_events:
     entity_types: ["Ingredient", "Product", "Supplier"]
     affected_kpis: ["Products Impacted", "Reformulation Cost"]
     related_processes: [regulation_impact_analysis, regulatory_change_implementation]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_ClaimsRuleChange
     category: "Compliance & Regulatory"
@@ -322,6 +340,7 @@ signals_events:
     affected_kpis: ["Claims Compliance Rate", "Revenue at Risk"]
     related_processes: [regulation_impact_analysis, claims_validation]
     related_kpis: [ClaimSubstantiationRate, ContradictedClaimCount]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_LabellingRuleChange
     category: "Compliance & Regulatory"
@@ -334,6 +353,7 @@ signals_events:
     affected_kpis: ["Label Compliance Rate", "SKUs Impacted"]
     related_processes: [regulation_impact_analysis, label_compliance_review]
     related_kpis: [MandatoryNutrientCompleteness, PanelBasisKnownShare]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_PackagingRegulationChange
     category: "Compliance & Regulatory"
@@ -345,6 +365,7 @@ signals_events:
     entity_types: ["Product", "Supplier"]
     affected_kpis: ["Packaging Compliance", "Cost Impact"]
     related_processes: [regulation_impact_analysis, regulatory_change_implementation]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_LegalMetrologyChange
     category: "Compliance & Regulatory"
@@ -356,6 +377,7 @@ signals_events:
     entity_types: ["Channel"]
     affected_kpis: ["Listing Compliance", "Price Compliance"]
     related_processes: [regulation_impact_analysis, label_compliance_review]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_EPREnvironmentalRegulationChange
     category: "Compliance & Regulatory"
@@ -367,6 +389,7 @@ signals_events:
     entity_types: ["Product"]
     affected_kpis: ["EPR Compliance", "Plastic Usage"]
     related_processes: [regulation_impact_analysis, regulatory_change_implementation]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_CompetitorEnforcementRecall
     category: "Compliance & Regulatory"
@@ -378,6 +401,7 @@ signals_events:
     entity_types: ["CompetitorProduct", "Ingredient", "Category", "Product"]
     affected_kpis: ["Regulatory Risk Score"]
     related_processes: [competitor_enforcement_signals]
+    sourced_from_feeds: [RegulatoryCompetitorNewsFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_InternationalRegulatoryChange
     category: "Compliance & Regulatory"
@@ -400,6 +424,7 @@ signals_events:
     entity_types: []
     affected_kpis: ["Licence Coverage", "Days to Expiry"]
     related_processes: [dark_store_licence_management]
+    sourced_from_feeds: [ComplianceOpsMessagingFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_SupplierCOAExpiry
     category: "Compliance & Regulatory"
@@ -411,6 +436,7 @@ signals_events:
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Supplier Compliance Rate", "Material Availability"]
     related_processes: [supplier_coa_renewal]
+    sourced_from_feeds: [ComplianceOpsMessagingFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_SupplierCertificationExpiry
     category: "Compliance & Regulatory"
@@ -422,6 +448,7 @@ signals_events:
     entity_types: ["Supplier", "Certification", "Ingredient"]
     affected_kpis: ["Approved Supplier Coverage"]
     related_processes: [supplier_coa_renewal]
+    sourced_from_feeds: [ComplianceOpsMessagingFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_ProductFormulationChanged
     category: "Compliance & Regulatory"
@@ -491,6 +518,7 @@ signals_events:
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Listing Readiness", "Compliance Coverage"]
     related_processes: [multi_market_compliance_readiness, channel_listing_claim_audit]
+    sourced_from_feeds: [MarketplaceChannelApiFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_PeriodicComplianceReviewDue
     category: "Compliance & Regulatory"
@@ -616,6 +644,7 @@ signals_events:
     affected_kpis: ["ROAS", "CTR", "Conversion"]
     related_processes: [campaign_planning_optimisation]
     related_kpis: [BlendedCampaignRoi, ZeroReturnAdSpend, AdsConversionGapPct]
+    sourced_from_feeds: [AdPlatformFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: MKT_CampaignBudgetThresholdReached
     category: "Marketing & Consumer"
@@ -628,6 +657,7 @@ signals_events:
     affected_kpis: ["Spend Utilization", "ROAS"]
     related_processes: [campaign_planning_optimisation]
     related_kpis: [ZeroReturnAdSpend]
+    sourced_from_feeds: [AdPlatformFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: MKT_CampaignOptimizationReviewDue
     category: "Marketing & Consumer"
@@ -640,6 +670,7 @@ signals_events:
     affected_kpis: ["CTR", "CPA", "ROAS"]
     related_processes: [campaign_planning_optimisation]
     related_kpis: [BlendedCampaignRoi, ZeroReturnAdSpend, AdsConversionGapPct]
+    sourced_from_feeds: [AdPlatformFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: MKT_ContentApprovalRequired
     category: "Marketing & Consumer"
@@ -672,6 +703,7 @@ signals_events:
     downstream_events: ["Campaign Optimization", "Pricing Review"]
     entity_types: ["Product"]
     affected_kpis: ["Conversion Rate", "CAC"]
+    sourced_from_feeds: [DtcCustomerMessagingFeed, AdPlatformFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: MKT_CustomerSegmentPerformanceChanged
     category: "Marketing & Consumer"
@@ -748,6 +780,7 @@ signals_events:
     downstream_events: ["Portfolio Gap Assessment", "Channel Strategy Review"]
     entity_types: ["CompetitorProduct", "Channel", "Category"]
     affected_kpis: ["Share of Shelf", "Market Share"]
+    sourced_from_feeds: [MarketplaceBrowserAutomationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: SALES_CompetitorListingRemoval
     category: "Sales & Channels"
@@ -758,6 +791,7 @@ signals_events:
     downstream_events: ["Sales Opportunity Assessment"]
     entity_types: ["CompetitorProduct", "Channel", "Product"]
     affected_kpis: ["Availability Advantage", "Revenue Opportunity"]
+    sourced_from_feeds: [MarketplaceBrowserAutomationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: SALES_CompetitorSearchRankingChange
     category: "Sales & Channels"
@@ -768,6 +802,7 @@ signals_events:
     downstream_events: ["Channel Strategy Review"]
     entity_types: ["Product", "Competitor", "Channel"]
     affected_kpis: ["Search Rank", "Share of Shelf"]
+    sourced_from_feeds: [MarketplaceBrowserAutomationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: SALES_CompetitorOutOfStock
     category: "Sales & Channels"
@@ -778,6 +813,7 @@ signals_events:
     downstream_events: ["Sales Opportunity / Promotion Review"]
     entity_types: ["CompetitorProduct", "Channel"]
     affected_kpis: ["Conversion Opportunity", "Sales Uplift"]
+    sourced_from_feeds: [MarketplaceBrowserAutomationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: SALES_RetailCategoryGrowth
     category: "Sales & Channels"
@@ -798,6 +834,7 @@ signals_events:
     downstream_events: ["SKU Assortment Review"]
     entity_types: ["Competitor", "Product", "Channel"]
     affected_kpis: ["Assortment Coverage"]
+    sourced_from_feeds: [MarketplaceBrowserAutomationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: SALES_MarketplacePolicyChange
     category: "Sales & Channels"
@@ -850,6 +887,7 @@ signals_events:
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Listing Lead Time", "Distribution"]
     related_processes: [channel_listing_claim_audit]
+    sourced_from_feeds: [MarketplaceChannelApiFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: SALES_ListingContentUpdateRequired
     category: "Sales & Channels"
@@ -861,6 +899,7 @@ signals_events:
     entity_types: ["Channel"]
     affected_kpis: ["Listing Accuracy"]
     related_processes: [channel_listing_claim_audit]
+    sourced_from_feeds: [MarketplaceBrowserAutomationFeed, MarketplaceChannelApiFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: SALES_RetailerOrderReceived
     category: "Sales & Channels"
@@ -871,6 +910,7 @@ signals_events:
     downstream_events: ["Order Fulfillment"]
     entity_types: []
     affected_kpis: ["Fill Rate", "OTIF"]
+    sourced_from_feeds: [PetpoojaPosFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: SALES_OrderFulfillmentSLABreached
     category: "Sales & Channels"
@@ -1245,6 +1285,7 @@ signals_events:
     affected_kpis: ["Days of Cover", "Stockout Rate"]
     related_processes: [demand_forecast, shelf_life_risk_monitoring]
     related_kpis: [LowStockIncidenceRate, CriticalLowCount]
+    sourced_from_feeds: [PetpoojaPosFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: OPS_ExcessInventoryDetected
     category: "Operations & Supply Chain"
@@ -1256,6 +1297,7 @@ signals_events:
     entity_types: []
     affected_kpis: ["Inventory Days", "Working Capital"]
     related_processes: [shelf_life_risk_monitoring]
+    sourced_from_feeds: [PetpoojaPosFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: OPS_ShelfLifeThresholdReached
     category: "Operations & Supply Chain"
@@ -1290,6 +1332,7 @@ signals_events:
     downstream_events: ["Recovery Planning"]
     entity_types: []
     affected_kpis: ["Schedule Adherence", "Service Level"]
+    sourced_from_feeds: [ErpNextFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: OPS_FactoryCapacityThresholdReached
     category: "Operations & Supply Chain"
@@ -1481,6 +1524,7 @@ signals_events:
     downstream_events: ["Material Shortage", "Production Risk"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["PO On-Time Delivery"]
+    sourced_from_feeds: [ErpNextFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: PROC_SupplierContractApproachingExpiry
     category: "Procurement & Suppliers"
@@ -1531,6 +1575,7 @@ signals_events:
     downstream_events: ["RFQ / PO / Supplier Selection"]
     entity_types: ["Ingredient", "Supplier"]
     affected_kpis: ["Procurement Cycle Time"]
+    sourced_from_feeds: [ErpNextFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: PROC_SupplierPerformanceReviewDue
     category: "Procurement & Suppliers"
@@ -1553,6 +1598,7 @@ signals_events:
     entity_types: ["Product", "Ingredient", "Category"]
     affected_kpis: ["Risk Exposure"]
     related_processes: [competitor_enforcement_signals]
+    sourced_from_feeds: [RegulatoryCompetitorNewsFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: QA_CompetitorProductRecall
     category: "Quality & Food Safety"
@@ -1564,6 +1610,7 @@ signals_events:
     entity_types: ["CompetitorProduct", "Ingredient", "Product"]
     affected_kpis: ["Product Risk Score"]
     related_processes: [competitor_enforcement_signals]
+    sourced_from_feeds: [RegulatoryCompetitorNewsFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: QA_IngredientSafetyWarning
     category: "Quality & Food Safety"
@@ -1596,6 +1643,7 @@ signals_events:
     entity_types: ["Product", "Ingredient"]
     affected_kpis: ["Compliance Risk"]
     related_processes: [competitor_enforcement_signals, regulation_impact_analysis]
+    sourced_from_feeds: [FssaiRegulatoryGazetteFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: QA_PublicComplaintTrend
     category: "Quality & Food Safety"
@@ -1608,6 +1656,7 @@ signals_events:
     affected_kpis: ["Complaint Rate", "Sentiment"]
     related_processes: [customer_review_aggregation_and_triage, formulation_feedback_loop]
     related_kpis: [LowRatingShare, OpsComplaintShare, NearExpiryComplaintShare]
+    sourced_from_feeds: [ReviewAggregationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: QA_CategoryQualityIssue
     category: "Quality & Food Safety"
@@ -1619,6 +1668,7 @@ signals_events:
     entity_types: ["Category", "Product"]
     affected_kpis: ["Quality Risk"]
     related_processes: [customer_review_aggregation_and_triage]
+    sourced_from_feeds: [ReviewAggregationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: QA_SupplierPublicSafetyAlert
     category: "Quality & Food Safety"
@@ -1721,6 +1771,7 @@ signals_events:
     affected_kpis: ["Complaint Rate"]
     related_processes: [customer_review_aggregation_and_triage, formulation_feedback_loop, dark_store_ops_escalation]
     related_kpis: [LowRatingShare, OpsComplaintShare, StoresOverOpsComplaintBar]
+    sourced_from_feeds: [ReviewAggregationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: QA_ProductReturnsAboveThreshold
     category: "Quality & Food Safety"
@@ -1732,6 +1783,7 @@ signals_events:
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Return Rate"]
     related_processes: [customer_review_aggregation_and_triage, formulation_feedback_loop]
+    sourced_from_feeds: [ReviewAggregationFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: QA_TraceabilityFailureDetected
     category: "Quality & Food Safety"
@@ -1957,8 +2009,17 @@ signals_events:
 
 # The external feeds catalog: data feeds ingested from outside the tenant (a
 # system, API, or file drop) — the upstream source a signal or event is often
-# derived from, though there is no edge linking a feed to the signals/events
-# it produces today; each is a separate, independently-authored list.
+# derived from. `produces_signals_events` (here) and `sourced_from_feeds` (on
+# the matching signals_events entries above) are a curated, hand-authored,
+# two-way pair added on top of both independently-authored lists — same
+# thematic-match methodology as `related_processes`/`related_kpis` above (feed
+# description/source vs. signal/event name/description/category, not exact
+# text matching), so treat it at the same confidence level: a reasonable
+# reading of which feed plausibly produces which signal/event, not a verified
+# integration mapping. Only 42 of 180 signals/events got a match; the rest
+# have no external_feeds entry that plausibly produces them yet. Keep both
+# sides in sync by hand if either list changes — there is no derivation step
+# that regenerates one from the other.
 # `id`, `name` and `source` are required by the apply-time schema; `source`
 # is the upstream system/provider (e.g. "fssai.gov.in", "ERPNext", "Petpooja")
 # — a free-text label like `cadence`/`format`, not a resolved integration
@@ -1991,6 +2052,7 @@ external_feeds:
     format: "Web scrape (HTML)"
     entity_types: ["Regulation", "Ingredient", "Claim", "Product"]
     affected_kpis: ["Compliance Exposure", "Revenue at Risk"]
+    produces_signals_events: [COMP_FSSAIRegulationPublished, COMP_DraftRegulationPublished, COMP_IngredientAdditiveRuleChange, COMP_ClaimsRuleChange, COMP_LabellingRuleChange, COMP_PackagingRegulationChange, COMP_LegalMetrologyChange, COMP_EPREnvironmentalRegulationChange, QA_RegulatorFoodSafetyAlert]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: StateComplianceParserFeed
     owner: compliance_team
@@ -2001,6 +2063,7 @@ external_feeds:
     format: "Web scrape"
     entity_types: ["Regulation", "Product"]
     affected_kpis: ["Compliance Exposure"]
+    produces_signals_events: [COMP_FSSAIRegulationPublished, COMP_DraftRegulationPublished]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: RegulatoryCompetitorNewsFeed
     owner: compliance_team
@@ -2011,6 +2074,7 @@ external_feeds:
     format: "not yet decided"
     entity_types: ["CompetitorProduct", "Regulation", "Category"]
     affected_kpis: ["Regulatory Risk Score"]
+    produces_signals_events: [COMP_CompetitorEnforcementRecall, COMP_DraftRegulationPublished, QA_IndustryProductRecall, QA_CompetitorProductRecall]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: ComplianceOpsMessagingFeed
     owner: compliance_team
@@ -2021,6 +2085,7 @@ external_feeds:
     format: "Email / WhatsApp"
     entity_types: ["Certification", "Supplier"]
     affected_kpis: ["Licence Coverage", "Supplier Compliance Rate"]
+    produces_signals_events: [COMP_FSSAILicenceExpiry, COMP_SupplierCOAExpiry, COMP_SupplierCertificationExpiry]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: DtcCustomerMessagingFeed
     owner: marketing_team
@@ -2031,6 +2096,7 @@ external_feeds:
     format: "Email / WhatsApp / SMS"
     entity_types: ["Campaign"]
     affected_kpis: ["Engagement", "Conversion Rate"]
+    produces_signals_events: [MKT_DTCConversionBelowTarget]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: MarketplaceBrowserAutomationFeed
     owner: sales_team
@@ -2041,6 +2107,7 @@ external_feeds:
     format: "Browser automation (headless browser)"
     entity_types: ["Channel", "Product", "CompetitorProduct"]
     affected_kpis: ["Share of Shelf", "Listing Accuracy"]
+    produces_signals_events: [SALES_CompetitorNewListing, SALES_CompetitorListingRemoval, SALES_CompetitorSearchRankingChange, SALES_CompetitorOutOfStock, SALES_CompetitorAssortmentChange, SALES_ListingContentUpdateRequired]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: MarketplaceChannelApiFeed
     owner: sales_team
@@ -2051,6 +2118,7 @@ external_feeds:
     format: "REST API / Webhook"
     entity_types: ["Channel", "Product"]
     affected_kpis: ["Listing Accuracy", "Price Realization"]
+    produces_signals_events: [SALES_NewListingRequestReceived, SALES_ListingContentUpdateRequired, COMP_NewMarketChannelListingRequested]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: ErpNextFeed
     owner: supply_chain_team
@@ -2061,6 +2129,7 @@ external_feeds:
     format: "REST API"
     entity_types: ["Supplier", "InventoryBatch", "Product"]
     affected_kpis: ["PO On-Time Delivery", "Production Uptime"]
+    produces_signals_events: [PROC_ProcurementCycleDue, PROC_PurchaseOrderDelayed, OPS_ProductionBehindPlan]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: PetpoojaPosFeed
     owner: supply_chain_team
@@ -2071,6 +2140,7 @@ external_feeds:
     format: "REST API"
     entity_types: ["Store", "InventoryBatch"]
     affected_kpis: ["Inventory Accuracy"]
+    produces_signals_events: [OPS_InventoryBelowSafetyStock, OPS_ExcessInventoryDetected, SALES_RetailerOrderReceived]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: AdPlatformFeed
     owner: marketing_team
@@ -2081,6 +2151,7 @@ external_feeds:
     format: "REST API"
     entity_types: ["Campaign", "Channel"]
     affected_kpis: ["ROAS", "CTR", "CAC"]
+    produces_signals_events: [MKT_CampaignPerformanceBelowTarget, MKT_CampaignBudgetThresholdReached, MKT_CampaignOptimizationReviewDue, MKT_DTCConversionBelowTarget]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: ReviewAggregationFeed
     owner: cx_team
@@ -2091,6 +2162,7 @@ external_feeds:
     format: "Email / REST API"
     entity_types: ["Review", "Complaint", "Store"]
     affected_kpis: ["Average Store Rating", "Complaint Rate"]
+    produces_signals_events: [QA_PublicComplaintTrend, QA_ConsumerComplaintsAboveThreshold, QA_ProductReturnsAboveThreshold, QA_CategoryQualityIssue]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
 
   - id: ExternalMarketDataProviderFeed
     owner: npd_team
@@ -2101,3 +2173,4 @@ external_feeds:
     format: "not yet decided"
     entity_types: ["Category", "CustomerSegment"]
     affected_kpis: ["Opportunity Score", "TAM"]
+    produces_signals_events: [NPD_EmergingConsumerSearchTrend, NPD_SocialTrendAcceleration, NPD_EmergingConsumerNeed, NPD_CategoryGrowthDecline, NPD_OpportunityAssessmentRequired]   # curated: signals/events this feed sources; reverse is sourced_from_feeds on each
