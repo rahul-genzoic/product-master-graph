@@ -76,6 +76,30 @@ version: 1
 # `related_processes`. These reverse fields are mechanically derived from
 # the two lists here -- regenerate them from this file if related_processes/
 # related_kpis ever change, don't hand-edit them out of sync.
+#
+# `source`, `cadence`, `format` (on every signals_events entry) and
+# `category`, `kind: Feed` (on every external_feeds entry) give both lists
+# the SAME field set, so every entry -- Signal, Event, or Feed -- carries
+# who/what it's from, how often it arrives, and what shape it's in,
+# regardless of which list it's authored in. These are NOT tracker-sourced --
+# the original sheet import never had a cadence/format/source column for
+# signals/events or a category column for feeds. They're authored here:
+# for a signals_events entry with a `sourced_from_feeds` link, its
+# source/cadence/format are inherited verbatim from that feed (the one case
+# with a real answer); for an Event with no feed link, they're
+# "internal" / "event-triggered" / "system event" (an internal occurrence
+# has no external pipe); for a Signal with no feed link, they're a
+# per-category default (e.g. "Compliance & Regulatory" -> "Regulatory
+# monitoring" / "continuous" / "Regulatory gazette / news scrape") -- a
+# reasonable placeholder, not a verified integration. Every external_feeds
+# entry's `category` is likewise inferred from its owner/description, one of
+# the same 9 business categories used above. Two top-level keys
+# (`signals_events:` / `external_feeds:`) are kept deliberately separate --
+# a real apply-time schema difference exists between them (see
+# f279469 "Fix external_feeds schema: add required source field"), so
+# collapsing them into one list risks breaking `contextgraph apply` in a way
+# nothing in this repo can verify. This is schema parity, not a structural
+# merge.
 
 signals_events:
   # ---- NPD & Innovation ----
@@ -85,6 +109,9 @@ signals_events:
     name: "Emerging Consumer Search Trend"
     kind: Signal
     description: "Growth in searches for attributes, formats or needs."
+    source: "External data provider (not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "not yet decided"
+    format: "not yet decided"
     downstream_events: ["Opportunity Assessment Required", "Portfolio Gap Assessment Due"]
     entity_types: ["Product", "Category", "CustomerSegment"]
     affected_kpis: ["Search Growth", "Category Growth", "Opportunity Score"]
@@ -96,6 +123,9 @@ signals_events:
     name: "Social Trend Acceleration"
     kind: Signal
     description: "Emerging product, ingredient, flavor or consumption trend."
+    source: "External data provider (not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "not yet decided"
+    format: "not yet decided"
     downstream_events: ["Opportunity Assessment Required"]
     entity_types: ["Product", "Category", "CustomerSegment"]
     affected_kpis: ["Trend Velocity", "Brand Relevance", "Opportunity Score"]
@@ -107,6 +137,9 @@ signals_events:
     name: "Emerging Ingredient Trend"
     kind: Signal
     description: "Growing interest in new functional/food ingredients."
+    source: "Market/consumer research"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Market/consumer research report"
     downstream_events: ["Opportunity Assessment Required", "NPD Feasibility Assessment Due"]
     entity_types: ["Ingredient", "Product", "Category", "Supplier"]
     affected_kpis: ["Ingredient Demand Growth", "Innovation Pipeline Value"]
@@ -117,6 +150,9 @@ signals_events:
     name: "Emerging Flavor Trend"
     kind: Signal
     description: "Flavors gaining consumer interest."
+    source: "Market/consumer research"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Market/consumer research report"
     downstream_events: ["Opportunity Assessment Required"]
     entity_types: ["Product", "Category", "CustomerSegment"]
     affected_kpis: ["Consumer Affinity", "Opportunity Score"]
@@ -127,6 +163,9 @@ signals_events:
     name: "Competitor Product Launch"
     kind: Signal
     description: "New competitor product or variant."
+    source: "Market/consumer research"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Market/consumer research report"
     downstream_events: ["Portfolio Gap Assessment Due", "Competitive Review Due"]
     entity_types: ["Competitor", "Product", "Category", "Channel"]
     affected_kpis: ["Market Share", "Innovation Gap", "Share of Shelf"]
@@ -137,6 +176,9 @@ signals_events:
     name: "Competitor Formulation Change"
     kind: Signal
     description: "Competitor changes ingredients or nutrition profile."
+    source: "Market/consumer research"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Market/consumer research report"
     downstream_events: ["Product Positioning Review Due", "Opportunity Assessment Required"]
     entity_types: ["CompetitorProduct", "Ingredient", "Product", "Category"]
     affected_kpis: ["Product Differentiation", "Consumer Preference"]
@@ -147,6 +189,9 @@ signals_events:
     name: "Competitor Pack Innovation"
     kind: Signal
     description: "New competitor pack size/format."
+    source: "Market/consumer research"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Market/consumer research report"
     downstream_events: ["Product Positioning Review Due", "Portfolio Gap Assessment Due"]
     entity_types: ["Product", "Channel", "Competitor"]
     affected_kpis: ["Price-Pack Index", "Pack Mix", "Market Share"]
@@ -157,6 +202,9 @@ signals_events:
     name: "Category Growth / Decline"
     kind: Signal
     description: "Material category/subcategory demand movement."
+    source: "External data provider (not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "not yet decided"
+    format: "not yet decided"
     downstream_events: ["Opportunity Assessment Required", "Strategic Portfolio Review Due"]
     entity_types: ["Category", "Product", "Channel"]
     affected_kpis: ["Category Growth", "Revenue Growth", "Market Share"]
@@ -168,6 +216,9 @@ signals_events:
     name: "Emerging Consumer Need"
     kind: Signal
     description: "Unmet needs identified from public consumer feedback."
+    source: "External data provider (not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "not yet decided"
+    format: "not yet decided"
     downstream_events: ["Opportunity Assessment Required"]
     entity_types: ["CustomerSegment", "Product", "Category"]
     affected_kpis: ["Need Frequency", "Sentiment", "Opportunity Score"]
@@ -179,6 +230,9 @@ signals_events:
     name: "New Ingredient / Technology Innovation"
     kind: Signal
     description: "New relevant ingredients or technology emerge."
+    source: "Market/consumer research"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Market/consumer research report"
     downstream_events: ["NPD Feasibility Assessment Due"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Innovation Potential", "Cost Impact", "Feasibility Score"]
@@ -189,6 +243,9 @@ signals_events:
     name: "New Idea Submitted"
     kind: Event
     description: "Initiate idea capture and triage."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Opportunity Assessment Required"]
     entity_types: ["Idea", "Category"]
     affected_kpis: ["Idea Pipeline Count", "Idea Conversion Rate"]
@@ -200,6 +257,9 @@ signals_events:
     name: "Opportunity Assessment Required"
     kind: Event
     description: "Assess market/product opportunity."
+    source: "External data provider (not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "not yet decided"
+    format: "not yet decided"
     downstream_events: ["NPD Feasibility Assessment Due", "NPD Investment Review Triggered"]
     entity_types: ["Category", "CustomerSegment"]
     affected_kpis: ["Opportunity Score", "TAM", "Expected Revenue"]
@@ -211,6 +271,9 @@ signals_events:
     name: "NPD Feasibility Assessment Due"
     kind: Event
     description: "Assess technical, supply, financial and regulatory feasibility."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["NPD Stage Gate Reached", "NPD Compliance Clearance Required"]
     entity_types: ["Product", "Ingredient", "Supplier"]
     affected_kpis: ["Feasibility Score", "Target COGS", "Time to Launch"]
@@ -222,6 +285,9 @@ signals_events:
     name: "NPD Stage Gate Reached"
     kind: Event
     description: "Review/approve progression to next development stage."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Product Ready for Launch Review"]
     entity_types: ["Product"]
     affected_kpis: ["Stage-Gate Cycle Time", "Approval Rate"]
@@ -234,6 +300,9 @@ signals_events:
     name: "Formulation Trial Completed"
     kind: Event
     description: "Evaluate formulation trial outcome."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["NPD Stage Gate Reached", "Formulation COGS Above Target"]
     entity_types: ["Product", "Ingredient"]
     affected_kpis: ["Trial Success Rate", "Sensory Score", "COGS"]
@@ -244,6 +313,9 @@ signals_events:
     name: "Formulation COGS Above Target"
     kind: Event
     description: "Formulation exceeds target economics."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["NPD Investment Review Triggered", "Supplier Review"]
     entity_types: ["Product", "Ingredient", "Supplier"]
     affected_kpis: ["COGS", "Gross Margin", "Target Cost Variance"]
@@ -255,6 +327,9 @@ signals_events:
     name: "NPD Project Delayed"
     kind: Event
     description: "Product-development milestone missed."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["NPD Investment Review Triggered"]
     entity_types: ["Product"]
     affected_kpis: ["Time to Market", "Milestone Variance"]
@@ -266,6 +341,9 @@ signals_events:
     name: "NPD Compliance Clearance Required"
     kind: Event
     description: "Perform compliance pre-clearance."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Product Ready for Launch Review"]
     entity_types: ["Product", "Ingredient", "Claim"]
     affected_kpis: ["Compliance Readiness", "Launch Readiness"]
@@ -277,6 +355,9 @@ signals_events:
     name: "Product Ready for Launch Review"
     kind: Event
     description: "Cross-functional launch readiness assessment."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["New SKU Created", "New Market / Channel Listing Requested"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Launch Readiness Score", "On-Time Launch"]
@@ -288,6 +369,9 @@ signals_events:
     name: "Post-Launch Review Due"
     kind: Event
     description: "Evaluate performance after launch."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Strategic Portfolio Review Due"]
     entity_types: ["Product", "Channel", "CustomerSegment"]
     affected_kpis: ["Revenue", "Repeat Rate", "Margin", "Distribution"]
@@ -299,6 +383,9 @@ signals_events:
     name: "FSSAI Regulation Published"
     kind: Signal
     description: "New/amended FSSAI regulation."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Compliance Review", "Product Claim Changed", "Label / Artwork Changed"]
     entity_types: ["Regulation", "Product", "Ingredient", "Claim"]
     affected_kpis: ["Compliance Exposure", "Revenue at Risk"]
@@ -311,6 +398,9 @@ signals_events:
     name: "Draft Regulation Published"
     kind: Signal
     description: "Proposed regulatory requirement."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Compliance Impact Assessment"]
     entity_types: ["Regulation", "Product", "Ingredient"]
     affected_kpis: ["Future Compliance Exposure", "Readiness Score"]
@@ -323,6 +413,9 @@ signals_events:
     name: "Ingredient / Additive Rule Change"
     kind: Signal
     description: "Permitted ingredient/additive rules change."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Product Formulation Changed", "Compliance Clearance"]
     entity_types: ["Ingredient", "Product", "Supplier"]
     affected_kpis: ["Products Impacted", "Reformulation Cost"]
@@ -335,6 +428,9 @@ signals_events:
     name: "Claims Rule Change"
     kind: Signal
     description: "Rules governing health/nutrition claims change."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Product Claim Changed", "Label / Artwork Changed"]
     entity_types: ["Claim", "Product", "Brand", "Channel"]
     affected_kpis: ["Claims Compliance Rate", "Revenue at Risk"]
@@ -348,6 +444,9 @@ signals_events:
     name: "Labelling Rule Change"
     kind: Signal
     description: "Mandatory labeling requirements change."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Label / Artwork Changed", "Listing Content Update Required"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Label Compliance Rate", "SKUs Impacted"]
@@ -361,6 +460,9 @@ signals_events:
     name: "Packaging Regulation Change"
     kind: Signal
     description: "Packaging/food-contact requirements change."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Packaging Change Review"]
     entity_types: ["Product", "Supplier"]
     affected_kpis: ["Packaging Compliance", "Cost Impact"]
@@ -373,6 +475,9 @@ signals_events:
     name: "Legal Metrology Change"
     kind: Signal
     description: "MRP/quantity/declaration requirements change."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Label / Artwork Changed"]
     entity_types: ["Channel"]
     affected_kpis: ["Listing Compliance", "Price Compliance"]
@@ -385,6 +490,9 @@ signals_events:
     name: "EPR / Environmental Regulation Change"
     kind: Signal
     description: "Packaging waste/EPR requirements change."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Packaging Compliance Review"]
     entity_types: ["Product"]
     affected_kpis: ["EPR Compliance", "Plastic Usage"]
@@ -397,6 +505,9 @@ signals_events:
     name: "Competitor Enforcement / Recall"
     kind: Signal
     description: "Regulatory action involving comparable product."
+    source: "News site (provider not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "not yet decided"
+    format: "not yet decided"
     downstream_events: ["Compliance Review", "Quality Investigation"]
     entity_types: ["CompetitorProduct", "Ingredient", "Category", "Product"]
     affected_kpis: ["Regulatory Risk Score"]
@@ -409,6 +520,9 @@ signals_events:
     name: "International Regulatory Change"
     kind: Signal
     description: "Relevant foreign regulation changes."
+    source: "Regulatory monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous"
+    format: "Regulatory gazette / news scrape"
     downstream_events: ["Market Entry Assessment", "Compliance Review"]
     entity_types: ["Product", "Ingredient", "Claim"]
     affected_kpis: ["Market Readiness", "Compliance Exposure"]
@@ -420,6 +534,9 @@ signals_events:
     name: "FSSAI Licence Expiry"
     kind: Event
     description: "Licence nearing expiration."
+    source: "Email / WhatsApp"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "as-received"
+    format: "Email / WhatsApp"
     downstream_events: ["Licence Renewal / Operational Escalation"]
     entity_types: []
     affected_kpis: ["Licence Coverage", "Days to Expiry"]
@@ -432,6 +549,9 @@ signals_events:
     name: "Supplier COA Expiry"
     kind: Event
     description: "Supplier COA requires renewal."
+    source: "Email / WhatsApp"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "as-received"
+    format: "Email / WhatsApp"
     downstream_events: ["Supplier Compliance Review", "Material Hold"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Supplier Compliance Rate", "Material Availability"]
@@ -444,6 +564,9 @@ signals_events:
     name: "Supplier Certification Expiry"
     kind: Event
     description: "Supplier certification expiring."
+    source: "Email / WhatsApp"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "as-received"
+    format: "Email / WhatsApp"
     downstream_events: ["Supplier Performance Review", "Alternate Sourcing"]
     entity_types: ["Supplier", "Certification", "Ingredient"]
     affected_kpis: ["Approved Supplier Coverage"]
@@ -456,6 +579,9 @@ signals_events:
     name: "Product Formulation Changed"
     kind: Event
     description: "Internal formulation modified."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Compliance Clearance", "Claim Review", "Label Change"]
     entity_types: ["Product", "Ingredient", "Claim"]
     affected_kpis: ["Compliance Readiness", "Reformulation Cost"]
@@ -468,6 +594,9 @@ signals_events:
     name: "New Ingredient Introduced"
     kind: Event
     description: "New ingredient added to product."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Ingredient Compliance Assessment", "Supplier Qualification"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Ingredient Approval Rate", "Compliance Risk"]
@@ -479,6 +608,9 @@ signals_events:
     name: "Product Claim Changed"
     kind: Event
     description: "Product/marketing claim modified."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Marketing Claim Approval", "Label Change"]
     entity_types: ["Product", "Claim", "Brand", "Channel"]
     affected_kpis: ["Claims Approval Rate", "Compliance Risk"]
@@ -491,6 +623,9 @@ signals_events:
     name: "Label / Artwork Changed"
     kind: Event
     description: "Product artwork modified."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Listing Content Update Required"]
     entity_types: ["Channel"]
     affected_kpis: ["Artwork Approval Cycle Time", "Listing Accuracy"]
@@ -503,6 +638,9 @@ signals_events:
     name: "New SKU Created"
     kind: Event
     description: "New SKU established internally."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Compliance Clearance", "New Listing Request"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Launch Readiness", "Compliance Completion"]
@@ -514,6 +652,9 @@ signals_events:
     name: "New Market / Channel Listing Requested"
     kind: Event
     description: "Product requested for new market/channel."
+    source: "Blinkit, Zomato, Swiggy, Shopify"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered (on product/price change), daily sync"
+    format: "REST API / Webhook"
     downstream_events: ["Market Entry Assessment", "Listing Compliance Review"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Listing Readiness", "Compliance Coverage"]
@@ -526,6 +667,9 @@ signals_events:
     name: "Periodic Compliance Review Due"
     kind: Event
     description: "Scheduled portfolio compliance assessment."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Product / Label / Claim Remediation"]
     entity_types: ["Regulation"]
     affected_kpis: ["Portfolio Compliance Score"]
@@ -537,6 +681,9 @@ signals_events:
     name: "Search Volume Spike"
     kind: Signal
     description: "Significant consumer search-interest movement."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Opportunity Assessment", "Campaign Planning"]
     entity_types: ["Product", "Category"]
     affected_kpis: ["Search Share", "Demand Index"]
@@ -547,6 +694,9 @@ signals_events:
     name: "Social Conversation Spike"
     kind: Signal
     description: "Brand/category conversation increases rapidly."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Campaign Optimization"]
     entity_types: ["Brand", "Product", "CustomerSegment"]
     affected_kpis: ["Share of Voice", "Engagement"]
@@ -557,6 +707,9 @@ signals_events:
     name: "Brand Sentiment Shift"
     kind: Signal
     description: "Public sentiment materially changes."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Product Positioning Review", "Campaign Optimization"]
     entity_types: ["Brand", "Product", "CustomerSegment"]
     affected_kpis: ["Sentiment Score", "NPS Proxy"]
@@ -567,6 +720,9 @@ signals_events:
     name: "Consumer Trend Emergence"
     kind: Signal
     description: "New consumer behavior/preferences emerge."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Opportunity Assessment", "Portfolio Review"]
     entity_types: ["CustomerSegment", "Product", "Category"]
     affected_kpis: ["Trend Adoption", "Segment Growth"]
@@ -577,6 +733,9 @@ signals_events:
     name: "Influencer Mention"
     kind: Signal
     description: "Influential creator discusses product/category."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Campaign Optimization"]
     entity_types: ["Brand", "Product"]
     affected_kpis: ["Earned Reach", "Engagement"]
@@ -587,6 +746,9 @@ signals_events:
     name: "Competitor Campaign Launch"
     kind: Signal
     description: "Competitor launches significant campaign."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Campaign Optimization", "Competitive Review"]
     entity_types: ["Competitor", "Brand", "Product", "Category"]
     affected_kpis: ["Share of Voice", "Brand Consideration"]
@@ -597,6 +759,9 @@ signals_events:
     name: "Viral Content / Category Trend"
     kind: Signal
     description: "Relevant topic becomes viral."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Campaign Planning", "Opportunity Assessment"]
     entity_types: ["Category", "Product", "CustomerSegment"]
     affected_kpis: ["Trend Velocity", "Engagement"]
@@ -607,6 +772,9 @@ signals_events:
     name: "Festival / Seasonal Opportunity"
     kind: Signal
     description: "Upcoming occasion affects demand."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Seasonal Campaign Planning", "Forecast Review"]
     entity_types: ["Product", "Category", "Channel"]
     affected_kpis: ["Seasonal Uplift", "Revenue Opportunity"]
@@ -618,6 +786,9 @@ signals_events:
     name: "Cultural / Sporting Event"
     kind: Signal
     description: "Major event influences consumption."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Campaign Planning", "Forecast Review"]
     entity_types: ["Product", "Category"]
     affected_kpis: ["Campaign Opportunity", "Demand Uplift"]
@@ -629,6 +800,9 @@ signals_events:
     name: "Consumer Behavior Shift"
     kind: Signal
     description: "External purchasing/consumption behavior changes."
+    source: "Market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Social/search analytics"
     downstream_events: ["Segment Strategy Review"]
     entity_types: ["CustomerSegment", "Product", "Channel"]
     affected_kpis: ["Conversion", "Repeat Rate", "Basket Size"]
@@ -639,6 +813,9 @@ signals_events:
     name: "Campaign Performance Below Target"
     kind: Event
     description: "Campaign KPI misses target."
+    source: "Meta Ads, Google Ads"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["Campaign Optimization Review"]
     entity_types: ["Campaign", "Product", "Channel"]
     affected_kpis: ["ROAS", "CTR", "Conversion"]
@@ -652,6 +829,9 @@ signals_events:
     name: "Campaign Budget Threshold Reached"
     kind: Event
     description: "Spend reaches predefined threshold."
+    source: "Meta Ads, Google Ads"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["Budget Reallocation Review"]
     entity_types: ["Campaign", "Channel"]
     affected_kpis: ["Spend Utilization", "ROAS"]
@@ -665,6 +845,9 @@ signals_events:
     name: "Campaign Optimization Review Due"
     kind: Event
     description: "Reassess active campaign."
+    source: "Meta Ads, Google Ads"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["Content Refresh Due"]
     entity_types: ["Campaign"]
     affected_kpis: ["CTR", "CPA", "ROAS"]
@@ -678,6 +861,9 @@ signals_events:
     name: "Content Approval Required"
     kind: Event
     description: "Marketing content requires approval."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Marketing Claim Approval"]
     entity_types: ["Claim", "Brand"]
     affected_kpis: ["Approval Cycle Time"]
@@ -688,6 +874,9 @@ signals_events:
     name: "Marketing Claim Approval Required"
     kind: Event
     description: "Validate proposed marketing claims."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Label / Artwork Changed"]
     entity_types: ["Claim", "Product"]
     affected_kpis: ["Claims Approval Rate"]
@@ -700,6 +889,9 @@ signals_events:
     name: "DTC Conversion Below Target"
     kind: Event
     description: "DTC conversion underperforms."
+    source: "Email / WhatsApp / SMS"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "as-triggered"
+    format: "Email / WhatsApp / SMS"
     downstream_events: ["Campaign Optimization", "Pricing Review"]
     entity_types: ["Product"]
     affected_kpis: ["Conversion Rate", "CAC"]
@@ -711,6 +903,9 @@ signals_events:
     name: "Customer Segment Performance Changed"
     kind: Event
     description: "Segment economics/engagement shifts."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Segment Strategy Review"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Revenue per Segment", "Retention"]
@@ -721,6 +916,9 @@ signals_events:
     name: "Seasonal Campaign Planning Due"
     kind: Event
     description: "Initiate seasonal planning."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Campaign Budget Approval", "Content Approval"]
     entity_types: ["Campaign", "Product"]
     affected_kpis: ["Campaign Readiness"]
@@ -732,6 +930,9 @@ signals_events:
     name: "Content Refresh Due"
     kind: Event
     description: "Existing assets require updating."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Content Approval Required"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Content Freshness", "Engagement"]
@@ -742,6 +943,9 @@ signals_events:
     name: "Campaign Post-Mortem Due"
     kind: Event
     description: "Analyze completed campaign."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Future Campaign Planning"]
     entity_types: ["Campaign", "Product", "Channel"]
     affected_kpis: ["Incremental Revenue", "ROAS"]
@@ -755,6 +959,9 @@ signals_events:
     name: "Retailer Expansion Announcement"
     kind: Signal
     description: "Retailer expands geography/store footprint."
+    source: "Channel monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Marketplace scrape / API"
     downstream_events: ["New Market / Channel Listing Requested"]
     entity_types: ["Channel", "Product"]
     affected_kpis: ["Distribution Reach", "Revenue Opportunity"]
@@ -766,6 +973,9 @@ signals_events:
     name: "Quick-Commerce Market Expansion"
     kind: Signal
     description: "Q-commerce platform enters new geography."
+    source: "Channel monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Marketplace scrape / API"
     downstream_events: ["Market Entry Assessment", "New Listing Request"]
     entity_types: ["Channel", "Product"]
     affected_kpis: ["Availability", "Incremental Revenue"]
@@ -777,6 +987,9 @@ signals_events:
     name: "Competitor New Listing"
     kind: Signal
     description: "Competitor SKU enters channel."
+    source: "Zomato, Swiggy, Blinkit, Instamart"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly (per source use case: \"Weekly scan\")"
+    format: "Browser automation (headless browser)"
     downstream_events: ["Portfolio Gap Assessment", "Channel Strategy Review"]
     entity_types: ["CompetitorProduct", "Channel", "Category"]
     affected_kpis: ["Share of Shelf", "Market Share"]
@@ -788,6 +1001,9 @@ signals_events:
     name: "Competitor Listing Removal"
     kind: Signal
     description: "Competitor SKU disappears."
+    source: "Zomato, Swiggy, Blinkit, Instamart"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly (per source use case: \"Weekly scan\")"
+    format: "Browser automation (headless browser)"
     downstream_events: ["Sales Opportunity Assessment"]
     entity_types: ["CompetitorProduct", "Channel", "Product"]
     affected_kpis: ["Availability Advantage", "Revenue Opportunity"]
@@ -799,6 +1015,9 @@ signals_events:
     name: "Competitor Search Ranking Change"
     kind: Signal
     description: "Competitor digital visibility changes."
+    source: "Zomato, Swiggy, Blinkit, Instamart"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly (per source use case: \"Weekly scan\")"
+    format: "Browser automation (headless browser)"
     downstream_events: ["Channel Strategy Review"]
     entity_types: ["Product", "Competitor", "Channel"]
     affected_kpis: ["Search Rank", "Share of Shelf"]
@@ -810,6 +1029,9 @@ signals_events:
     name: "Competitor Out-of-Stock"
     kind: Signal
     description: "Competitor unavailable externally."
+    source: "Zomato, Swiggy, Blinkit, Instamart"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly (per source use case: \"Weekly scan\")"
+    format: "Browser automation (headless browser)"
     downstream_events: ["Sales Opportunity / Promotion Review"]
     entity_types: ["CompetitorProduct", "Channel"]
     affected_kpis: ["Conversion Opportunity", "Sales Uplift"]
@@ -821,6 +1043,9 @@ signals_events:
     name: "Retail Category Growth"
     kind: Signal
     description: "Category accelerates at retailer."
+    source: "Channel monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Marketplace scrape / API"
     downstream_events: ["Assortment Review"]
     entity_types: ["Category", "Product"]
     affected_kpis: ["Category Growth", "Share of Category"]
@@ -831,6 +1056,9 @@ signals_events:
     name: "Competitor Assortment Change"
     kind: Signal
     description: "Competitor modifies channel portfolio."
+    source: "Zomato, Swiggy, Blinkit, Instamart"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly (per source use case: \"Weekly scan\")"
+    format: "Browser automation (headless browser)"
     downstream_events: ["SKU Assortment Review"]
     entity_types: ["Competitor", "Product", "Channel"]
     affected_kpis: ["Assortment Coverage"]
@@ -842,6 +1070,9 @@ signals_events:
     name: "Marketplace Policy Change"
     kind: Signal
     description: "Marketplace modifies commercial/listing rules."
+    source: "Channel monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Marketplace scrape / API"
     downstream_events: ["Listing Compliance Review"]
     entity_types: ["Channel", "Product"]
     affected_kpis: ["Listing Compliance", "Channel Margin"]
@@ -853,6 +1084,9 @@ signals_events:
     name: "New Distribution Opportunity"
     kind: Signal
     description: "New channel/distributor identified."
+    source: "Channel monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Marketplace scrape / API"
     downstream_events: ["Market Entry Assessment"]
     entity_types: ["Channel"]
     affected_kpis: ["Numeric Distribution", "Revenue Opportunity"]
@@ -863,6 +1097,9 @@ signals_events:
     name: "Sales Target Variance"
     kind: Event
     description: "Actual sales deviate from target."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Channel Performance Review"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Revenue Attainment", "Volume Variance"]
@@ -873,6 +1110,9 @@ signals_events:
     name: "Distributor Inventory Threshold Breached"
     kind: Event
     description: "Distributor stock outside tolerance."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Replenishment", "Inventory Transfer"]
     entity_types: []
     affected_kpis: ["Days of Inventory", "Fill Rate"]
@@ -883,6 +1123,9 @@ signals_events:
     name: "New Listing Request Received"
     kind: Event
     description: "New channel listing requested."
+    source: "Blinkit, Zomato, Swiggy, Shopify"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered (on product/price change), daily sync"
+    format: "REST API / Webhook"
     downstream_events: ["Listing Compliance Review", "Listing Creation"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Listing Lead Time", "Distribution"]
@@ -895,6 +1138,9 @@ signals_events:
     name: "Listing Content Update Required"
     kind: Event
     description: "Channel information requires modification."
+    source: "Zomato, Swiggy, Blinkit, Instamart"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly (per source use case: \"Weekly scan\")"
+    format: "Browser automation (headless browser)"
     downstream_events: ["Digital Shelf Audit"]
     entity_types: ["Channel"]
     affected_kpis: ["Listing Accuracy"]
@@ -907,6 +1153,9 @@ signals_events:
     name: "Retailer Order Received"
     kind: Event
     description: "Customer order enters system."
+    source: "Petpooja"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["Order Fulfillment"]
     entity_types: []
     affected_kpis: ["Fill Rate", "OTIF"]
@@ -918,6 +1167,9 @@ signals_events:
     name: "Order Fulfillment SLA Breached"
     kind: Event
     description: "Fulfillment misses agreed SLA."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Operations Escalation"]
     entity_types: []
     affected_kpis: ["OTIF", "Service Level"]
@@ -929,6 +1181,9 @@ signals_events:
     name: "Distributor Replenishment Required"
     kind: Event
     description: "Distributor requires replenishment."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Production / Dispatch Planning"]
     entity_types: []
     affected_kpis: ["Service Level", "Stock Availability"]
@@ -939,6 +1194,9 @@ signals_events:
     name: "SKU Assortment Review Due"
     kind: Event
     description: "Review SKU mix by channel."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Listing Creation/Removal"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Assortment Productivity"]
@@ -949,6 +1207,9 @@ signals_events:
     name: "Channel Performance Below Target"
     kind: Event
     description: "Channel misses performance target."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Channel Strategy Review", "Pricing Review"]
     entity_types: ["Channel", "Product"]
     affected_kpis: ["Revenue Growth", "Channel Margin"]
@@ -959,6 +1220,9 @@ signals_events:
     name: "Account Business Review Due"
     kind: Event
     description: "Periodic key-account review."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Assortment", "Pricing", "Trade-Spend Review"]
     entity_types: ["Product"]
     affected_kpis: ["Account Revenue", "Account Margin"]
@@ -970,6 +1234,9 @@ signals_events:
     name: "Competitor Price Change"
     kind: Signal
     description: "Competitor changes external selling price."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["Price Review Due"]
     entity_types: ["CompetitorProduct", "Product", "Category", "Channel"]
     affected_kpis: ["Price Index", "Market Share"]
@@ -980,6 +1247,9 @@ signals_events:
     name: "Competitor Promotion Launch"
     kind: Signal
     description: "Competitor introduces offer/discount."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["Promotion Review"]
     entity_types: ["Competitor", "Product", "Channel"]
     affected_kpis: ["Promo Intensity", "Market Share"]
@@ -990,6 +1260,9 @@ signals_events:
     name: "Commodity Price Movement"
     kind: Signal
     description: "Key input market price changes."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["COGS Above Threshold", "Gross Margin Below Floor"]
     entity_types: ["Ingredient", "Product", "Supplier"]
     affected_kpis: ["COGS", "Gross Margin"]
@@ -1001,6 +1274,9 @@ signals_events:
     name: "FX Rate Movement"
     kind: Signal
     description: "Currency changes affect economics."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["COGS Above Threshold", "Pricing Review"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Landed Cost", "Margin"]
@@ -1011,6 +1287,9 @@ signals_events:
     name: "Inflation Movement"
     kind: Signal
     description: "Broader inflation changes."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["Pricing Review", "Portfolio Review"]
     entity_types: ["Category", "Product"]
     affected_kpis: ["Price Realization", "Volume Growth"]
@@ -1021,6 +1300,9 @@ signals_events:
     name: "Competitor Pack-Size Change"
     kind: Signal
     description: "Competitor alters price-pack architecture."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["Product Positioning Review"]
     entity_types: ["Product", "Competitor"]
     affected_kpis: ["Price per Unit", "Pack Mix"]
@@ -1031,6 +1313,9 @@ signals_events:
     name: "Competitor Bundle / Offer"
     kind: Signal
     description: "Competitor launches bundle."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["Promotion / Bundle Review"]
     entity_types: ["Competitor", "Product", "Channel"]
     affected_kpis: ["Basket Size", "Promo ROI"]
@@ -1041,6 +1326,9 @@ signals_events:
     name: "Category Pricing Movement"
     kind: Signal
     description: "Category-level pricing changes."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["Price Review Due"]
     entity_types: ["Category", "Product", "Channel"]
     affected_kpis: ["Price Index"]
@@ -1051,6 +1339,9 @@ signals_events:
     name: "Retailer Discount Movement"
     kind: Signal
     description: "Retailer discounting changes."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["Trade-Spend Review"]
     entity_types: ["Product"]
     affected_kpis: ["Price Realization", "Trade Spend"]
@@ -1061,6 +1352,9 @@ signals_events:
     name: "Macroeconomic Demand Change"
     kind: Signal
     description: "Economy indicates demand pressure/opportunity."
+    source: "Market/pricing monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Market/pricing data feed"
     downstream_events: ["Revenue Forecast Review"]
     entity_types: ["Category", "Product"]
     affected_kpis: ["Revenue Forecast", "Volume Growth"]
@@ -1071,6 +1365,9 @@ signals_events:
     name: "Gross Margin Below Floor"
     kind: Event
     description: "Margin falls below policy threshold."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Price Review", "COGS Optimization", "Sourcing Review"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Gross Margin", "Contribution Margin"]
@@ -1082,6 +1379,9 @@ signals_events:
     name: "COGS Above Threshold"
     kind: Event
     description: "Product cost exceeds threshold."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Formulation Optimization", "Supplier Review"]
     entity_types: ["Product", "Ingredient", "Supplier"]
     affected_kpis: ["COGS", "Cost Variance"]
@@ -1093,6 +1393,9 @@ signals_events:
     name: "Promotion ROI Below Target"
     kind: Event
     description: "Promotion generates inadequate return."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Promotion Optimization"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Promo ROI", "Incremental Margin"]
@@ -1103,6 +1406,9 @@ signals_events:
     name: "Trade Spend Budget Exceeded"
     kind: Event
     description: "Trade spend breaches budget."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Trade-Spend Reallocation"]
     entity_types: ["Channel"]
     affected_kpis: ["Trade Spend %", "ROI"]
@@ -1113,6 +1419,9 @@ signals_events:
     name: "Revenue Variance Above Threshold"
     kind: Event
     description: "Revenue deviates materially from plan."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Sales Review", "Forecast Review"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Revenue Variance"]
@@ -1123,6 +1432,9 @@ signals_events:
     name: "SKU Profitability Below Threshold"
     kind: Event
     description: "SKU economics fall below target."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Portfolio Rationalization Review"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["SKU Margin", "Contribution"]
@@ -1134,6 +1446,9 @@ signals_events:
     name: "Price Review Due"
     kind: Event
     description: "Pricing decision required."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Listing Price Update"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Price Realization", "Margin"]
@@ -1144,6 +1459,9 @@ signals_events:
     name: "Customer / Channel Profitability Below Target"
     kind: Event
     description: "Channel/customer economics deteriorate."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Account Review", "Assortment Review"]
     entity_types: ["Channel", "Product"]
     affected_kpis: ["Customer Margin", "Channel Margin"]
@@ -1154,6 +1472,9 @@ signals_events:
     name: "Portfolio Rationalization Review Due"
     kind: Event
     description: "Portfolio optimization required."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["SKU Discontinuation / Investment Review"]
     entity_types: ["Product", "Category"]
     affected_kpis: ["Portfolio ROI", "SKU Productivity"]
@@ -1164,6 +1485,9 @@ signals_events:
     name: "NPD Investment Review Triggered"
     kind: Event
     description: "Innovation economics require reassessment."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Continue/Pause/Stop NPD"]
     entity_types: []
     affected_kpis: ["NPV", "Expected Margin", "Investment ROI"]
@@ -1175,6 +1499,9 @@ signals_events:
     name: "Weather Anomaly"
     kind: Signal
     description: "External weather deviates materially from normal."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Forecast Review", "Inventory Rebalancing"]
     entity_types: ["Product"]
     affected_kpis: ["Forecast Accuracy", "Service Level"]
@@ -1186,6 +1513,9 @@ signals_events:
     name: "Severe Weather Warning"
     kind: Signal
     description: "Flood, cyclone, heatwave etc."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Supplier Risk Review", "Logistics Response"]
     entity_types: ["Supplier"]
     affected_kpis: ["OTIF", "Supply Risk"]
@@ -1196,6 +1526,9 @@ signals_events:
     name: "Transport / Port Disruption"
     kind: Signal
     description: "External transport network disrupted."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Shipment Delay", "Material Shortage"]
     entity_types: ["Supplier"]
     affected_kpis: ["Lead Time", "OTIF"]
@@ -1206,6 +1539,9 @@ signals_events:
     name: "Fuel Price Spike"
     kind: Signal
     description: "Transport input costs increase."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Logistics Cost / Margin Review"]
     entity_types: ["Product"]
     affected_kpis: ["Logistics Cost per Unit"]
@@ -1216,6 +1552,9 @@ signals_events:
     name: "Festival / Event Demand Signal"
     kind: Signal
     description: "Upcoming event likely changes demand."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Forecast Review", "Production Planning"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Forecast Accuracy", "Sales Uplift"]
@@ -1228,6 +1567,9 @@ signals_events:
     name: "Regional Disruption"
     kind: Signal
     description: "Strike/unrest affects region."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Logistics / Inventory Risk Review"]
     entity_types: []
     affected_kpis: ["Service Level"]
@@ -1238,6 +1580,9 @@ signals_events:
     name: "Logistics Market Disruption"
     kind: Signal
     description: "Freight capacity/availability disrupted."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Shipment Delay", "Fulfillment Risk"]
     entity_types: []
     affected_kpis: ["Freight Cost", "OTIF"]
@@ -1248,6 +1593,9 @@ signals_events:
     name: "Industry-Wide Shortage"
     kind: Signal
     description: "External material/capacity shortage emerges."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Supplier Capacity Risk"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Material Availability"]
@@ -1258,6 +1606,9 @@ signals_events:
     name: "External Demand Trend"
     kind: Signal
     description: "Market indicators signal demand movement."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Demand Forecast Review"]
     entity_types: ["Product", "Category"]
     affected_kpis: ["Forecast Accuracy"]
@@ -1270,6 +1621,9 @@ signals_events:
     name: "Infrastructure Disruption"
     kind: Signal
     description: "Road/rail/power disruption occurs."
+    source: "External weather/logistics monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Weather/logistics data feed"
     downstream_events: ["Shipment/Production Disruption"]
     entity_types: []
     affected_kpis: ["Production Uptime", "OTIF"]
@@ -1280,6 +1634,9 @@ signals_events:
     name: "Inventory Below Safety Stock"
     kind: Event
     description: "Stock falls below policy threshold."
+    source: "Petpooja"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["Replenishment", "Production Planning"]
     entity_types: []
     affected_kpis: ["Days of Cover", "Stockout Rate"]
@@ -1293,6 +1650,9 @@ signals_events:
     name: "Excess Inventory Detected"
     kind: Event
     description: "Inventory exceeds target."
+    source: "Petpooja"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["Liquidation", "Promotion", "Transfer"]
     entity_types: []
     affected_kpis: ["Inventory Days", "Working Capital"]
@@ -1305,6 +1665,9 @@ signals_events:
     name: "Shelf-Life Threshold Reached"
     kind: Event
     description: "Stock approaches expiry."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Liquidation", "Transfer", "Promotion"]
     entity_types: []
     affected_kpis: ["Expiry Risk", "Waste %"]
@@ -1317,6 +1680,9 @@ signals_events:
     name: "Forecast Variance Above Tolerance"
     kind: Event
     description: "Actual vs forecast diverges."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Forecast Recalculation"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Forecast Accuracy", "Bias"]
@@ -1329,6 +1695,9 @@ signals_events:
     name: "Production Behind Plan"
     kind: Event
     description: "Output misses production plan."
+    source: "ERPNext"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["Recovery Planning"]
     entity_types: []
     affected_kpis: ["Schedule Adherence", "Service Level"]
@@ -1340,6 +1709,9 @@ signals_events:
     name: "Factory Capacity Threshold Reached"
     kind: Event
     description: "Plant approaches capacity limit."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Capacity Reallocation"]
     entity_types: ["Product"]
     affected_kpis: ["Capacity Utilization"]
@@ -1350,6 +1722,9 @@ signals_events:
     name: "Warehouse Capacity Threshold Reached"
     kind: Event
     description: "Storage capacity constrained."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Inventory Redistribution"]
     entity_types: []
     affected_kpis: ["Capacity Utilization"]
@@ -1360,6 +1735,9 @@ signals_events:
     name: "Shipment Delayed"
     kind: Event
     description: "Shipment misses schedule."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Fulfillment SLA Risk"]
     entity_types: []
     affected_kpis: ["OTIF", "Lead Time"]
@@ -1370,6 +1748,9 @@ signals_events:
     name: "Order Backlog Threshold Breached"
     kind: Event
     description: "Orders accumulate beyond tolerance."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Production / Fulfillment Recovery"]
     entity_types: []
     affected_kpis: ["Backlog", "Service Level"]
@@ -1380,6 +1761,9 @@ signals_events:
     name: "Inventory Imbalance Across Locations"
     kind: Event
     description: "Stock misallocated geographically."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Inter-Store/DC Transfer"]
     entity_types: ["Store"]
     affected_kpis: ["Stock Availability", "Inventory Turns"]
@@ -1391,6 +1775,9 @@ signals_events:
     name: "Commodity Price Spike"
     kind: Signal
     description: "Major external raw-material price increase."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["COGS Above Threshold", "Supplier Price Review"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Purchase Price Variance", "COGS"]
@@ -1401,6 +1788,9 @@ signals_events:
     name: "Commodity Futures Movement"
     kind: Signal
     description: "Forward prices indicate future risk."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["Procurement Planning", "Contract Review"]
     entity_types: ["Ingredient"]
     affected_kpis: ["Forecast Purchase Cost"]
@@ -1411,6 +1801,9 @@ signals_events:
     name: "Supplier Financial Risk News"
     kind: Signal
     description: "Public information indicates supplier distress."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["Supplier Risk Review", "Alternate Sourcing"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Supplier Risk Score"]
@@ -1421,6 +1814,9 @@ signals_events:
     name: "Supplier Geopolitical Exposure"
     kind: Signal
     description: "Political events threaten supplier operations."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["Supply Continuity Review"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Supply Risk"]
@@ -1431,6 +1827,9 @@ signals_events:
     name: "Supplier Region Weather Disruption"
     kind: Signal
     description: "Weather threatens supplier geography."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["Lead-Time Risk", "Alternate Sourcing"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Lead Time", "Material Availability"]
@@ -1441,6 +1840,9 @@ signals_events:
     name: "Port / Shipping Disruption"
     kind: Signal
     description: "External shipping route disruption."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["Purchase Order Delay"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Inbound OTIF"]
@@ -1451,6 +1853,9 @@ signals_events:
     name: "Market Material Shortage"
     kind: Signal
     description: "Input availability declines externally."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["Supplier Capacity Risk"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Material Availability"]
@@ -1461,6 +1866,9 @@ signals_events:
     name: "New Alternative Supplier Identified"
     kind: Signal
     description: "New sourcing candidate discovered."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["Supplier Qualification"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Supplier Coverage", "Sourcing Optionality"]
@@ -1471,6 +1879,9 @@ signals_events:
     name: "Supplier M&A / Ownership Change"
     kind: Signal
     description: "Supplier ownership materially changes."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["Supplier Risk Review"]
     entity_types: ["Supplier"]
     affected_kpis: ["Supplier Risk Score"]
@@ -1481,6 +1892,9 @@ signals_events:
     name: "Industry Input Cost Movement"
     kind: Signal
     description: "Industry-wide input cost changes."
+    source: "Supplier/market monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Supplier/market news"
     downstream_events: ["COGS Review", "Contract Review"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["COGS", "Purchase Price Variance"]
@@ -1491,6 +1905,9 @@ signals_events:
     name: "Supplier OTIF Below Threshold"
     kind: Event
     description: "Supplier delivery performance deteriorates."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Supplier Performance Review"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Supplier OTIF"]
@@ -1501,6 +1918,9 @@ signals_events:
     name: "Supplier Lead Time Above Threshold"
     kind: Event
     description: "Supplier delivery lead time deteriorates."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Safety Stock Review", "Alternate Sourcing"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Lead Time", "Service Risk"]
@@ -1511,6 +1931,9 @@ signals_events:
     name: "Supplier Quality Score Declined"
     kind: Event
     description: "Supplier quality deteriorates."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Supplier Quality Review"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Supplier Quality Score"]
@@ -1521,6 +1944,9 @@ signals_events:
     name: "Purchase Order Delayed"
     kind: Event
     description: "PO misses required delivery date."
+    source: "ERPNext"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["Material Shortage", "Production Risk"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["PO On-Time Delivery"]
@@ -1532,6 +1958,9 @@ signals_events:
     name: "Supplier Contract Approaching Expiry"
     kind: Event
     description: "Contract requires renewal."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Negotiation / Sourcing Process"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Contract Coverage", "Savings"]
@@ -1542,6 +1971,9 @@ signals_events:
     name: "Single-Source Exposure Above Threshold"
     kind: Event
     description: "Critical dependency identified."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Alternate Supplier Qualification"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Single-Source Exposure"]
@@ -1552,6 +1984,9 @@ signals_events:
     name: "Supplier Capacity Insufficient"
     kind: Event
     description: "Supplier cannot satisfy forecast demand."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Alternate Sourcing"]
     entity_types: ["Supplier", "Ingredient", "Product"]
     affected_kpis: ["Supplier Capacity Coverage"]
@@ -1562,6 +1997,9 @@ signals_events:
     name: "Supplier Price Increase Received"
     kind: Event
     description: "Supplier requests higher price."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Negotiation", "COGS Review"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Purchase Price Variance"]
@@ -1572,6 +2010,9 @@ signals_events:
     name: "Procurement Cycle Due"
     kind: Event
     description: "Planned procurement process begins."
+    source: "ERPNext"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "REST API"
     downstream_events: ["RFQ / PO / Supplier Selection"]
     entity_types: ["Ingredient", "Supplier"]
     affected_kpis: ["Procurement Cycle Time"]
@@ -1583,6 +2024,9 @@ signals_events:
     name: "Supplier Performance Review Due"
     kind: Event
     description: "Scheduled supplier assessment."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Corrective Action / Sourcing Decision"]
     entity_types: ["Supplier"]
     affected_kpis: ["Supplier Scorecard"]
@@ -1594,6 +2038,9 @@ signals_events:
     name: "Industry Product Recall"
     kind: Signal
     description: "Similar external product recalled."
+    source: "News site (provider not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "not yet decided"
+    format: "not yet decided"
     downstream_events: ["Internal Product Risk Assessment"]
     entity_types: ["Product", "Ingredient", "Category"]
     affected_kpis: ["Risk Exposure"]
@@ -1606,6 +2053,9 @@ signals_events:
     name: "Competitor Product Recall"
     kind: Signal
     description: "Competitor recall detected."
+    source: "News site (provider not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "not yet decided"
+    format: "not yet decided"
     downstream_events: ["Product / Ingredient Risk Review"]
     entity_types: ["CompetitorProduct", "Ingredient", "Product"]
     affected_kpis: ["Product Risk Score"]
@@ -1618,6 +2068,9 @@ signals_events:
     name: "Ingredient Safety Warning"
     kind: Signal
     description: "External ingredient safety concern."
+    source: "External safety/quality monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Regulatory/news alert"
     downstream_events: ["Ingredient Risk Assessment", "Material Hold"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Safety Risk"]
@@ -1628,6 +2081,9 @@ signals_events:
     name: "Contamination Outbreak"
     kind: Signal
     description: "External contamination incident."
+    source: "External safety/quality monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Regulatory/news alert"
     downstream_events: ["Supplier / Ingredient Risk Assessment"]
     entity_types: ["Ingredient", "Supplier"]
     affected_kpis: ["Food Safety Risk"]
@@ -1639,6 +2095,9 @@ signals_events:
     name: "Regulator Food Safety Alert"
     kind: Signal
     description: "Regulator publishes safety warning."
+    source: "fssai.gov.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "continuous (per source use case: \"Continuous monitoring\")"
+    format: "Web scrape (HTML)"
     downstream_events: ["Product Risk Assessment"]
     entity_types: ["Product", "Ingredient"]
     affected_kpis: ["Compliance Risk"]
@@ -1651,6 +2110,9 @@ signals_events:
     name: "Public Complaint Trend"
     kind: Signal
     description: "External consumers report emerging issue."
+    source: "Email, Swiggy, Zomato, Amazon.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Email / REST API"
     downstream_events: ["Quality Investigation"]
     entity_types: ["Product"]
     affected_kpis: ["Complaint Rate", "Sentiment"]
@@ -1664,6 +2126,9 @@ signals_events:
     name: "Category Quality Issue"
     kind: Signal
     description: "Market-wide category quality problem."
+    source: "Email, Swiggy, Zomato, Amazon.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Email / REST API"
     downstream_events: ["Internal Quality Review"]
     entity_types: ["Category", "Product"]
     affected_kpis: ["Quality Risk"]
@@ -1676,6 +2141,9 @@ signals_events:
     name: "Supplier Public Safety Alert"
     kind: Signal
     description: "External alert involves supplier."
+    source: "External safety/quality monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Regulatory/news alert"
     downstream_events: ["Supplier Quality Review", "Material Hold"]
     entity_types: ["Supplier", "Ingredient"]
     affected_kpis: ["Supplier Risk"]
@@ -1686,6 +2154,9 @@ signals_events:
     name: "Scientific Safety Finding"
     kind: Signal
     description: "New scientific safety evidence emerges."
+    source: "External safety/quality monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Regulatory/news alert"
     downstream_events: ["Ingredient / Formulation Risk Review"]
     entity_types: ["Ingredient", "Product"]
     affected_kpis: ["Safety Risk"]
@@ -1696,6 +2167,9 @@ signals_events:
     name: "International Food Safety Alert"
     kind: Signal
     description: "Relevant global alert issued."
+    source: "External safety/quality monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Regulatory/news alert"
     downstream_events: ["Product / Ingredient Risk Assessment"]
     entity_types: ["Product", "Ingredient"]
     affected_kpis: ["Market Risk"]
@@ -1706,6 +2180,9 @@ signals_events:
     name: "Lab Test Failed"
     kind: Event
     description: "Internal lab result fails specification."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Batch Hold", "CAPA"]
     entity_types: ["Product"]
     affected_kpis: ["Pass Rate", "Batch Release Time"]
@@ -1716,6 +2193,9 @@ signals_events:
     name: "Batch Specification Breached"
     kind: Event
     description: "Batch outside approved limits."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Batch Hold / Rejection", "CAPA"]
     entity_types: ["Product"]
     affected_kpis: ["Batch Conformance Rate"]
@@ -1726,6 +2206,9 @@ signals_events:
     name: "Incoming Material Failed QA"
     kind: Event
     description: "Raw material fails inspection."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Material Rejection", "Supplier Review"]
     entity_types: ["Ingredient", "Supplier"]
     affected_kpis: ["Incoming Quality Rate"]
@@ -1736,6 +2219,9 @@ signals_events:
     name: "Batch Rejected"
     kind: Event
     description: "Batch formally rejected."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["CAPA", "Production Rescheduling"]
     entity_types: ["Product"]
     affected_kpis: ["Rejection Rate", "Yield"]
@@ -1746,6 +2232,9 @@ signals_events:
     name: "Packaging Defect Above Threshold"
     kind: Event
     description: "Packaging defects exceed tolerance."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Packaging Investigation"]
     entity_types: ["Supplier", "Product"]
     affected_kpis: ["Defect Rate"]
@@ -1756,6 +2245,9 @@ signals_events:
     name: "Production Parameter Outside Tolerance"
     kind: Event
     description: "Manufacturing parameter deviates."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Batch Quality Review", "CAPA"]
     entity_types: ["Product"]
     affected_kpis: ["Process Capability", "Yield"]
@@ -1766,6 +2258,9 @@ signals_events:
     name: "Consumer Complaints Above Threshold"
     kind: Event
     description: "Internal complaint threshold breached."
+    source: "Email, Swiggy, Zomato, Amazon.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Email / REST API"
     downstream_events: ["Quality Investigation", "Batch Correlation"]
     entity_types: ["Product"]
     affected_kpis: ["Complaint Rate"]
@@ -1779,6 +2274,9 @@ signals_events:
     name: "Product Returns Above Threshold"
     kind: Event
     description: "Return rate breaches target."
+    source: "Email, Swiggy, Zomato, Amazon.in"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "daily"
+    format: "Email / REST API"
     downstream_events: ["Quality Investigation"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Return Rate"]
@@ -1791,6 +2289,9 @@ signals_events:
     name: "Traceability Failure Detected"
     kind: Event
     description: "Product/batch lineage cannot be established."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Compliance Escalation", "CAPA"]
     entity_types: ["Ingredient", "Supplier", "Product"]
     affected_kpis: ["Traceability Coverage"]
@@ -1801,6 +2302,9 @@ signals_events:
     name: "CAPA Investigation Due"
     kind: Event
     description: "Corrective/preventive process required."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Supplier / Manufacturing Corrective Action"]
     entity_types: ["Supplier"]
     affected_kpis: ["CAPA Closure Time"]
@@ -1812,6 +2316,9 @@ signals_events:
     name: "Competitor Product Launch"
     kind: Signal
     description: "Competitor introduces product/SKU."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Competitive Review", "Portfolio Gap Assessment"]
     entity_types: ["Competitor", "Product", "Category", "Channel"]
     affected_kpis: ["Market Share", "Innovation Gap"]
@@ -1822,6 +2329,9 @@ signals_events:
     name: "Competitor Price Change"
     kind: Signal
     description: "Competitor pricing moves."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Competitive Pricing Review"]
     entity_types: ["CompetitorProduct", "Product", "Channel"]
     affected_kpis: ["Price Index"]
@@ -1832,6 +2342,9 @@ signals_events:
     name: "Competitor Promotion"
     kind: Signal
     description: "Competitor launches promotion."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Promotion Response Review"]
     entity_types: ["Competitor", "Product", "Channel"]
     affected_kpis: ["Promo Share", "Market Share"]
@@ -1842,6 +2355,9 @@ signals_events:
     name: "Competitor Claim Change"
     kind: Signal
     description: "Competitor positioning/claim changes."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Product Positioning Review"]
     entity_types: ["CompetitorProduct", "Claim", "Product"]
     affected_kpis: ["Brand Differentiation"]
@@ -1852,6 +2368,9 @@ signals_events:
     name: "Competitor Formulation Change"
     kind: Signal
     description: "Competitor changes product composition."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Product / NPD Review"]
     entity_types: ["CompetitorProduct", "Ingredient", "Product"]
     affected_kpis: ["Product Differentiation"]
@@ -1862,6 +2381,9 @@ signals_events:
     name: "Competitor Geographic Expansion"
     kind: Signal
     description: "Competitor enters new geography."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Market Entry / Defense Review"]
     entity_types: ["Competitor", "Channel"]
     affected_kpis: ["Regional Market Share"]
@@ -1872,6 +2394,9 @@ signals_events:
     name: "Competitor Channel Expansion"
     kind: Signal
     description: "Competitor enters new channel."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Channel Strategy Review"]
     entity_types: ["Competitor", "Channel", "Product"]
     affected_kpis: ["Channel Share"]
@@ -1882,6 +2407,9 @@ signals_events:
     name: "Competitor Funding / M&A"
     kind: Signal
     description: "Competitor capital/ownership changes."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Strategic Competitive Review"]
     entity_types: ["Competitor", "Category"]
     affected_kpis: ["Competitive Threat Score"]
@@ -1892,6 +2420,9 @@ signals_events:
     name: "New Challenger Brand Emerging"
     kind: Signal
     description: "Fast-growing new entrant detected."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Competitive Review", "Portfolio Gap Assessment"]
     entity_types: ["Competitor", "Brand", "Category"]
     affected_kpis: ["Share Growth"]
@@ -1902,6 +2433,9 @@ signals_events:
     name: "Category / Market Growth Shift"
     kind: Signal
     description: "Category trajectory changes."
+    source: "Competitive monitoring"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "weekly"
+    format: "Competitive intelligence monitoring"
     downstream_events: ["Category Performance Review", "Portfolio Review"]
     entity_types: ["Category", "Product"]
     affected_kpis: ["Category Growth", "Market Share"]
@@ -1912,6 +2446,9 @@ signals_events:
     name: "Competitive Review Due"
     kind: Event
     description: "Structured competitor assessment required."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Positioning / Pricing / Portfolio Review"]
     entity_types: ["Competitor", "Product", "Category"]
     affected_kpis: ["Competitive Position Score"]
@@ -1922,6 +2459,9 @@ signals_events:
     name: "Market Share Variance Above Threshold"
     kind: Event
     description: "Internal share KPI deviates."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Category Review", "Competitive Review"]
     entity_types: ["Product", "Category"]
     affected_kpis: ["Market Share"]
@@ -1932,6 +2472,9 @@ signals_events:
     name: "Category Performance Review Triggered"
     kind: Event
     description: "Category requires strategic review."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Portfolio / Assortment / NPD Review"]
     entity_types: ["Category", "Product", "Channel"]
     affected_kpis: ["Category Growth", "Margin"]
@@ -1942,6 +2485,9 @@ signals_events:
     name: "Product Positioning Review Due"
     kind: Event
     description: "Positioning requires reassessment."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Claim / Pack / Marketing Review"]
     entity_types: ["Product", "Brand", "Claim"]
     affected_kpis: ["Brand Consideration"]
@@ -1952,6 +2498,9 @@ signals_events:
     name: "Competitive Pricing Review Triggered"
     kind: Event
     description: "Pricing response needs assessment."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Price Review Due"]
     entity_types: ["Product", "Competitor", "Channel"]
     affected_kpis: ["Price Index", "Margin"]
@@ -1962,6 +2511,9 @@ signals_events:
     name: "Portfolio Gap Assessment Due"
     kind: Event
     description: "Compare portfolio against market opportunities."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Opportunity Assessment / NPD"]
     entity_types: ["Category"]
     affected_kpis: ["Portfolio Coverage", "Opportunity Value"]
@@ -1972,6 +2524,9 @@ signals_events:
     name: "Market Entry Assessment Initiated"
     kind: Event
     description: "New geography/category evaluated."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Compliance", "Channel", "Supply Readiness"]
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Market Attractiveness", "Readiness"]
@@ -1983,6 +2538,9 @@ signals_events:
     name: "Channel Strategy Review Due"
     kind: Event
     description: "Channel strategy reassessment required."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Assortment / Listing / Pricing Review"]
     entity_types: ["Channel", "Product"]
     affected_kpis: ["Channel Growth", "Channel Margin"]
@@ -1993,6 +2551,9 @@ signals_events:
     name: "Competitor Response Assessment Assigned"
     kind: Event
     description: "Competitor move requires response."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Pricing / Marketing / NPD Response"]
     entity_types: ["Competitor", "Product", "Category"]
     affected_kpis: ["Threat Score", "Expected Revenue Impact"]
@@ -2003,6 +2564,9 @@ signals_events:
     name: "Strategic Portfolio Review Due"
     kind: Event
     description: "Portfolio strategy reassessment."
+    source: "internal"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
+    cadence: "event-triggered"
+    format: "system event"
     downstream_events: ["Rationalization / NPD Investment"]
     entity_types: ["Category"]
     affected_kpis: ["Portfolio ROI", "Growth", "Margin"]
@@ -2045,6 +2609,8 @@ signals_events:
 external_feeds:
   - id: FssaiRegulatoryGazetteFeed
     owner: compliance_team
+    category: "Compliance & Regulatory"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "FSSAI Regulatory Gazette Feed"
     source: "fssai.gov.in"
     description: "FSSAI gazette notifications, draft regulations and state-level advisories, scraped directly from fssai.gov.in. Feeds FSSAI / regulatory feed monitoring, regulation impact analysis, label compliance review, and new-product compliance pre-clearance."
@@ -2056,6 +2622,8 @@ external_feeds:
 
   - id: StateComplianceParserFeed
     owner: compliance_team
+    category: "Compliance & Regulatory"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "State-Level Compliance Portal Feed"
     source: "State FSSAI / food-safety authority portals (per state, provider not yet decided)"
     description: "State-level food-safety authority advisories and restrictions, parsed per state beyond central FSSAI coverage. Source tracker names it only as \"local complaince parser\" [sic] with no cadence decided."
@@ -2067,6 +2635,8 @@ external_feeds:
 
   - id: RegulatoryCompetitorNewsFeed
     owner: compliance_team
+    category: "Compliance & Regulatory"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "Regulatory & Competitor Enforcement News Feed"
     source: "News site (provider not yet decided)"
     description: "News-site monitoring for competitor FSSAI enforcement/recall actions and pre-rule legislative/advisory-committee signals. Source tracker marks the provider \"News site ?\" — not yet selected."
@@ -2078,6 +2648,8 @@ external_feeds:
 
   - id: ComplianceOpsMessagingFeed
     owner: compliance_team
+    category: "Compliance & Regulatory"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "Compliance Ops Inbox (Email / WhatsApp)"
     source: "Email / WhatsApp"
     description: "Inbound dark-store FSSAI licence and supplier COA renewal documents/reminders over email and WhatsApp."
@@ -2089,6 +2661,8 @@ external_feeds:
 
   - id: DtcCustomerMessagingFeed
     owner: marketing_team
+    category: "Marketing & Consumer"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "DTC Customer Messaging Feed"
     source: "Email / WhatsApp / SMS"
     description: "Outbound/inbound DTC customer engagement over email, WhatsApp and SMS text."
@@ -2100,6 +2674,8 @@ external_feeds:
 
   - id: MarketplaceBrowserAutomationFeed
     owner: sales_team
+    category: "Sales & Channels"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "Marketplace Browser Automation Feed"
     source: "Zomato, Swiggy, Blinkit, Instamart"
     description: "Browser-automation scrape of marketplace listing pages (Zomato, Swiggy, Blinkit, Instamart) for listing content, category rankings, and claim/label drift. Backs channel listing claim audit, quick commerce category monitoring, and listing visibility monitoring."
@@ -2111,6 +2687,8 @@ external_feeds:
 
   - id: MarketplaceChannelApiFeed
     owner: sales_team
+    category: "Sales & Channels"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "Marketplace Channel API Feed"
     source: "Blinkit, Zomato, Swiggy, Shopify"
     description: "Channel-platform integrations for listing creation/update, pricing and bundle/combo data across Blinkit, Zomato, Swiggy and Shopify."
@@ -2122,6 +2700,8 @@ external_feeds:
 
   - id: ErpNextFeed
     owner: supply_chain_team
+    category: "Operations & Supply Chain"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "ERPNext Integration Feed"
     source: "ERPNext"
     description: "Procurement cycle and production-to-inventory sync with ERPNext."
@@ -2133,6 +2713,8 @@ external_feeds:
 
   - id: PetpoojaPosFeed
     owner: supply_chain_team
+    category: "Operations & Supply Chain"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "Petpooja POS Feed"
     source: "Petpooja"
     description: "Dark-store inventory reconciliation against the Petpooja point-of-sale system."
@@ -2144,6 +2726,8 @@ external_feeds:
 
   - id: AdPlatformFeed
     owner: marketing_team
+    category: "Marketing & Consumer"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "Ad Platform Feed (Meta Ads / Google Ads)"
     source: "Meta Ads, Google Ads"
     description: "DTC performance-marketing monitoring from Meta Ads and Google Ads."
@@ -2155,6 +2739,8 @@ external_feeds:
 
   - id: ReviewAggregationFeed
     owner: cx_team
+    category: "Quality & Food Safety"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "Customer Review & Marketplace Feedback Feed"
     source: "Email, Swiggy, Zomato, Amazon.in"
     description: "Inbound customer reviews and complaints aggregated from email, Swiggy, Zomato and Amazon.in."
@@ -2166,6 +2752,8 @@ external_feeds:
 
   - id: ExternalMarketDataProviderFeed
     owner: npd_team
+    category: "NPD & Innovation"   # authored: inferred, not tracker-sourced (no category column existed for external_feeds)
+    kind: Feed
     name: "External Market Data Provider Feed"
     source: "External data provider (not yet decided)"
     description: "Third-party market/consumer data provider feeding NPD opportunity-assessment briefs. Source tracker names it only as \"External Data Provider\" — specific vendor not yet selected."
