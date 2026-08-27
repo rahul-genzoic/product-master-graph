@@ -109,6 +109,7 @@ signals_events:
     category: "NPD & Innovation"
     owner: npd_team
     name: "Emerging Consumer Search Trend"
+    kind: Signal
     description: "Growth in searches for attributes, formats or needs."
     source: "External data provider (not yet decided)"   # authored: inferred, not tracker-sourced (no cadence/format/source column existed for signals/events)
     cadence: "not yet decided"
@@ -660,6 +661,7 @@ signals_events:
     entity_types: ["Product", "Channel"]
     affected_kpis: ["Listing Readiness", "Compliance Coverage"]
     related_processes: [multi_market_compliance_readiness, channel_listing_claim_audit]
+    related_kpis: [ListingReadyShare]
     sourced_from_feeds: [MarketplaceChannelApiFeed]   # curated: external_feeds entries that produce this signal/event
 
   - id: COMP_PeriodicComplianceReviewDue
