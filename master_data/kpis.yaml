@@ -4,7 +4,7 @@ kpis:
   name: Listing-Ready SKU Share
   description: Share of active SKUs a marketplace or FSSAI would accept with no blocking gap.
   owner: compliance_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 90
@@ -27,7 +27,7 @@ kpis:
   name: Blocking Gaps per Active SKU
   description: How far a SKU is from publishable, not just whether it is. Depth behind ListingReadyShare.
   owner: compliance_team
-  applies_to: Product
+  applies_to: Products
   unit: count
   target:
     value: 1
@@ -46,7 +46,7 @@ kpis:
   description: Share of active SKUs whose recipe implies an allergen the label declares only as "may contain" (or not at all).
     The highest-liability number in the graph.
   owner: compliance_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 0
@@ -67,7 +67,7 @@ kpis:
   description: "Share of on-pack claims the lab panel supports within 5%. Claim-weighted, not averaged per SKU \u2014 one\
     \ SKU with ten claims must not count as one vote."
   owner: compliance_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 90
@@ -84,7 +84,7 @@ kpis:
   name: Unpublishable Claim Count
   description: "Claims the lab panel contradicts outright \u2014 over 20% off, a false zero claim, or malformed."
   owner: compliance_team
-  applies_to: Claim
+  applies_to: QualityInspections
   unit: count
   target:
     value: 0
@@ -105,7 +105,7 @@ kpis:
   description: Share of active SKUs with an ingredient list of their own rather than one inherited from a sibling pack size.
     Inherited data is assembled, not verified.
   owner: portfolio_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 80
@@ -125,7 +125,7 @@ kpis:
   description: 'Share of active SKUs whose panel basis is known. Without it no figure is publishable: 14.71 g protein per
     100 g and per 70 g serving are two different listings.'
   owner: compliance_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 100
@@ -144,7 +144,7 @@ kpis:
   name: FSSAI Mandatory Nutrient Completeness
   description: Share of active SKUs with no FSSAI-mandatory nutrient left blank on the panel.
   owner: compliance_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 100
@@ -164,7 +164,7 @@ kpis:
   description: "Units expiring inside the store's configured risk window \u2014 the liquidation trigger. Target 0 is a true\
     \ north, so this reads red until the network actually clears."
   owner: supply_chain_team
-  applies_to: Store
+  applies_to: Channel
   unit: units
   target:
     value: 0
@@ -186,7 +186,7 @@ kpis:
   name: Expiry Value at Risk (INR)
   description: "Rupee cost of the stock about to be binned network-wide \u2014 units at risk priced at unit COGS."
   owner: supply_chain_team
-  applies_to: Product
+  applies_to: Products
   unit: inr
   target:
     value: 25000
@@ -204,7 +204,7 @@ kpis:
   description: Units already past expiry and still carried. Both shelf-life processes filter days_to_expiry >= 0, so nothing
     else watches this.
   owner: supply_chain_team
-  applies_to: Store
+  applies_to: Channel
   unit: units
   target:
     value: 0
@@ -227,7 +227,7 @@ kpis:
   description: "Share of stocked (SKU, store) pairs at or under their configured min_count. The counterweight to cutting wastage\
     \ \u2014 expiry risk removed by understocking is not a win."
   owner: supply_chain_team
-  applies_to: Store
+  applies_to: Channel
   unit: percentage
   target:
     value: 5
@@ -254,7 +254,7 @@ kpis:
   name: Critically-Low (SKU, store) Pairs
   description: "Pairs at or under absolute_risk_count \u2014 the hard floor, not the reorder point."
   owner: supply_chain_team
-  applies_to: Store
+  applies_to: Channel
   unit: count
   target:
     value: 0
@@ -272,7 +272,7 @@ kpis:
   description: "On-hand minus the 3-day forecast for stock inside the expiry window. Positive means we ordered more than will\
     \ sell \u2014 the over-ordering the rescue desk exists to stop."
   owner: supply_chain_team
-  applies_to: Product
+  applies_to: Products
   unit: units
   target:
     value: 0
@@ -295,7 +295,7 @@ kpis:
   name: Average Store Rating
   description: Mean customer star rating across stores.
   owner: cx_team
-  applies_to: Store
+  applies_to: Channel
   unit: rating
   target:
     value: 4.0
@@ -313,7 +313,7 @@ kpis:
   description: Share of reviews at 3 stars or below over 90 days. The mean averages the tail away; this is the band the triage
     process actually acts on.
   owner: cx_team
-  applies_to: Store
+  applies_to: Channel
   unit: percentage
   target:
     value: 15
@@ -336,7 +336,7 @@ kpis:
   description: "Share of complaints over 60 days owned by the dark-store partner rather than the product \u2014 late, wrong,\
     \ missing or damaged."
   owner: cx_team
-  applies_to: Store
+  applies_to: Channel
   unit: percentage
   target:
     value: 30
@@ -354,7 +354,7 @@ kpis:
   name: Stores Over the Ops-Complaint Bar
   description: "Stores with 3 or more last-mile complaints in 60 days \u2014 the escalation bar itself."
   owner: cx_team
-  applies_to: Store
+  applies_to: Channel
   unit: count
   target:
     value: 0
@@ -374,7 +374,7 @@ kpis:
   description: Share of product complaints where the batch on hand that day was already inside its shelf-life threshold. The
     only measure of a freshness failure reaching a customer.
   owner: production_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 10
@@ -402,7 +402,7 @@ kpis:
   description: '100 - MAPE against realised sales per (SKU, store, day) over 30 days. Can go negative: a forecast worse than
     useless should read worse than zero.'
   owner: demand_planning_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 80
@@ -435,7 +435,7 @@ kpis:
   description: "How far into the future the latest forecast run reaches. Accuracy on a forecast that stops in the past plans\
     \ nothing \u2014 this is what makes a stalled job visible."
   owner: demand_planning_team
-  applies_to: Product
+  applies_to: Products
   unit: days
   target:
     value: 3
@@ -458,7 +458,7 @@ kpis:
   description: "Ad sales over ad spend across every running campaign. Spend-weighted, never an average of per-campaign ROI\
     \ \u2014 a tiny-spend outlier must not outvote a flagship."
   owner: marketing_team
-  applies_to: Campaign
+  applies_to: Campaigns
   unit: ratio
   target:
     value: 1.5
@@ -486,7 +486,7 @@ kpis:
   name: Zero-Return Ad Spend (INR)
   description: Money on campaigns returning literally nothing, above the process's own 200-rupee floor.
   owner: marketing_team
-  applies_to: Campaign
+  applies_to: Campaigns
   unit: inr
   target:
     value: 0
@@ -505,7 +505,7 @@ kpis:
   description: Percentage points by which ad-driven menu-to-order conversion trails the store's overall rate. The process
     treats a 5-point gap as a campaign failing on its own terms.
   owner: marketing_team
-  applies_to: Campaign
+  applies_to: Campaigns
   unit: percentage
   target:
     value: 5
@@ -529,7 +529,7 @@ kpis:
   description: (MRP - COGS) / MRP across active SKUs, revenue-weighted. Previously averaged MRP_INR and labelled it a percentage,
     which read as permanently on target.
   owner: portfolio_team
-  applies_to: Product
+  applies_to: Products
   unit: percentage
   target:
     value: 60
@@ -570,7 +570,7 @@ kpis:
   name: Pipeline Aging (days in stage)
   description: Mean days an active brief has sat in its current stage.
   owner: npd_team
-  applies_to: Idea
+  applies_to: Products
   unit: days
   target:
     value: 45
@@ -601,7 +601,7 @@ kpis:
   name: Stalled Brief Count
   description: "Active briefs past 90 days in stage \u2014 the top rung of the scoring ladder, i.e. undecided."
   owner: npd_team
-  applies_to: Idea
+  applies_to: Products
   unit: count
   target:
     value: 0
@@ -622,7 +622,7 @@ kpis:
   description: Share of active briefs with a target COGS and a stage date. Below this the ranking is scored on midpoints,
     which is what the process escalates on.
   owner: npd_team
-  applies_to: Idea
+  applies_to: Products
   unit: percentage
   target:
     value: 90

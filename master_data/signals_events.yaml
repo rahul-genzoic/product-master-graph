@@ -13,13 +13,9 @@ signals_events:
   - Opportunity Assessment Required
   - Portfolio Gap Assessment Due
   entity_types:
-  - Product
-  - Category
-  - CustomerSegment
-  affected_kpis:
-  - Search Growth
-  - Category Growth
-  - Opportunity Score
+  - Products
+  - Consumers
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   related_kpis:
@@ -42,13 +38,9 @@ signals_events:
   downstream_events:
   - Opportunity Assessment Required
   entity_types:
-  - Product
-  - Category
-  - CustomerSegment
-  affected_kpis:
-  - Trend Velocity
-  - Brand Relevance
-  - Opportunity Score
+  - Products
+  - Consumers
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   related_kpis:
@@ -72,13 +64,11 @@ signals_events:
   - Opportunity Assessment Required
   - NPD Feasibility Assessment Due
   entity_types:
-  - Ingredient
-  - Product
-  - Category
-  - Supplier
+  - Materials
+  - Products
+  - Suppliers
   affected_kpis:
-  - Ingredient Demand Growth
-  - Innovation Pipeline Value
+  - PipelineAgingDays
   related_processes:
   - idea_capture_triage
   - recipe_development_live_cogs
@@ -102,12 +92,9 @@ signals_events:
   downstream_events:
   - Opportunity Assessment Required
   entity_types:
-  - Product
-  - Category
-  - CustomerSegment
-  affected_kpis:
-  - Consumer Affinity
-  - Opportunity Score
+  - Products
+  - Consumers
+  affected_kpis: []
   related_processes:
   - idea_capture_triage
   - recipe_development_live_cogs
@@ -132,14 +119,9 @@ signals_events:
   - Portfolio Gap Assessment Due
   - Competitive Review Due
   entity_types:
-  - Competitor
-  - Product
-  - Category
+  - Products
   - Channel
-  affected_kpis:
-  - Market Share
-  - Innovation Gap
-  - Share of Shelf
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   - competitive_pricing_signal
@@ -168,13 +150,9 @@ signals_events:
   - Product Positioning Review Due
   - Opportunity Assessment Required
   entity_types:
-  - CompetitorProduct
-  - Ingredient
-  - Product
-  - Category
-  affected_kpis:
-  - Product Differentiation
-  - Consumer Preference
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   - recipe_development_live_cogs
@@ -204,13 +182,10 @@ signals_events:
   - Product Positioning Review Due
   - Portfolio Gap Assessment Due
   entity_types:
-  - Product
+  - Products
   - Channel
-  - Competitor
   affected_kpis:
-  - Price-Pack Index
-  - Pack Mix
-  - Market Share
+  - MarginPct
   related_processes:
   - innovation_pipeline_prioritisation
   - competitive_pricing_signal
@@ -239,13 +214,9 @@ signals_events:
   - Opportunity Assessment Required
   - Strategic Portfolio Review Due
   entity_types:
-  - Category
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Category Growth
-  - Revenue Growth
-  - Market Share
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   related_kpis:
@@ -268,13 +239,9 @@ signals_events:
   downstream_events:
   - Opportunity Assessment Required
   entity_types:
-  - CustomerSegment
-  - Product
-  - Category
-  affected_kpis:
-  - Need Frequency
-  - Sentiment
-  - Opportunity Score
+  - Consumers
+  - Products
+  affected_kpis: []
   related_processes:
   - idea_capture_triage
   - innovation_pipeline_prioritisation
@@ -302,13 +269,11 @@ signals_events:
   downstream_events:
   - NPD Feasibility Assessment Due
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
+  - Materials
+  - Suppliers
+  - Products
   affected_kpis:
-  - Innovation Potential
-  - Cost Impact
-  - Feasibility Score
+  - MarginPct
   related_processes:
   - idea_capture_triage
   - recipe_development_live_cogs
@@ -333,11 +298,9 @@ signals_events:
   downstream_events:
   - Opportunity Assessment Required
   entity_types:
-  - Idea
-  - Category
+  - Products
   affected_kpis:
-  - Idea Pipeline Count
-  - Idea Conversion Rate
+  - PipelineAgingDays
   related_processes:
   - idea_capture_triage
   system_bindings:
@@ -356,12 +319,9 @@ signals_events:
   - NPD Feasibility Assessment Due
   - NPD Investment Review Triggered
   entity_types:
-  - Category
-  - CustomerSegment
-  affected_kpis:
-  - Opportunity Score
-  - TAM
-  - Expected Revenue
+  - Products
+  - Consumers
+  affected_kpis: []
   system_bindings:
   - Google Trends API
   - Social Listening API
@@ -379,13 +339,12 @@ signals_events:
   - NPD Stage Gate Reached
   - NPD Compliance Clearance Required
   entity_types:
-  - Product
-  - Ingredient
-  - Supplier
+  - Products
+  - Materials
+  - Suppliers
   affected_kpis:
-  - Feasibility Score
-  - Target COGS
-  - Time to Launch
+  - MarginPct
+  - PipelineAgingDays
   related_processes:
   - innovation_pipeline_prioritisation
   system_bindings:
@@ -403,10 +362,9 @@ signals_events:
   downstream_events:
   - Product Ready for Launch Review
   entity_types:
-  - Product
+  - Products
   affected_kpis:
-  - Stage-Gate Cycle Time
-  - Approval Rate
+  - PipelineAgingDays
   related_processes:
   - innovation_pipeline_prioritisation
   related_kpis:
@@ -428,12 +386,10 @@ signals_events:
   - NPD Stage Gate Reached
   - Formulation COGS Above Target
   entity_types:
-  - Product
-  - Ingredient
+  - Products
+  - Materials
   affected_kpis:
-  - Trial Success Rate
-  - Sensory Score
-  - COGS
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -448,15 +404,13 @@ signals_events:
   format: system event
   downstream_events:
   - NPD Investment Review Triggered
-  - Supplier Review
+  - Supplier Performance Review Due
   entity_types:
-  - Product
-  - Ingredient
-  - Supplier
+  - Products
+  - Materials
+  - Suppliers
   affected_kpis:
-  - COGS
-  - Gross Margin
-  - Target Cost Variance
+  - MarginPct
   related_kpis:
   - MarginPct
   system_bindings:
@@ -474,10 +428,9 @@ signals_events:
   downstream_events:
   - NPD Investment Review Triggered
   entity_types:
-  - Product
+  - Products
   affected_kpis:
-  - Time to Market
-  - Milestone Variance
+  - PipelineAgingDays
   related_processes:
   - innovation_pipeline_prioritisation
   system_bindings:
@@ -495,12 +448,10 @@ signals_events:
   downstream_events:
   - Product Ready for Launch Review
   entity_types:
-  - Product
-  - Ingredient
-  - Claim
-  affected_kpis:
-  - Compliance Readiness
-  - Launch Readiness
+  - Products
+  - Materials
+  - QualityInspections
+  affected_kpis: []
   related_processes:
   - npd_compliance_preclearance
   system_bindings:
@@ -519,11 +470,9 @@ signals_events:
   - New SKU Created
   - New Market / Channel Listing Requested
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Launch Readiness Score
-  - On-Time Launch
+  affected_kpis: []
   related_processes:
   - npd_compliance_preclearance
   system_bindings:
@@ -541,14 +490,11 @@ signals_events:
   downstream_events:
   - Strategic Portfolio Review Due
   entity_types:
-  - Product
+  - Products
   - Channel
-  - CustomerSegment
+  - Consumers
   affected_kpis:
-  - Revenue
-  - Repeat Rate
-  - Margin
-  - Distribution
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -566,13 +512,10 @@ signals_events:
   - Product Claim Changed
   - Label / Artwork Changed
   entity_types:
-  - Regulation
-  - Product
-  - Ingredient
-  - Claim
-  affected_kpis:
-  - Compliance Exposure
-  - Revenue at Risk
+  - QualityInspections
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - fssai_feed_signal
   - regulation_impact_analysis
@@ -599,12 +542,10 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Regulation
-  - Product
-  - Ingredient
-  affected_kpis:
-  - Future Compliance Exposure
-  - Readiness Score
+  - QualityInspections
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - fssai_feed_signal
   - regulatory_horizon_alerts
@@ -632,12 +573,11 @@ signals_events:
   - Product Formulation Changed
   - NPD Compliance Clearance Required
   entity_types:
-  - Ingredient
-  - Product
-  - Supplier
+  - Materials
+  - Products
+  - Suppliers
   affected_kpis:
-  - Products Impacted
-  - Reformulation Cost
+  - MarginPct
   related_processes:
   - fssai_feed_signal
   - regulation_impact_analysis
@@ -663,13 +603,11 @@ signals_events:
   - Product Claim Changed
   - Label / Artwork Changed
   entity_types:
-  - Claim
-  - Product
-  - Brand
+  - QualityInspections
+  - Products
   - Channel
   affected_kpis:
-  - Claims Compliance Rate
-  - Revenue at Risk
+  - ClaimSubstantiationRate
   related_processes:
   - fssai_feed_signal
   - regulation_impact_analysis
@@ -695,11 +633,9 @@ signals_events:
   - Label / Artwork Changed
   - Listing Content Update Required
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Label Compliance Rate
-  - SKUs Impacted
+  affected_kpis: []
   related_processes:
   - fssai_feed_signal
   - regulation_impact_analysis
@@ -724,11 +660,10 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Product
-  - Supplier
+  - Products
+  - Suppliers
   affected_kpis:
-  - Packaging Compliance
-  - Cost Impact
+  - MarginPct
   related_processes:
   - fssai_feed_signal
   - regulation_impact_analysis
@@ -755,8 +690,7 @@ signals_events:
   entity_types:
   - Channel
   affected_kpis:
-  - Listing Compliance
-  - Price Compliance
+  - ListingReadyShare
   related_processes:
   - fssai_feed_signal
   - regulation_impact_analysis
@@ -781,10 +715,8 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Product
-  affected_kpis:
-  - EPR Compliance
-  - Plastic Usage
+  - Products
+  affected_kpis: []
   related_processes:
   - fssai_feed_signal
   - regulation_impact_analysis
@@ -807,12 +739,9 @@ signals_events:
   - Periodic Compliance Review Due
   - CAPA Investigation Due
   entity_types:
-  - CompetitorProduct
-  - Ingredient
-  - Category
-  - Product
-  affected_kpis:
-  - Regulatory Risk Score
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - competitor_enforcement_signals
   system_bindings:
@@ -833,12 +762,10 @@ signals_events:
   - Market Entry Assessment Initiated
   - Periodic Compliance Review Due
   entity_types:
-  - Product
-  - Ingredient
-  - Claim
-  affected_kpis:
-  - Market Readiness
-  - Compliance Exposure
+  - Products
+  - Materials
+  - QualityInspections
+  affected_kpis: []
   related_processes:
   - multi_market_compliance_readiness
   - regulatory_horizon_alerts
@@ -856,12 +783,9 @@ signals_events:
   source: Email / WhatsApp
   cadence: as-received
   format: Email / WhatsApp
-  downstream_events:
-  - Licence Renewal / Operational Escalation
+  downstream_events: []
   entity_types: []
-  affected_kpis:
-  - Licence Coverage
-  - Days to Expiry
+  affected_kpis: []
   related_processes:
   - dark_store_licence_management
   system_bindings:
@@ -880,14 +804,12 @@ signals_events:
   cadence: as-received
   format: Email / WhatsApp
   downstream_events:
-  - Supplier Compliance Review
-  - Material Hold
+  - Supplier Performance Review Due
+  - Incoming Material Failed QA
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Supplier Compliance Rate
-  - Material Availability
+  - Suppliers
+  - Materials
+  affected_kpis: []
   related_processes:
   - supplier_coa_renewal
   system_bindings:
@@ -906,14 +828,13 @@ signals_events:
   cadence: as-received
   format: Email / WhatsApp
   downstream_events:
-  - Supplier Performance Review
-  - Alternate Sourcing
+  - Supplier Performance Review Due
+  - New Alternative Supplier Identified
   entity_types:
-  - Supplier
-  - Certification
-  - Ingredient
-  affected_kpis:
-  - Approved Supplier Coverage
+  - Suppliers
+  - QualityInspections
+  - Materials
+  affected_kpis: []
   related_processes:
   - supplier_coa_renewal
   system_bindings:
@@ -932,16 +853,15 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Compliance Clearance
-  - Claim Review
-  - Label Change
+  - NPD Compliance Clearance Required
+  - Marketing Claim Approval Required
+  - Label / Artwork Changed
   entity_types:
-  - Product
-  - Ingredient
-  - Claim
+  - Products
+  - Materials
+  - QualityInspections
   affected_kpis:
-  - Compliance Readiness
-  - Reformulation Cost
+  - MarginPct
   related_processes:
   - label_compliance_review
   - claims_validation
@@ -960,15 +880,13 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Ingredient Compliance Assessment
-  - Supplier Qualification
+  - Periodic Compliance Review Due
+  - Supplier Certification Expiry
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
-  affected_kpis:
-  - Ingredient Approval Rate
-  - Compliance Risk
+  - Materials
+  - Suppliers
+  - Products
+  affected_kpis: []
   related_processes:
   - label_compliance_review
   - claims_validation
@@ -985,16 +903,14 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Marketing Claim Approval
-  - Label Change
+  - Marketing Claim Approval Required
+  - Label / Artwork Changed
   entity_types:
-  - Product
-  - Claim
-  - Brand
+  - Products
+  - QualityInspections
   - Channel
   affected_kpis:
-  - Claims Approval Rate
-  - Compliance Risk
+  - ClaimSubstantiationRate
   related_processes:
   - claims_validation
   related_kpis:
@@ -1017,8 +933,7 @@ signals_events:
   entity_types:
   - Channel
   affected_kpis:
-  - Artwork Approval Cycle Time
-  - Listing Accuracy
+  - ListingReadyShare
   related_processes:
   - label_compliance_review
   related_kpis:
@@ -1037,14 +952,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Compliance Clearance
-  - New Listing Request
+  - NPD Compliance Clearance Required
+  - New Listing Request Received
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Launch Readiness
-  - Compliance Completion
+  affected_kpis: []
   related_kpis:
   - ListingReadyShare
   - BlockingGapsPerSku
@@ -1061,14 +974,13 @@ signals_events:
   cadence: event-triggered (on product/price change), daily sync
   format: REST API / Webhook
   downstream_events:
-  - Market Entry Assessment
-  - Listing Compliance Review
+  - Market Entry Assessment Initiated
+  - Periodic Compliance Review Due
   entity_types:
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Listing Readiness
-  - Compliance Coverage
+  - ListingReadyShare
   related_processes:
   - multi_market_compliance_readiness
   - channel_listing_claim_audit
@@ -1089,11 +1001,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Product / Label / Claim Remediation
+  - Product Claim Changed
   entity_types:
-  - Regulation
-  affected_kpis:
-  - Portfolio Compliance Score
+  - QualityInspections
+  affected_kpis: []
   system_bindings:
   - Compliance Ops Inbox
   - FSSAI Portal
@@ -1110,11 +1021,8 @@ signals_events:
   - Opportunity Assessment Required
   - Campaign Optimization Review Due
   entity_types:
-  - Product
-  - Category
-  affected_kpis:
-  - Search Share
-  - Demand Index
+  - Products
+  affected_kpis: []
   related_processes:
   - campaign_planning_optimisation
   - innovation_pipeline_prioritisation
@@ -1139,12 +1047,9 @@ signals_events:
   downstream_events:
   - Campaign Optimization Review Due
   entity_types:
-  - Brand
-  - Product
-  - CustomerSegment
-  affected_kpis:
-  - Share of Voice
-  - Engagement
+  - Products
+  - Consumers
+  affected_kpis: []
   related_processes:
   - campaign_planning_optimisation
   related_kpis:
@@ -1169,12 +1074,10 @@ signals_events:
   - Product Positioning Review Due
   - Campaign Optimization Review Due
   entity_types:
-  - Brand
-  - Product
-  - CustomerSegment
+  - Products
+  - Consumers
   affected_kpis:
-  - Sentiment Score
-  - NPS Proxy
+  - AvgStoreRating
   related_processes:
   - customer_review_aggregation_and_triage
   related_kpis:
@@ -1206,12 +1109,9 @@ signals_events:
   - Opportunity Assessment Required
   - Strategic Portfolio Review Due
   entity_types:
-  - CustomerSegment
-  - Product
-  - Category
-  affected_kpis:
-  - Trend Adoption
-  - Segment Growth
+  - Consumers
+  - Products
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   related_kpis:
@@ -1234,11 +1134,8 @@ signals_events:
   downstream_events:
   - Campaign Optimization Review Due
   entity_types:
-  - Brand
-  - Product
-  affected_kpis:
-  - Earned Reach
-  - Engagement
+  - Products
+  affected_kpis: []
   related_processes:
   - campaign_planning_optimisation
   related_kpis:
@@ -1262,13 +1159,8 @@ signals_events:
   - Campaign Optimization Review Due
   - Competitive Review Due
   entity_types:
-  - Competitor
-  - Brand
-  - Product
-  - Category
-  affected_kpis:
-  - Share of Voice
-  - Brand Consideration
+  - Products
+  affected_kpis: []
   related_processes:
   - campaign_planning_optimisation
   - competitive_pricing_signal
@@ -1298,12 +1190,9 @@ signals_events:
   - Campaign Optimization Review Due
   - Opportunity Assessment Required
   entity_types:
-  - Category
-  - Product
-  - CustomerSegment
-  affected_kpis:
-  - Trend Velocity
-  - Engagement
+  - Products
+  - Consumers
+  affected_kpis: []
   related_processes:
   - campaign_planning_optimisation
   related_kpis:
@@ -1327,12 +1216,9 @@ signals_events:
   - Seasonal Campaign Planning Due
   - Forecast Variance Above Tolerance
   entity_types:
-  - Product
-  - Category
+  - Products
   - Channel
-  affected_kpis:
-  - Seasonal Uplift
-  - Revenue Opportunity
+  affected_kpis: []
   related_processes:
   - seasonal_campaign_planning
   - demand_forecast
@@ -1357,11 +1243,8 @@ signals_events:
   - Seasonal Campaign Planning Due
   - Forecast Variance Above Tolerance
   entity_types:
-  - Product
-  - Category
-  affected_kpis:
-  - Campaign Opportunity
-  - Demand Uplift
+  - Products
+  affected_kpis: []
   related_processes:
   - seasonal_campaign_planning
   - demand_forecast
@@ -1385,13 +1268,10 @@ signals_events:
   downstream_events:
   - Strategic Portfolio Review Due
   entity_types:
-  - CustomerSegment
-  - Product
+  - Consumers
+  - Products
   - Channel
-  affected_kpis:
-  - Conversion
-  - Repeat Rate
-  - Basket Size
+  affected_kpis: []
   related_processes:
   - campaign_planning_optimisation
   related_kpis:
@@ -1412,15 +1292,13 @@ signals_events:
   cadence: daily
   format: REST API
   downstream_events:
-  - Campaign Optimization Review
+  - Campaign Optimization Review Due
   entity_types:
-  - Campaign
-  - Product
+  - Campaigns
+  - Products
   - Channel
   affected_kpis:
-  - ROAS
-  - CTR
-  - Conversion
+  - BlendedCampaignRoi
   related_processes:
   - campaign_planning_optimisation
   related_kpis:
@@ -1441,14 +1319,12 @@ signals_events:
   source: Meta Ads, Google Ads
   cadence: daily
   format: REST API
-  downstream_events:
-  - Budget Reallocation Review
+  downstream_events: []
   entity_types:
-  - Campaign
+  - Campaigns
   - Channel
   affected_kpis:
-  - Spend Utilization
-  - ROAS
+  - BlendedCampaignRoi
   related_processes:
   - campaign_planning_optimisation
   related_kpis:
@@ -1470,11 +1346,9 @@ signals_events:
   downstream_events:
   - Content Refresh Due
   entity_types:
-  - Campaign
+  - Campaigns
   affected_kpis:
-  - CTR
-  - CPA
-  - ROAS
+  - BlendedCampaignRoi
   related_processes:
   - campaign_planning_optimisation
   related_kpis:
@@ -1496,12 +1370,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Marketing Claim Approval
+  - Marketing Claim Approval Required
   entity_types:
-  - Claim
-  - Brand
-  affected_kpis:
-  - Approval Cycle Time
+  - QualityInspections
+  - Products
+  affected_kpis: []
   system_bindings:
   - Meta Ads API
   - Google Ads API
@@ -1518,10 +1391,10 @@ signals_events:
   downstream_events:
   - Label / Artwork Changed
   entity_types:
-  - Claim
-  - Product
+  - QualityInspections
+  - Products
   affected_kpis:
-  - Claims Approval Rate
+  - ClaimSubstantiationRate
   related_processes:
   - claims_validation
   related_kpis:
@@ -1541,13 +1414,11 @@ signals_events:
   cadence: as-triggered
   format: Email / WhatsApp / SMS
   downstream_events:
-  - Campaign Optimization
-  - Pricing Review
+  - Campaign Optimization Review Due
+  - Price Review Due
   entity_types:
-  - Product
-  affected_kpis:
-  - Conversion Rate
-  - CAC
+  - Products
+  affected_kpis: []
   system_bindings:
   - Shopify Inbox
   - WhatsApp Customer Support
@@ -1565,13 +1436,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Segment Strategy Review
+  - Channel Strategy Review Due
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Revenue per Segment
-  - Retention
+  affected_kpis: []
   system_bindings:
   - Meta Ads API
   - Google Ads API
@@ -1586,13 +1455,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Campaign Budget Approval
-  - Content Approval
+  - Campaign Budget Threshold Reached
+  - Content Approval Required
   entity_types:
-  - Campaign
-  - Product
-  affected_kpis:
-  - Campaign Readiness
+  - Campaigns
+  - Products
+  affected_kpis: []
   related_processes:
   - seasonal_campaign_planning
   system_bindings:
@@ -1611,11 +1479,9 @@ signals_events:
   downstream_events:
   - Content Approval Required
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Content Freshness
-  - Engagement
+  affected_kpis: []
   system_bindings:
   - Meta Ads API
   - Google Ads API
@@ -1630,14 +1496,13 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Future Campaign Planning
+  - Seasonal Campaign Planning Due
   entity_types:
-  - Campaign
-  - Product
+  - Campaigns
+  - Products
   - Channel
   affected_kpis:
-  - Incremental Revenue
-  - ROAS
+  - BlendedCampaignRoi
   related_processes:
   - campaign_planning_optimisation
   related_kpis:
@@ -1659,10 +1524,8 @@ signals_events:
   - New Market / Channel Listing Requested
   entity_types:
   - Channel
-  - Product
-  affected_kpis:
-  - Distribution Reach
-  - Revenue Opportunity
+  - Products
+  affected_kpis: []
   related_processes:
   - multi_market_compliance_readiness
   system_bindings:
@@ -1686,10 +1549,8 @@ signals_events:
   - New Listing Request Received
   entity_types:
   - Channel
-  - Product
-  affected_kpis:
-  - Availability
-  - Incremental Revenue
+  - Products
+  affected_kpis: []
   related_processes:
   - multi_market_compliance_readiness
   system_bindings:
@@ -1712,12 +1573,9 @@ signals_events:
   - Portfolio Gap Assessment Due
   - Channel Strategy Review Due
   entity_types:
-  - CompetitorProduct
+  - Products
   - Channel
-  - Category
-  affected_kpis:
-  - Share of Shelf
-  - Market Share
+  affected_kpis: []
   related_processes:
   - channel_listing_claim_audit
   - competitive_pricing_signal
@@ -1740,12 +1598,9 @@ signals_events:
   downstream_events:
   - Opportunity Assessment Required
   entity_types:
-  - CompetitorProduct
+  - Products
   - Channel
-  - Product
-  affected_kpis:
-  - Availability Advantage
-  - Revenue Opportunity
+  affected_kpis: []
   related_processes:
   - channel_listing_claim_audit
   - competitive_pricing_signal
@@ -1768,12 +1623,9 @@ signals_events:
   downstream_events:
   - Channel Strategy Review Due
   entity_types:
-  - Product
-  - Competitor
+  - Products
   - Channel
-  affected_kpis:
-  - Search Rank
-  - Share of Shelf
+  affected_kpis: []
   related_processes:
   - competitive_pricing_signal
   system_bindings:
@@ -1795,11 +1647,9 @@ signals_events:
   downstream_events:
   - Opportunity Assessment Required
   entity_types:
-  - CompetitorProduct
+  - Products
   - Channel
-  affected_kpis:
-  - Conversion Opportunity
-  - Sales Uplift
+  affected_kpis: []
   related_processes:
   - competitive_pricing_signal
   related_kpis:
@@ -1823,11 +1673,8 @@ signals_events:
   downstream_events:
   - SKU Assortment Review Due
   entity_types:
-  - Category
-  - Product
-  affected_kpis:
-  - Category Growth
-  - Share of Category
+  - Products
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   system_bindings:
@@ -1852,11 +1699,9 @@ signals_events:
   downstream_events:
   - SKU Assortment Review Due
   entity_types:
-  - Competitor
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Assortment Coverage
+  affected_kpis: []
   related_processes:
   - competitive_pricing_signal
   - innovation_pipeline_prioritisation
@@ -1880,10 +1725,10 @@ signals_events:
   - Listing Content Update Required
   entity_types:
   - Channel
-  - Product
+  - Products
   affected_kpis:
-  - Listing Compliance
-  - Channel Margin
+  - ListingReadyShare
+  - MarginPct
   related_processes:
   - channel_listing_claim_audit
   related_kpis:
@@ -1909,9 +1754,7 @@ signals_events:
   - Market Entry Assessment Initiated
   entity_types:
   - Channel
-  affected_kpis:
-  - Numeric Distribution
-  - Revenue Opportunity
+  affected_kpis: []
   related_processes:
   - multi_market_compliance_readiness
   system_bindings:
@@ -1931,13 +1774,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Channel Performance Review
+  - Channel Performance Below Target
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Revenue Attainment
-  - Volume Variance
+  affected_kpis: []
   system_bindings:
   - Swiggy Partner API
   - Zomato Partner API
@@ -1952,12 +1793,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Replenishment
-  - Inventory Transfer
+  - Distributor Replenishment Required
+  - Inventory Imbalance Across Locations
   entity_types: []
   affected_kpis:
-  - Days of Inventory
-  - Fill Rate
+  - LowStockIncidenceRate
   system_bindings:
   - Swiggy Partner API
   - Zomato Partner API
@@ -1972,14 +1812,12 @@ signals_events:
   cadence: event-triggered (on product/price change), daily sync
   format: REST API / Webhook
   downstream_events:
-  - Listing Compliance Review
-  - Listing Creation
+  - Periodic Compliance Review Due
+  - New Listing Request Received
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Listing Lead Time
-  - Distribution
+  affected_kpis: []
   related_processes:
   - channel_listing_claim_audit
   system_bindings:
@@ -1996,12 +1834,11 @@ signals_events:
   source: Zomato, Swiggy, Blinkit, Instamart
   cadence: 'weekly (per source use case: "Weekly scan")'
   format: Browser automation (headless browser)
-  downstream_events:
-  - Digital Shelf Audit
+  downstream_events: []
   entity_types:
   - Channel
   affected_kpis:
-  - Listing Accuracy
+  - ListingReadyShare
   related_processes:
   - channel_listing_claim_audit
   system_bindings:
@@ -2023,11 +1860,9 @@ signals_events:
   cadence: daily
   format: REST API
   downstream_events:
-  - Order Fulfillment
+  - Order Fulfillment SLA Breached
   entity_types: []
-  affected_kpis:
-  - Fill Rate
-  - OTIF
+  affected_kpis: []
   system_bindings:
   - Petpooja POS
   - Petpooja Webhook API
@@ -2040,12 +1875,9 @@ signals_events:
   source: internal
   cadence: event-triggered
   format: system event
-  downstream_events:
-  - Operations Escalation
+  downstream_events: []
   entity_types: []
-  affected_kpis:
-  - OTIF
-  - Service Level
+  affected_kpis: []
   related_processes:
   - dark_store_ops_escalation
   system_bindings:
@@ -2062,11 +1894,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Production / Dispatch Planning
+  - Production Behind Plan
   entity_types: []
   affected_kpis:
-  - Service Level
-  - Stock Availability
+  - LowStockIncidenceRate
   system_bindings:
   - Swiggy Partner API
   - Zomato Partner API
@@ -2081,12 +1912,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Listing Creation/Removal
+  - Competitor Listing Removal
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Assortment Productivity
+  affected_kpis: []
   system_bindings:
   - Swiggy Partner API
   - Zomato Partner API
@@ -2101,14 +1931,13 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Channel Strategy Review
-  - Pricing Review
+  - Channel Strategy Review Due
+  - Price Review Due
   entity_types:
   - Channel
-  - Product
+  - Products
   affected_kpis:
-  - Revenue Growth
-  - Channel Margin
+  - MarginPct
   system_bindings:
   - Swiggy Partner API
   - Zomato Partner API
@@ -2123,14 +1952,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Assortment
-  - Pricing
-  - Trade-Spend Review
+  - SKU Assortment Review Due
+  - Price Review Due
+  - Trade Spend Budget Exceeded
   entity_types:
-  - Product
-  affected_kpis:
-  - Account Revenue
-  - Account Margin
+  - Products
+  affected_kpis: []
   system_bindings:
   - Swiggy Partner API
   - Zomato Partner API
@@ -2148,13 +1975,10 @@ signals_events:
   - Price Review Due
   - Competitive Pricing Review Triggered
   entity_types:
-  - CompetitorProduct
-  - Product
-  - Category
+  - Products
   - Channel
   affected_kpis:
-  - Price Index
-  - Market Share
+  - MarginPct
   related_processes:
   - competitive_pricing_signal
   related_kpis:
@@ -2178,12 +2002,9 @@ signals_events:
   downstream_events:
   - Promotion ROI Below Target
   entity_types:
-  - Competitor
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Promo Intensity
-  - Market Share
+  affected_kpis: []
   related_processes:
   - competitive_pricing_signal
   system_bindings:
@@ -2208,12 +2029,11 @@ signals_events:
   - COGS Above Threshold
   - Gross Margin Below Floor
   entity_types:
-  - Ingredient
-  - Product
-  - Supplier
+  - Materials
+  - Products
+  - Suppliers
   affected_kpis:
-  - COGS
-  - Gross Margin
+  - MarginPct
   related_kpis:
   - MarginPct
   related_processes:
@@ -2236,11 +2056,10 @@ signals_events:
   - COGS Above Threshold
   - Price Review Due
   entity_types:
-  - Supplier
-  - Ingredient
+  - Suppliers
+  - Materials
   affected_kpis:
-  - Landed Cost
-  - Margin
+  - MarginPct
   related_processes:
   - recipe_development_live_cogs
   related_kpis:
@@ -2263,11 +2082,9 @@ signals_events:
   - Price Review Due
   - Strategic Portfolio Review Due
   entity_types:
-  - Category
-  - Product
+  - Products
   affected_kpis:
-  - Price Realization
-  - Volume Growth
+  - MarginPct
   related_processes:
   - recipe_development_live_cogs
   related_kpis:
@@ -2290,11 +2107,9 @@ signals_events:
   downstream_events:
   - Product Positioning Review Due
   entity_types:
-  - Product
-  - Competitor
+  - Products
   affected_kpis:
-  - Price per Unit
-  - Pack Mix
+  - MarginPct
   related_processes:
   - competitive_pricing_signal
   - innovation_pipeline_prioritisation
@@ -2319,12 +2134,10 @@ signals_events:
   downstream_events:
   - Promotion ROI Below Target
   entity_types:
-  - Competitor
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Basket Size
-  - Promo ROI
+  - BlendedCampaignRoi
   related_processes:
   - competitive_pricing_signal
   system_bindings:
@@ -2349,11 +2162,10 @@ signals_events:
   - Price Review Due
   - Competitive Pricing Review Triggered
   entity_types:
-  - Category
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Price Index
+  - MarginPct
   related_processes:
   - competitive_pricing_signal
   related_kpis:
@@ -2380,10 +2192,9 @@ signals_events:
   downstream_events:
   - Trade Spend Budget Exceeded
   entity_types:
-  - Product
+  - Products
   affected_kpis:
-  - Price Realization
-  - Trade Spend
+  - MarginPct
   related_processes:
   - competitive_pricing_signal
   related_kpis:
@@ -2407,11 +2218,9 @@ signals_events:
   downstream_events:
   - Revenue Variance Above Threshold
   entity_types:
-  - Category
-  - Product
+  - Products
   affected_kpis:
-  - Revenue Forecast
-  - Volume Growth
+  - ForecastAccuracy
   related_processes:
   - demand_forecast
   related_kpis:
@@ -2432,15 +2241,14 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Price Review
-  - COGS Optimization
-  - Sourcing Review
+  - Price Review Due
+  - Formulation COGS Above Target
+  - New Alternative Supplier Identified
   entity_types:
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Gross Margin
-  - Contribution Margin
+  - MarginPct
   related_kpis:
   - MarginPct
   system_bindings:
@@ -2456,15 +2264,14 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Formulation Optimization
-  - Supplier Review
+  - Product Formulation Changed
+  - Supplier Performance Review Due
   entity_types:
-  - Product
-  - Ingredient
-  - Supplier
+  - Products
+  - Materials
+  - Suppliers
   affected_kpis:
-  - COGS
-  - Cost Variance
+  - MarginPct
   related_kpis:
   - MarginPct
   system_bindings:
@@ -2480,13 +2287,13 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Promotion Optimization
+  - Promotion ROI Below Target
   entity_types:
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Promo ROI
-  - Incremental Margin
+  - BlendedCampaignRoi
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -2500,12 +2307,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Trade-Spend Reallocation
+  - Trade Spend Budget Exceeded
   entity_types:
   - Channel
   affected_kpis:
-  - Trade Spend %
-  - ROI
+  - MarginPct
+  - BlendedCampaignRoi
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -2519,13 +2326,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Sales Review
-  - Forecast Review
+  - Sales Target Variance
+  - Forecast Variance Above Tolerance
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Revenue Variance
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -2539,13 +2345,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Portfolio Rationalization Review
+  - Portfolio Rationalization Review Due
   entity_types:
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - SKU Margin
-  - Contribution
+  - MarginPct
   related_kpis:
   - MarginPct
   system_bindings:
@@ -2561,13 +2366,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Listing Price Update
+  - Price Review Due
   entity_types:
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Price Realization
-  - Margin
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -2581,14 +2385,13 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Account Review
-  - Assortment Review
+  - Channel Strategy Review Due
+  - SKU Assortment Review Due
   entity_types:
   - Channel
-  - Product
+  - Products
   affected_kpis:
-  - Customer Margin
-  - Channel Margin
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -2602,13 +2405,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - SKU Discontinuation / Investment Review
+  - Portfolio Rationalization Review Due
   entity_types:
-  - Product
-  - Category
+  - Products
   affected_kpis:
-  - Portfolio ROI
-  - SKU Productivity
+  - BlendedCampaignRoi
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -2621,13 +2422,11 @@ signals_events:
   source: internal
   cadence: event-triggered
   format: system event
-  downstream_events:
-  - Continue/Pause/Stop NPD
+  downstream_events: []
   entity_types: []
   affected_kpis:
-  - NPV
-  - Expected Margin
-  - Investment ROI
+  - MarginPct
+  - BlendedCampaignRoi
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -2644,10 +2443,9 @@ signals_events:
   - Forecast Variance Above Tolerance
   - Inventory Imbalance Across Locations
   entity_types:
-  - Product
+  - Products
   affected_kpis:
-  - Forecast Accuracy
-  - Service Level
+  - ForecastAccuracy
   related_kpis:
   - ForecastAccuracy
   - WastageRisk
@@ -2673,10 +2471,8 @@ signals_events:
   - Supplier Performance Review Due
   - Shipment Delayed
   entity_types:
-  - Supplier
-  affected_kpis:
-  - OTIF
-  - Supply Risk
+  - Suppliers
+  affected_kpis: []
   related_processes:
   - demand_forecast
   - dark_store_ops_escalation
@@ -2701,10 +2497,8 @@ signals_events:
   - Shipment Delayed
   - Purchase Order Delayed
   entity_types:
-  - Supplier
-  affected_kpis:
-  - Lead Time
-  - OTIF
+  - Suppliers
+  affected_kpis: []
   related_processes:
   - dark_store_ops_escalation
   related_kpis:
@@ -2726,9 +2520,9 @@ signals_events:
   downstream_events:
   - COGS Above Threshold
   entity_types:
-  - Product
+  - Products
   affected_kpis:
-  - Logistics Cost per Unit
+  - MarginPct
   related_kpis:
   - MarginPct
   system_bindings:
@@ -2751,11 +2545,10 @@ signals_events:
   - Forecast Variance Above Tolerance
   - Seasonal Campaign Planning Due
   entity_types:
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Forecast Accuracy
-  - Sales Uplift
+  - ForecastAccuracy
   related_processes:
   - demand_forecast
   - seasonal_campaign_planning
@@ -2779,8 +2572,7 @@ signals_events:
   downstream_events:
   - Order Fulfillment SLA Breached
   entity_types: []
-  affected_kpis:
-  - Service Level
+  affected_kpis: []
   related_processes:
   - dark_store_ops_escalation
   related_kpis:
@@ -2805,8 +2597,7 @@ signals_events:
   - Order Fulfillment SLA Breached
   entity_types: []
   affected_kpis:
-  - Freight Cost
-  - OTIF
+  - MarginPct
   related_processes:
   - dark_store_ops_escalation
   related_kpis:
@@ -2828,11 +2619,10 @@ signals_events:
   downstream_events:
   - Supplier Capacity Insufficient
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
-  affected_kpis:
-  - Material Availability
+  - Materials
+  - Suppliers
+  - Products
+  affected_kpis: []
   related_processes:
   - recipe_development_live_cogs
   related_kpis:
@@ -2854,10 +2644,9 @@ signals_events:
   downstream_events:
   - Forecast Variance Above Tolerance
   entity_types:
-  - Product
-  - Category
+  - Products
   affected_kpis:
-  - Forecast Accuracy
+  - ForecastAccuracy
   related_processes:
   - demand_forecast
   related_kpis:
@@ -2880,9 +2669,7 @@ signals_events:
   downstream_events:
   - Production Behind Plan
   entity_types: []
-  affected_kpis:
-  - Production Uptime
-  - OTIF
+  affected_kpis: []
   related_processes:
   - dark_store_ops_escalation
   related_kpis:
@@ -2902,12 +2689,11 @@ signals_events:
   cadence: daily
   format: REST API
   downstream_events:
-  - Replenishment
-  - Production Planning
+  - Distributor Replenishment Required
+  - Production Behind Plan
   entity_types: []
   affected_kpis:
-  - Days of Cover
-  - Stockout Rate
+  - LowStockIncidenceRate
   related_processes:
   - demand_forecast
   - shelf_life_risk_monitoring
@@ -2927,13 +2713,9 @@ signals_events:
   cadence: daily
   format: REST API
   downstream_events:
-  - Liquidation
-  - Promotion
-  - Transfer
+  - Promotion ROI Below Target
   entity_types: []
-  affected_kpis:
-  - Inventory Days
-  - Working Capital
+  affected_kpis: []
   related_processes:
   - shelf_life_risk_monitoring
   system_bindings:
@@ -2949,13 +2731,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Liquidation
-  - Transfer
-  - Promotion
+  - Promotion ROI Below Target
   entity_types: []
   affected_kpis:
-  - Expiry Risk
-  - Waste %
+  - WastageRisk
   related_processes:
   - shelf_life_risk_monitoring
   related_kpis:
@@ -2976,13 +2755,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Forecast Recalculation
+  - Forecast Variance Above Tolerance
   entity_types:
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Forecast Accuracy
-  - Bias
+  - ForecastAccuracy
   related_processes:
   - demand_forecast
   related_kpis:
@@ -3001,11 +2779,9 @@ signals_events:
   cadence: daily
   format: REST API
   downstream_events:
-  - Recovery Planning
+  - Severe Weather Warning
   entity_types: []
-  affected_kpis:
-  - Schedule Adherence
-  - Service Level
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - ERPNext REST API
@@ -3018,12 +2794,10 @@ signals_events:
   source: internal
   cadence: event-triggered
   format: system event
-  downstream_events:
-  - Capacity Reallocation
+  downstream_events: []
   entity_types:
-  - Product
-  affected_kpis:
-  - Capacity Utilization
+  - Products
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3037,10 +2811,9 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Inventory Redistribution
+  - Inventory Imbalance Across Locations
   entity_types: []
-  affected_kpis:
-  - Capacity Utilization
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3054,11 +2827,9 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Fulfillment SLA Risk
+  - Order Fulfillment SLA Breached
   entity_types: []
-  affected_kpis:
-  - OTIF
-  - Lead Time
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3072,11 +2843,9 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Production / Fulfillment Recovery
+  - Production Behind Plan
   entity_types: []
-  affected_kpis:
-  - Backlog
-  - Service Level
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3090,12 +2859,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Inter-Store/DC Transfer
+  - Inventory Imbalance Across Locations
   entity_types:
-  - Store
+  - Channel
   affected_kpis:
-  - Stock Availability
-  - Inventory Turns
+  - LowStockIncidenceRate
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3112,12 +2880,11 @@ signals_events:
   - COGS Above Threshold
   - Supplier Price Increase Received
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
+  - Materials
+  - Suppliers
+  - Products
   affected_kpis:
-  - Purchase Price Variance
-  - COGS
+  - MarginPct
   related_processes:
   - recipe_development_live_cogs
   related_kpis:
@@ -3139,9 +2906,9 @@ signals_events:
   downstream_events:
   - Procurement Cycle Due
   entity_types:
-  - Ingredient
+  - Materials
   affected_kpis:
-  - Forecast Purchase Cost
+  - MarginPct
   related_processes:
   - recipe_development_live_cogs
   related_kpis:
@@ -3163,10 +2930,9 @@ signals_events:
   downstream_events:
   - Supplier Performance Review Due
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Supplier Risk Score
+  - Suppliers
+  - Materials
+  affected_kpis: []
   system_bindings:
   - Regulatory News Aggregator
   - FSSAI Enforcement Feed
@@ -3186,10 +2952,9 @@ signals_events:
   downstream_events:
   - Supplier Performance Review Due
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Supply Risk
+  - Suppliers
+  - Materials
+  affected_kpis: []
   system_bindings:
   - Google Trends API
   - Social Listening API
@@ -3210,11 +2975,9 @@ signals_events:
   downstream_events:
   - Supplier Lead Time Above Threshold
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Lead Time
-  - Material Availability
+  - Suppliers
+  - Materials
+  affected_kpis: []
   related_processes:
   - dark_store_ops_escalation
   system_bindings:
@@ -3239,10 +3002,9 @@ signals_events:
   downstream_events:
   - Purchase Order Delayed
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Inbound OTIF
+  - Suppliers
+  - Materials
+  affected_kpis: []
   related_processes:
   - dark_store_ops_escalation
   related_kpis:
@@ -3264,11 +3026,10 @@ signals_events:
   downstream_events:
   - Supplier Capacity Insufficient
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
-  affected_kpis:
-  - Material Availability
+  - Materials
+  - Suppliers
+  - Products
+  affected_kpis: []
   related_processes:
   - recipe_development_live_cogs
   related_kpis:
@@ -3290,11 +3051,9 @@ signals_events:
   downstream_events:
   - Opportunity Assessment Required
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Supplier Coverage
-  - Sourcing Optionality
+  - Suppliers
+  - Materials
+  affected_kpis: []
   related_processes:
   - recipe_development_live_cogs
   - supplier_coa_renewal
@@ -3317,9 +3076,8 @@ signals_events:
   downstream_events:
   - Supplier Performance Review Due
   entity_types:
-  - Supplier
-  affected_kpis:
-  - Supplier Risk Score
+  - Suppliers
+  affected_kpis: []
   system_bindings:
   - Regulatory News Aggregator
   - FSSAI Enforcement Feed
@@ -3339,12 +3097,11 @@ signals_events:
   downstream_events:
   - COGS Above Threshold
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
+  - Materials
+  - Suppliers
+  - Products
   affected_kpis:
-  - COGS
-  - Purchase Price Variance
+  - MarginPct
   related_processes:
   - recipe_development_live_cogs
   related_kpis:
@@ -3364,12 +3121,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Supplier Performance Review
+  - Supplier Performance Review Due
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Supplier OTIF
+  - Suppliers
+  - Materials
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3383,14 +3139,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Safety Stock Review
-  - Alternate Sourcing
+  - Inventory Below Safety Stock
+  - New Alternative Supplier Identified
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Lead Time
-  - Service Risk
+  - Suppliers
+  - Materials
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3404,12 +3158,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Supplier Quality Review
+  - Supplier Quality Score Declined
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Supplier Quality Score
+  - Suppliers
+  - Materials
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3423,13 +3176,12 @@ signals_events:
   cadence: daily
   format: REST API
   downstream_events:
-  - Material Shortage
-  - Production Risk
+  - Market Material Shortage
+  - Production Behind Plan
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - PO On-Time Delivery
+  - Suppliers
+  - Materials
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - ERPNext REST API
@@ -3443,13 +3195,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Negotiation / Sourcing Process
+  - New Alternative Supplier Identified
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Contract Coverage
-  - Savings
+  - Suppliers
+  - Materials
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3463,13 +3213,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Alternate Supplier Qualification
+  - New Alternative Supplier Identified
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
-  affected_kpis:
-  - Single-Source Exposure
+  - Materials
+  - Suppliers
+  - Products
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3483,13 +3232,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Alternate Sourcing
+  - New Alternative Supplier Identified
   entity_types:
-  - Supplier
-  - Ingredient
-  - Product
-  affected_kpis:
-  - Supplier Capacity Coverage
+  - Suppliers
+  - Materials
+  - Products
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3503,13 +3251,13 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Negotiation
-  - COGS Review
+  - New Alternative Supplier Identified
+  - Formulation COGS Above Target
   entity_types:
-  - Supplier
-  - Ingredient
+  - Suppliers
+  - Materials
   affected_kpis:
-  - Purchase Price Variance
+  - MarginPct
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3523,12 +3271,11 @@ signals_events:
   cadence: daily
   format: REST API
   downstream_events:
-  - RFQ / PO / Supplier Selection
+  - New Alternative Supplier Identified
   entity_types:
-  - Ingredient
-  - Supplier
-  affected_kpis:
-  - Procurement Cycle Time
+  - Materials
+  - Suppliers
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - ERPNext REST API
@@ -3542,11 +3289,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Corrective Action / Sourcing Decision
+  - New Alternative Supplier Identified
   entity_types:
-  - Supplier
-  affected_kpis:
-  - Supplier Scorecard
+  - Suppliers
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Petpooja POS
@@ -3562,11 +3308,9 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Product
-  - Ingredient
-  - Category
-  affected_kpis:
-  - Risk Exposure
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - competitor_enforcement_signals
   system_bindings:
@@ -3586,11 +3330,9 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - CompetitorProduct
-  - Ingredient
-  - Product
-  affected_kpis:
-  - Product Risk Score
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - competitor_enforcement_signals
   system_bindings:
@@ -3610,11 +3352,10 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
-  affected_kpis:
-  - Safety Risk
+  - Materials
+  - Suppliers
+  - Products
+  affected_kpis: []
   related_processes:
   - competitor_enforcement_signals
   - regulation_impact_analysis
@@ -3641,10 +3382,9 @@ signals_events:
   - Supplier Performance Review Due
   - Periodic Compliance Review Due
   entity_types:
-  - Ingredient
-  - Supplier
-  affected_kpis:
-  - Food Safety Risk
+  - Materials
+  - Suppliers
+  affected_kpis: []
   related_processes:
   - competitor_enforcement_signals
   related_kpis:
@@ -3666,10 +3406,9 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Product
-  - Ingredient
-  affected_kpis:
-  - Compliance Risk
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - competitor_enforcement_signals
   - regulation_impact_analysis
@@ -3692,10 +3431,9 @@ signals_events:
   - CAPA Investigation Due
   - Consumer Complaints Above Threshold
   entity_types:
-  - Product
+  - Products
   affected_kpis:
-  - Complaint Rate
-  - Sentiment
+  - OpsComplaintShare
   related_processes:
   - customer_review_aggregation_and_triage
   - formulation_feedback_loop
@@ -3726,10 +3464,8 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Category
-  - Product
-  affected_kpis:
-  - Quality Risk
+  - Products
+  affected_kpis: []
   related_processes:
   - customer_review_aggregation_and_triage
   - formulation_feedback_loop
@@ -3755,10 +3491,9 @@ signals_events:
   downstream_events:
   - Supplier Performance Review Due
   entity_types:
-  - Supplier
-  - Ingredient
-  affected_kpis:
-  - Supplier Risk
+  - Suppliers
+  - Materials
+  affected_kpis: []
   related_processes:
   - competitor_enforcement_signals
   system_bindings:
@@ -3778,10 +3513,9 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Ingredient
-  - Product
-  affected_kpis:
-  - Safety Risk
+  - Materials
+  - Products
+  affected_kpis: []
   related_processes:
   - formulation_feedback_loop
   - npd_compliance_preclearance
@@ -3802,10 +3536,9 @@ signals_events:
   downstream_events:
   - Periodic Compliance Review Due
   entity_types:
-  - Product
-  - Ingredient
-  affected_kpis:
-  - Market Risk
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - competitor_enforcement_signals
   - regulatory_horizon_alerts
@@ -3824,13 +3557,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Batch Hold
-  - CAPA
+  - CAPA Investigation Due
   entity_types:
-  - Product
-  affected_kpis:
-  - Pass Rate
-  - Batch Release Time
+  - Products
+  affected_kpis: []
   system_bindings:
   - Marketplace Review Aggregator
   - ERPNext QA Module
@@ -3844,12 +3574,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Batch Hold / Rejection
-  - CAPA
+  - Batch Rejected
+  - CAPA Investigation Due
   entity_types:
-  - Product
-  affected_kpis:
-  - Batch Conformance Rate
+  - Products
+  affected_kpis: []
   system_bindings:
   - Marketplace Review Aggregator
   - ERPNext QA Module
@@ -3863,13 +3592,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Material Rejection
-  - Supplier Review
+  - Batch Rejected
+  - Supplier Performance Review Due
   entity_types:
-  - Ingredient
-  - Supplier
-  affected_kpis:
-  - Incoming Quality Rate
+  - Materials
+  - Suppliers
+  affected_kpis: []
   system_bindings:
   - Marketplace Review Aggregator
   - ERPNext QA Module
@@ -3883,13 +3611,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - CAPA
-  - Production Rescheduling
+  - CAPA Investigation Due
+  - Production Behind Plan
   entity_types:
-  - Product
-  affected_kpis:
-  - Rejection Rate
-  - Yield
+  - Products
+  affected_kpis: []
   system_bindings:
   - Marketplace Review Aggregator
   - ERPNext QA Module
@@ -3903,12 +3629,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Packaging Investigation
+  - CAPA Investigation Due
   entity_types:
-  - Supplier
-  - Product
-  affected_kpis:
-  - Defect Rate
+  - Suppliers
+  - Products
+  affected_kpis: []
   system_bindings:
   - Marketplace Review Aggregator
   - ERPNext QA Module
@@ -3922,13 +3647,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Batch Quality Review
-  - CAPA
+  - CAPA Investigation Due
   entity_types:
-  - Product
-  affected_kpis:
-  - Process Capability
-  - Yield
+  - Products
+  affected_kpis: []
   system_bindings:
   - Marketplace Review Aggregator
   - ERPNext QA Module
@@ -3942,12 +3664,11 @@ signals_events:
   cadence: daily
   format: Email / REST API
   downstream_events:
-  - Quality Investigation
-  - Batch Correlation
+  - CAPA Investigation Due
   entity_types:
-  - Product
+  - Products
   affected_kpis:
-  - Complaint Rate
+  - OpsComplaintShare
   related_processes:
   - customer_review_aggregation_and_triage
   - formulation_feedback_loop
@@ -3971,12 +3692,11 @@ signals_events:
   cadence: daily
   format: Email / REST API
   downstream_events:
-  - Quality Investigation
+  - CAPA Investigation Due
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Return Rate
+  affected_kpis: []
   related_processes:
   - customer_review_aggregation_and_triage
   - formulation_feedback_loop
@@ -3997,14 +3717,13 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Compliance Escalation
-  - CAPA
+  - Periodic Compliance Review Due
+  - CAPA Investigation Due
   entity_types:
-  - Ingredient
-  - Supplier
-  - Product
-  affected_kpis:
-  - Traceability Coverage
+  - Materials
+  - Suppliers
+  - Products
+  affected_kpis: []
   system_bindings:
   - Marketplace Review Aggregator
   - ERPNext QA Module
@@ -4018,11 +3737,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Supplier / Manufacturing Corrective Action
+  - Supplier Quality Score Declined
   entity_types:
-  - Supplier
-  affected_kpis:
-  - CAPA Closure Time
+  - Suppliers
+  affected_kpis: []
   system_bindings:
   - Marketplace Review Aggregator
   - ERPNext QA Module
@@ -4039,13 +3757,9 @@ signals_events:
   - Competitive Review Due
   - Portfolio Gap Assessment Due
   entity_types:
-  - Competitor
-  - Product
-  - Category
+  - Products
   - Channel
-  affected_kpis:
-  - Market Share
-  - Innovation Gap
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   - competitive_pricing_signal
@@ -4074,11 +3788,10 @@ signals_events:
   - Competitive Pricing Review Triggered
   - Price Review Due
   entity_types:
-  - CompetitorProduct
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Price Index
+  - MarginPct
   related_processes:
   - competitive_pricing_signal
   related_kpis:
@@ -4102,12 +3815,9 @@ signals_events:
   downstream_events:
   - Promotion ROI Below Target
   entity_types:
-  - Competitor
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Promo Share
-  - Market Share
+  affected_kpis: []
   related_processes:
   - competitive_pricing_signal
   system_bindings:
@@ -4131,11 +3841,9 @@ signals_events:
   downstream_events:
   - Product Positioning Review Due
   entity_types:
-  - CompetitorProduct
-  - Claim
-  - Product
-  affected_kpis:
-  - Brand Differentiation
+  - Products
+  - QualityInspections
+  affected_kpis: []
   related_processes:
   - claims_validation
   - competitive_pricing_signal
@@ -4161,11 +3869,9 @@ signals_events:
   downstream_events:
   - Product Positioning Review Due
   entity_types:
-  - CompetitorProduct
-  - Ingredient
-  - Product
-  affected_kpis:
-  - Product Differentiation
+  - Products
+  - Materials
+  affected_kpis: []
   related_processes:
   - recipe_development_live_cogs
   - innovation_pipeline_prioritisation
@@ -4191,10 +3897,9 @@ signals_events:
   downstream_events:
   - Market Entry Assessment Initiated
   entity_types:
-  - Competitor
+  - Products
   - Channel
-  affected_kpis:
-  - Regional Market Share
+  affected_kpis: []
   related_processes:
   - multi_market_compliance_readiness
   system_bindings:
@@ -4219,11 +3924,9 @@ signals_events:
   downstream_events:
   - Channel Strategy Review Due
   entity_types:
-  - Competitor
+  - Products
   - Channel
-  - Product
-  affected_kpis:
-  - Channel Share
+  affected_kpis: []
   related_processes:
   - competitive_pricing_signal
   system_bindings:
@@ -4245,10 +3948,8 @@ signals_events:
   downstream_events:
   - Strategic Portfolio Review Due
   entity_types:
-  - Competitor
-  - Category
-  affected_kpis:
-  - Competitive Threat Score
+  - Products
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   system_bindings:
@@ -4270,11 +3971,8 @@ signals_events:
   - Competitive Review Due
   - Portfolio Gap Assessment Due
   entity_types:
-  - Competitor
-  - Brand
-  - Category
-  affected_kpis:
-  - Share Growth
+  - Products
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   - competitive_pricing_signal
@@ -4303,11 +4001,8 @@ signals_events:
   - Category Performance Review Triggered
   - Strategic Portfolio Review Due
   entity_types:
-  - Category
-  - Product
-  affected_kpis:
-  - Category Growth
-  - Market Share
+  - Products
+  affected_kpis: []
   related_processes:
   - innovation_pipeline_prioritisation
   - demand_forecast
@@ -4330,13 +4025,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Positioning / Pricing / Portfolio Review
+  - Strategic Portfolio Review Due
   entity_types:
-  - Competitor
-  - Product
-  - Category
-  affected_kpis:
-  - Competitive Position Score
+  - Products
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -4350,13 +4042,11 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Category Review
-  - Competitive Review
+  - Category Performance Review Triggered
+  - Competitive Review Due
   entity_types:
-  - Product
-  - Category
-  affected_kpis:
-  - Market Share
+  - Products
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -4370,14 +4060,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Portfolio / Assortment / NPD Review
+  - Strategic Portfolio Review Due
   entity_types:
-  - Category
-  - Product
+  - Products
   - Channel
   affected_kpis:
-  - Category Growth
-  - Margin
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -4390,14 +4078,11 @@ signals_events:
   source: internal
   cadence: event-triggered
   format: system event
-  downstream_events:
-  - Claim / Pack / Marketing Review
+  downstream_events: []
   entity_types:
-  - Product
-  - Brand
-  - Claim
-  affected_kpis:
-  - Brand Consideration
+  - Products
+  - QualityInspections
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -4413,12 +4098,10 @@ signals_events:
   downstream_events:
   - Price Review Due
   entity_types:
-  - Product
-  - Competitor
+  - Products
   - Channel
   affected_kpis:
-  - Price Index
-  - Margin
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -4432,12 +4115,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Opportunity Assessment / NPD
+  - Opportunity Assessment Required
   entity_types:
-  - Category
-  affected_kpis:
-  - Portfolio Coverage
-  - Opportunity Value
+  - Products
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -4451,15 +4132,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Compliance
-  - Channel
-  - Supply Readiness
+  - Periodic Compliance Review Due
+  - Supplier Capacity Insufficient
   entity_types:
-  - Product
+  - Products
   - Channel
-  affected_kpis:
-  - Market Attractiveness
-  - Readiness
+  affected_kpis: []
   related_processes:
   - multi_market_compliance_readiness
   system_bindings:
@@ -4475,13 +4153,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Assortment / Listing / Pricing Review
+  - Channel Strategy Review Due
   entity_types:
   - Channel
-  - Product
+  - Products
   affected_kpis:
-  - Channel Growth
-  - Channel Margin
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -4495,14 +4172,10 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Pricing / Marketing / NPD Response
+  - Competitor Response Assessment Assigned
   entity_types:
-  - Competitor
-  - Product
-  - Category
-  affected_kpis:
-  - Threat Score
-  - Expected Revenue Impact
+  - Products
+  affected_kpis: []
   system_bindings:
   - ERPNext
   - Google Trends API
@@ -4516,13 +4189,12 @@ signals_events:
   cadence: event-triggered
   format: system event
   downstream_events:
-  - Rationalization / NPD Investment
+  - Portfolio Rationalization Review Due
   entity_types:
-  - Category
+  - Products
   affected_kpis:
-  - Portfolio ROI
-  - Growth
-  - Margin
+  - BlendedCampaignRoi
+  - MarginPct
   system_bindings:
   - ERPNext
   - Google Trends API

@@ -43,8 +43,8 @@ hierarchies:
       - { id: delhi,   label: "Delhi",   level: city, parent: india }
       - { id: bengaluru, label: "Bengaluru", level: city, parent: india }
 
-  - id: ChannelGroup
-    name: Channel Grouping
+  - id: TradeChannel
+    name: Trade Channel Hierarchy
     description: Online vs Offline grouping — reconciles the PIM channel list with live channel strings.
     owner: sales_team
     levels:
