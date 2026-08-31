@@ -2,14 +2,16 @@ version: 1
 processes:
 - id: regulation_impact_analysis
   name: Regulation Impact Analysis
-  description: "Scans incoming FSSAI regulatory changes, maps each relevant change to the affected SKUs, ingredients and suppliers\
-    \ in our portfolio, identifies the formulation and label changes required, and surfaces compliant alternatives with cost\
-    \ deltas \u2014 then lets a reviewer approve or iterate on the remediation plan.\n"
+  description: "Scans incoming FSSAI regulatory changes, maps each relevant change\
+    \ to the affected SKUs, ingredients and suppliers in our portfolio, identifies\
+    \ the formulation and label changes required, and surfaces compliant alternatives\
+    \ with cost deltas \u2014 then lets a reviewer approve or iterate on the remediation\
+    \ plan.\n"
   domain: Compliance
   owner: compliance_team
   definition_type: text
   applies_to:
-  - entity: Product
+  - entity: Products
   triggers:
   - type: event
     event_type: regulation_changed
@@ -38,10 +40,12 @@ processes:
     name: Scan FSSAI Regulatory Feed
     type: agent
     description: Invoke the FSSAI feed scraper to pull the latest regulatory changes.
-    instruction: 'The FSSAI feed scraper (scan_feed) has already run and its result is in state as regulatory_scan. Summarise
-      regulatory_scan.items: for EACH scanned change output a concise entry {title, what_changed, effective_date, affected_areas
-      (ingredient / claim / category keywords it names), business_criticality, source_url}. Output regulatory_changes as that
-      list (an empty list if regulatory_scan.items is empty or the scan returned no documents), and change_count as its length.
+    instruction: 'The FSSAI feed scraper (scan_feed) has already run and its result
+      is in state as regulatory_scan. Summarise regulatory_scan.items: for EACH scanned
+      change output a concise entry {title, what_changed, effective_date, affected_areas
+      (ingredient / claim / category keywords it names), business_criticality, source_url}.
+      Output regulatory_changes as that list (an empty list if regulatory_scan.items
+      is empty or the scan returned no documents), and change_count as its length.
       Do NOT invent changes beyond regulatory_scan.
 
       '
@@ -71,7 +75,8 @@ processes:
     name: Assess Portfolio Impact & Map Affected SKUs
     type: agent
     after: scan_regulations
-    description: Map each relevant regulatory change to the affected SKUs, ingredients and suppliers.
+    description: Map each relevant regulatory change to the affected SKUs, ingredients
+      and suppliers.
     fetch:
       entity_type: Product
       source_table: V_PRODUCT_ENRICHED
@@ -83,21 +88,28 @@ processes:
       - SHELF_LIFE_DAYS
       limit: 200
       as: product_portfolio
-    instruction: "Determine which of regulatory_changes actually affect OUR portfolio, and map them to the affected SKUs.\
-      \ Your SKU universe is product_portfolio \u2014 EVERY row is a real SKU we sell (SKU code, DISPLAY_NAME, MRP_INR, TOTAL_COGS_INR).\
-      \ You MUST only name SKUs that appear in product_portfolio; never invent SKUs or describe them in the abstract (\"several\
-      \ dessert products\"). The DISPLAY_NAME encodes the product family (e.g. \"Dessert-\u2026\", \"Health Bar-\u2026\")\
-      \ \u2014 use it to match a change's affected_areas to a product category. Supporting signals: product_ingredients (a\
-      \ representative ingredient per SKU, best-effort \u2014 may be sparse) and any ingredient/supplier links in the GATHERED\
-      \ CONTEXT. For EACH change in regulatory_changes, decide relevance: it is relevant if its affected_areas match a product\
-      \ family / claim / ingredient we actually carry in product_portfolio. Output: - relevant_changes: the subset of changes\
-      \ that affect us, each with a one-line\n  why_relevant and the matched ingredient(s)/category(ies).\n- affected_skus:\
-      \ one row per (SKU, change) it touches, drawn STRICTLY from\n  product_portfolio \u2014 {sku, product_name (DISPLAY_NAME),\
-      \ affected_via (the exact\n  ingredient/claim/category that matched), change_title, business_criticality,\n  mrp_inr,\
-      \ total_cogs_inr}.\n- affected_suppliers: suppliers tied to an affected ingredient \u2014 {supplier,\n  ingredient,\
-      \ sku_count}. Empty if no supplier data is present.\nIf NO product_portfolio SKU concretely matches any change, output\
-      \ EMPTY lists \u2014 the reviewer will choose \"No Action Needed\". Never claim a SKU is affected without a concrete,\
-      \ named match to a product_portfolio row.\n"
+    instruction: "Determine which of regulatory_changes actually affect OUR portfolio,\
+      \ and map them to the affected SKUs. Your SKU universe is product_portfolio\
+      \ \u2014 EVERY row is a real SKU we sell (SKU code, DISPLAY_NAME, MRP_INR, TOTAL_COGS_INR).\
+      \ You MUST only name SKUs that appear in product_portfolio; never invent SKUs\
+      \ or describe them in the abstract (\"several dessert products\"). The DISPLAY_NAME\
+      \ encodes the product family (e.g. \"Dessert-\u2026\", \"Health Bar-\u2026\"\
+      ) \u2014 use it to match a change's affected_areas to a product category. Supporting\
+      \ signals: product_ingredients (a representative ingredient per SKU, best-effort\
+      \ \u2014 may be sparse) and any ingredient/supplier links in the GATHERED CONTEXT.\
+      \ For EACH change in regulatory_changes, decide relevance: it is relevant if\
+      \ its affected_areas match a product family / claim / ingredient we actually\
+      \ carry in product_portfolio. Output: - relevant_changes: the subset of changes\
+      \ that affect us, each with a one-line\n  why_relevant and the matched ingredient(s)/category(ies).\n\
+      - affected_skus: one row per (SKU, change) it touches, drawn STRICTLY from\n\
+      \  product_portfolio \u2014 {sku, product_name (DISPLAY_NAME), affected_via\
+      \ (the exact\n  ingredient/claim/category that matched), change_title, business_criticality,\n\
+      \  mrp_inr, total_cogs_inr}.\n- affected_suppliers: suppliers tied to an affected\
+      \ ingredient \u2014 {supplier,\n  ingredient, sku_count}. Empty if no supplier\
+      \ data is present.\nIf NO product_portfolio SKU concretely matches any change,\
+      \ output EMPTY lists \u2014 the reviewer will choose \"No Action Needed\". Never\
+      \ claim a SKU is affected without a concrete, named match to a product_portfolio\
+      \ row.\n"
     produces:
     - relevant_changes
     - affected_skus
@@ -122,11 +134,14 @@ processes:
     name: Confirm Impact Scope
     type: decision
     after: assess_and_map
-    description: Compliance lead confirms which SKUs/suppliers to remediate (or that there's no impact).
-    instruction: 'Review affected_skus and relevant_changes. Choose "Proceed to Remediation" when one or more SKUs are genuinely
-      affected and warrant formulation/label changes. Choose "No Action Needed" when nothing in the portfolio is affected
-      (empty affected_skus) or the changes are purely informational. Recommend "Proceed to Remediation" whenever affected_skus
-      is non-empty with any license_blocking / must_have item; otherwise recommend "No Action Needed".
+    description: Compliance lead confirms which SKUs/suppliers to remediate (or that
+      there's no impact).
+    instruction: 'Review affected_skus and relevant_changes. Choose "Proceed to Remediation"
+      when one or more SKUs are genuinely affected and warrant formulation/label changes.
+      Choose "No Action Needed" when nothing in the portfolio is affected (empty affected_skus)
+      or the changes are purely informational. Recommend "Proceed to Remediation"
+      whenever affected_skus is non-empty with any license_blocking / must_have item;
+      otherwise recommend "No Action Needed".
 
       '
     decision_options:
@@ -154,14 +169,19 @@ processes:
     type: agent
     after: confirm_scope
     condition: '{{scope_decision}} == "Proceed to Remediation"'
-    description: Derive the formulation and label edits each affected SKU needs to comply.
-    instruction: "For each row in affected_skus, derive what must change to comply with its change_title (see relevant_changes\
-      \ for the rule detail). Split into two outputs: - formulation_changes: {sku, product_name, ingredient, action (reduce\
-      \ | replace |\n  remove | reformulate), driving_rule, rationale} \u2014 the recipe-level edits (e.g.\n  replace a restricted\
-      \ additive, cut a nutrient above a new threshold).\n- label_changes: {sku, product_name, field (e.g. allergen declaration,\
-      \ nutrition\n  panel, claim, front-of-pack symbol, ingredient list), current_state,\n  required_state, driving_rule}\
-      \ \u2014 the on-pack edits.\nReason over product_ingredients / product_portfolio for current state; use \"not declared\"\
-      \ when a field is absent. Be concrete and per-SKU; do not generalise.\n"
+    description: Derive the formulation and label edits each affected SKU needs to
+      comply.
+    instruction: "For each row in affected_skus, derive what must change to comply\
+      \ with its change_title (see relevant_changes for the rule detail). Split into\
+      \ two outputs: - formulation_changes: {sku, product_name, ingredient, action\
+      \ (reduce | replace |\n  remove | reformulate), driving_rule, rationale} \u2014\
+      \ the recipe-level edits (e.g.\n  replace a restricted additive, cut a nutrient\
+      \ above a new threshold).\n- label_changes: {sku, product_name, field (e.g.\
+      \ allergen declaration, nutrition\n  panel, claim, front-of-pack symbol, ingredient\
+      \ list), current_state,\n  required_state, driving_rule} \u2014 the on-pack\
+      \ edits.\nReason over product_ingredients / product_portfolio for current state;\
+      \ use \"not declared\" when a field is absent. Be concrete and per-SKU; do not\
+      \ generalise.\n"
     produces:
     - formulation_changes
     - label_changes
@@ -170,15 +190,19 @@ processes:
     type: agent
     after: identify_remediation
     condition: '{{scope_decision}} == "Proceed to Remediation"'
-    description: Propose compliant alternative ingredients/suppliers with the cost impact of each swap.
-    instruction: 'For each formulation_changes row that needs a replacement, propose compliant alternative(s). Reason over
-      product_portfolio / product_ingredients (current cost signals: total_cogs_inr, mrp_inr) and any supplier links in the
-      GATHERED CONTEXT for who could supply an alternative. Output compliant_alternatives: {sku, product_name, current_ingredient,
-      alternative_ingredient, alternative_supplier, est_cost_delta_inr (per unit / per SKU; positive = costs more, negative
-      = saves), compliance_note (why the alternative is compliant with the driving rule), confidence}. When you cannot find
-      a concrete alternative in the graph, say so in compliance_note and set alternative_ingredient to "none identified" rather
-      than inventing a supplier. Also output a one-line remediation_summary and rate remediation_severity as license_blocking,
-      must_have, or good_to_have.
+    description: Propose compliant alternative ingredients/suppliers with the cost
+      impact of each swap.
+    instruction: 'For each formulation_changes row that needs a replacement, propose
+      compliant alternative(s). Reason over product_portfolio / product_ingredients
+      (current cost signals: total_cogs_inr, mrp_inr) and any supplier links in the
+      GATHERED CONTEXT for who could supply an alternative. Output compliant_alternatives:
+      {sku, product_name, current_ingredient, alternative_ingredient, alternative_supplier,
+      est_cost_delta_inr (per unit / per SKU; positive = costs more, negative = saves),
+      compliance_note (why the alternative is compliant with the driving rule), confidence}.
+      When you cannot find a concrete alternative in the graph, say so in compliance_note
+      and set alternative_ingredient to "none identified" rather than inventing a
+      supplier. Also output a one-line remediation_summary and rate remediation_severity
+      as license_blocking, must_have, or good_to_have.
 
       '
     produces:
@@ -190,13 +214,16 @@ processes:
     type: decision
     after: surface_alternatives
     condition: '{{scope_decision}} == "Proceed to Remediation"'
-    description: Regulatory affairs approves or rejects the formulation/label remediation plan.
-    instruction: "Review the full remediation plan: the formulation_changes, label_changes and compliant_alternatives (with\
-      \ cost deltas) for every affected SKU. Choose \"Approve Remediation Plan\" when the plan is sound and the alternatives\
-      \ are acceptable on cost and compliance; choose \"REJECT\" when it needs rework or the impact is not worth acting on.\
-      \ If you want to refine the plan \u2014 recalculate alternatives, correct a value, focus on a subset of SKUs \u2014\
-      \ REVISE with that instruction instead of approving. Recommend \"Approve Remediation Plan\" when every license_blocking\
-      \ item has a concrete compliant fix.\n"
+    description: Regulatory affairs approves or rejects the formulation/label remediation
+      plan.
+    instruction: "Review the full remediation plan: the formulation_changes, label_changes\
+      \ and compliant_alternatives (with cost deltas) for every affected SKU. Choose\
+      \ \"Approve Remediation Plan\" when the plan is sound and the alternatives are\
+      \ acceptable on cost and compliance; choose \"REJECT\" when it needs rework\
+      \ or the impact is not worth acting on. If you want to refine the plan \u2014\
+      \ recalculate alternatives, correct a value, focus on a subset of SKUs \u2014\
+      \ REVISE with that instruction instead of approving. Recommend \"Approve Remediation\
+      \ Plan\" when every license_blocking item has a concrete compliant fix.\n"
     decision_options:
     - Approve Remediation Plan
     - REJECT
@@ -244,14 +271,16 @@ processes:
     type: notify
     after: brief_remediation_plan
     condition: '{{remediation_decision}} == "Approve Remediation Plan"'
-    description: Record that the remediation plan is approved and route it to the owners.
+    description: Record that the remediation plan is approved and route it to the
+      owners.
     produces:
     - remediation_recorded
     action:
       type: simulated
       name: record_remediation_plan
       config:
-        summary: "Regulation remediation plan approved \u2014 {{change_count}} change(s) assessed"
+        summary: "Regulation remediation plan approved \u2014 {{change_count}} change(s)\
+          \ assessed"
         severity: '{{remediation_severity}}'
         formulation_changes: '{{formulation_changes}}'
         label_changes: '{{label_changes}}'

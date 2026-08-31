@@ -2,15 +2,20 @@ version: 1
 processes:
 - id: formulation_feedback_loop
   name: Formulation Feedback Loop
-  description: 'Turns repeated customer complaints into a reformulation brief. Reads low-rated reviews
+  description: 'Turns repeated customer complaints into a reformulation brief. Reads
+    low-rated reviews
 
-    from the last 30 days, infers the product each one names from its text, groups them by
+    from the last 30 days, infers the product each one names from its text, groups
+    them by
 
-    product and complaint theme, and keeps only themes a formulation change could fix that
+    product and complaint theme, and keeps only themes a formulation change could
+    fix that
 
-    recur 3+ times inside a rolling 14-day window. Each surviving cluster goes to the NPD
+    recur 3+ times inside a rolling 14-day window. Each surviving cluster goes to
+    the NPD
 
-    owner as its own approval, and an approved one is written to DIM_IDEA as a brief at
+    owner as its own approval, and an approved one is written to DIM_IDEA as a brief
+    at
 
     stage Triage.
 
@@ -18,8 +23,8 @@ processes:
   domain: Product Reviews & NPD
   owner: npd_team
   applies_to:
-  - entity: Store
-  - entity: Store
+  - entity: Channel
+  - entity: Channel
     where:
     - field: id
       op: ne
@@ -37,8 +42,9 @@ processes:
   - name: product_focus
     type: string
     required: false
-    description: Optional. A product family as a customer would name it, e.g. 'Almond Katli'. When set, only reviews naming
-      that product are considered; the 3-in-14-days rule is unchanged.
+    description: Optional. A product family as a customer would name it, e.g. 'Almond
+      Katli'. When set, only reviews naming that product are considered; the 3-in-14-days
+      rule is unchanged.
   - name: scheduled_at
     type: datetime
     required: false
@@ -53,8 +59,9 @@ processes:
   - id: cluster_complaint_signals
     name: Cluster Repeated Complaints
     type: agent
-    description: 'Infers the product named in each review, assigns a complaint theme, and keeps the product/theme pairs that
-      recur 3+ times within a rolling 14-day window and are fixable by reformulation.
+    description: 'Infers the product named in each review, assigns a complaint theme,
+      and keeps the product/theme pairs that recur 3+ times within a rolling 14-day
+      window and are fixable by reformulation.
 
       '
     fetch:
@@ -73,61 +80,85 @@ processes:
     produces:
     - groups_considered
     - formulation_clusters
-    instruction: "Each row of `review_candidates` is one review: S = store id, D = review date (YYYY-MM-DD, for quoting),\
-      \ N = that date as an integer day number, T = review text.\nIf the fact `product_focus` is present and non-empty, discard\
-      \ every review whose T does not name that product before doing anything else, and report on that product alone. If it\
-      \ is absent, blank or null, consider all reviews \u2014 that is the normal case and is not an error.\n1. Identify the\
-      \ product each review names, reading only T, and record it as one entry copied exactly from the NM field of `product_catalog`\
-      \ \u2014 the pipe-separated list of every product we sell. NM is the only permitted vocabulary: never invent a product,\
-      \ never merge two of its entries, and never shorten one. Match on whole words \u2014 \"chocolate\" is not \"late\".\
-      \ Drop any review that names nothing in NM. The same fact's CG field pairs some of those names with a cost; it is not\
-      \ a second vocabulary and is read only in step 6.\nSeveral entries deliberately share words and are still different\
-      \ products; keep them apart on the full entry. If a review's wording fits two entries equally, drop it rather than guess.\n\
-      2. Give each review one short complaint theme (e.g. \"missing top layer\", \"dry grainy texture\", \"wrong item delivered\"\
-      ).\n3. Group by product AND theme together. Two different complaints about the same product are two groups, not one.\n\
-      A review belongs only to the product its own T names. Complaints recur across the catalog \u2014 several desserts draw\
-      \ the same \"too sweet\", \"stale\" or \"grainy\" wording \u2014 so a group must never borrow a review that names a\
-      \ different product, however alike the two complaints read. Before scoring a group, confirm every review in it names\
-      \ that product.\n4. Label each group's Kind from its theme. OPERATIONS = a delivery, packaging, service or fulfilment\
-      \ failure: wrong or missing item, late or warm arrival, no spoons or napkins, leaking or crushed box. PRODUCT = the\
-      \ food itself is at fault: quality, freshness/expiry, taste, ingredients, preparation, hygiene, appearance.\nAsk only\
-      \ whether changing the recipe would fix it. Naming a product does not make a group PRODUCT, and neither does having\
-      \ several reviews close together: \"wrong item delivered\" stays OPERATIONS however many customers report it.\n5. Score\
-      \ every group on N by subtraction only \u2014 never on D, never by eye, and never from how many reviews the group has\
-      \ in total.\nFor a group, list its N values ascending \u2014 exactly one entry per review in the group, taken from that\
-      \ review's own row, never a value carried over from another product. Try each value W as a window start: the window\
-      \ admits exactly those N with N >= W and N - W <= 14. The best window is the one admitting the most.\nReturn `groups_considered`\
-      \ as a list covering EVERY group from step 3, each {\"Product_family\": <product>, \"Theme\": <theme>, \"Kind\": <\"\
-      PRODUCT\" or \"OPERATIONS\">, \"Ns\": <all N values, ascending>, \"Window_ns\": <the N values the best window admits>,\
-      \ \"Span\": <last Window_ns minus first Window_ns>, \"Qualifies\": <true only if Kind is PRODUCT AND Span <= 14 AND\
-      \ Window_ns has 3 or more entries>}.\nKind and Span are the whole test, so write both down and let them decide. If Span\
-      \ exceeds 14 the group fails however evenly spaced it looks \u2014 for Ns 196, 204, 212, 220 the best window is [196,\
-      \ 204] (adding 212 would make Span 16), so 2 entries, Qualifies false. If Kind is OPERATIONS the group fails no matter\
-      \ what Span says.\n6. Return `formulation_clusters` containing one object for each `groups_considered` entry whose Qualifies\
-      \ is true, and nothing else. Carry Window_ns and Span through unchanged, and add: {\"Product_family\", \"Theme\", \"\
-      Window_ns\", \"Span\", \"Review_count\": <number of entries in Window_ns>, \"Store_count\": <distinct S among exactly\
-      \ those reviews, a number>, \"Window_start\": <D of the earliest review in Window_ns>, \"Window_end\": <D of the latest>,\
-      \ \"Evidence\": <one line per review in Window_ns, up to 4, each \"<D> \u2014 <quote from T>\", newline separated>,\
-      \ \"Brief_name\": <\"Reformulation: <product> \u2014 <theme>\">, \"Hypothesis\": <2-3 sentences: what customers report,\
-      \ how many reviews across how many stores in the window, and what to investigate in the formulation. End with the evidence\
-      \ lines.>, \"Target_cogs_inr\": <the number paired with this product in the CG field of `product_catalog`, copied digit\
-      \ for digit. If the product is not listed in CG, null. Never compute, scale, round or estimate it, and never take a\
-      \ number from a different product.>}.\nThe two lists must agree: every `groups_considered` entry with Qualifies true\
-      \ appears in `formulation_clusters`, and nothing else does. Return an empty list if none qualify. Never invent a review,\
-      \ a date or a product that is not in the data. Set `signal_summary` to one sentence naming the products that qualified,\
-      \ or stating that none did.\n"
+    instruction: "Each row of `review_candidates` is one review: S = store id, D =\
+      \ review date (YYYY-MM-DD, for quoting), N = that date as an integer day number,\
+      \ T = review text.\nIf the fact `product_focus` is present and non-empty, discard\
+      \ every review whose T does not name that product before doing anything else,\
+      \ and report on that product alone. If it is absent, blank or null, consider\
+      \ all reviews \u2014 that is the normal case and is not an error.\n1. Identify\
+      \ the product each review names, reading only T, and record it as one entry\
+      \ copied exactly from the NM field of `product_catalog` \u2014 the pipe-separated\
+      \ list of every product we sell. NM is the only permitted vocabulary: never\
+      \ invent a product, never merge two of its entries, and never shorten one. Match\
+      \ on whole words \u2014 \"chocolate\" is not \"late\". Drop any review that\
+      \ names nothing in NM. The same fact's CG field pairs some of those names with\
+      \ a cost; it is not a second vocabulary and is read only in step 6.\nSeveral\
+      \ entries deliberately share words and are still different products; keep them\
+      \ apart on the full entry. If a review's wording fits two entries equally, drop\
+      \ it rather than guess.\n2. Give each review one short complaint theme (e.g.\
+      \ \"missing top layer\", \"dry grainy texture\", \"wrong item delivered\").\n\
+      3. Group by product AND theme together. Two different complaints about the same\
+      \ product are two groups, not one.\nA review belongs only to the product its\
+      \ own T names. Complaints recur across the catalog \u2014 several desserts draw\
+      \ the same \"too sweet\", \"stale\" or \"grainy\" wording \u2014 so a group\
+      \ must never borrow a review that names a different product, however alike the\
+      \ two complaints read. Before scoring a group, confirm every review in it names\
+      \ that product.\n4. Label each group's Kind from its theme. OPERATIONS = a delivery,\
+      \ packaging, service or fulfilment failure: wrong or missing item, late or warm\
+      \ arrival, no spoons or napkins, leaking or crushed box. PRODUCT = the food\
+      \ itself is at fault: quality, freshness/expiry, taste, ingredients, preparation,\
+      \ hygiene, appearance.\nAsk only whether changing the recipe would fix it. Naming\
+      \ a product does not make a group PRODUCT, and neither does having several reviews\
+      \ close together: \"wrong item delivered\" stays OPERATIONS however many customers\
+      \ report it.\n5. Score every group on N by subtraction only \u2014 never on\
+      \ D, never by eye, and never from how many reviews the group has in total.\n\
+      For a group, list its N values ascending \u2014 exactly one entry per review\
+      \ in the group, taken from that review's own row, never a value carried over\
+      \ from another product. Try each value W as a window start: the window admits\
+      \ exactly those N with N >= W and N - W <= 14. The best window is the one admitting\
+      \ the most.\nReturn `groups_considered` as a list covering EVERY group from\
+      \ step 3, each {\"Product_family\": <product>, \"Theme\": <theme>, \"Kind\"\
+      : <\"PRODUCT\" or \"OPERATIONS\">, \"Ns\": <all N values, ascending>, \"Window_ns\"\
+      : <the N values the best window admits>, \"Span\": <last Window_ns minus first\
+      \ Window_ns>, \"Qualifies\": <true only if Kind is PRODUCT AND Span <= 14 AND\
+      \ Window_ns has 3 or more entries>}.\nKind and Span are the whole test, so write\
+      \ both down and let them decide. If Span exceeds 14 the group fails however\
+      \ evenly spaced it looks \u2014 for Ns 196, 204, 212, 220 the best window is\
+      \ [196, 204] (adding 212 would make Span 16), so 2 entries, Qualifies false.\
+      \ If Kind is OPERATIONS the group fails no matter what Span says.\n6. Return\
+      \ `formulation_clusters` containing one object for each `groups_considered`\
+      \ entry whose Qualifies is true, and nothing else. Carry Window_ns and Span\
+      \ through unchanged, and add: {\"Product_family\", \"Theme\", \"Window_ns\"\
+      , \"Span\", \"Review_count\": <number of entries in Window_ns>, \"Store_count\"\
+      : <distinct S among exactly those reviews, a number>, \"Window_start\": <D of\
+      \ the earliest review in Window_ns>, \"Window_end\": <D of the latest>, \"Evidence\"\
+      : <one line per review in Window_ns, up to 4, each \"<D> \u2014 <quote from\
+      \ T>\", newline separated>, \"Brief_name\": <\"Reformulation: <product> \u2014\
+      \ <theme>\">, \"Hypothesis\": <2-3 sentences: what customers report, how many\
+      \ reviews across how many stores in the window, and what to investigate in the\
+      \ formulation. End with the evidence lines.>, \"Target_cogs_inr\": <the number\
+      \ paired with this product in the CG field of `product_catalog`, copied digit\
+      \ for digit. If the product is not listed in CG, null. Never compute, scale,\
+      \ round or estimate it, and never take a number from a different product.>}.\n\
+      The two lists must agree: every `groups_considered` entry with Qualifies true\
+      \ appears in `formulation_clusters`, and nothing else does. Return an empty\
+      \ list if none qualify. Never invent a review, a date or a product that is not\
+      \ in the data. Set `signal_summary` to one sentence naming the products that\
+      \ qualified, or stating that none did.\n"
   - id: approve_briefs
     name: Approve Reformulation Briefs
     type: foreach
     after: cluster_complaint_signals
     for_each: formulation_clusters
-    description: 'One approval per cluster. Approving writes the reformulation brief into DIM_IDEA at stage Triage; rejecting
-      holds it with nothing written.
+    description: 'One approval per cluster. Approving writes the reformulation brief
+      into DIM_IDEA at stage Triage; rejecting holds it with nothing written.
 
       '
-    instruction: "{{Product_family}} \u2014 \"{{Theme}}\", reported by {{Review_count}} reviews across {{Store_count}} stores\
-      \ between {{Window_start}} and {{Window_end}}. Check the evidence supports a formulation fault rather than a one-off\
-      \ batch or a delivery problem, then approve to open the reformulation brief or reject to hold it.\n"
+    instruction: "{{Product_family}} \u2014 \"{{Theme}}\", reported by {{Review_count}}\
+      \ reviews across {{Store_count}} stores between {{Window_start}} and {{Window_end}}.\
+      \ Check the evidence supports a formulation fault rather than a one-off batch\
+      \ or a delivery problem, then approve to open the reformulation brief or reject\
+      \ to hold it.\n"
     decision_options:
     - APPROVE
     - REJECT
@@ -136,7 +167,8 @@ processes:
     - briefs_held
     key_data:
     - title: Complaint clusters awaiting a brief
-      summary: Each product/theme that recurred 3+ times inside a 14-day window, with the reviews behind it
+      summary: Each product/theme that recurred 3+ times inside a 14-day window, with
+        the reviews behind it
       views:
       - view: table
         from: formulation_clusters
@@ -151,7 +183,8 @@ processes:
         - Target_cogs_inr
         - Evidence
     - title: All complaint groups weighed
-      summary: Every product/theme group, its Kind, the reviews in its best 14-day window and its span in days
+      summary: Every product/theme group, its Kind, the reviews in its best 14-day
+        window and its span in days
       views:
       - view: table
         from: groups_considered
@@ -190,8 +223,8 @@ processes:
       type: simulated
       config:
         type: simulated
-        note: "Formulation feedback loop complete \u2014 reformulation briefs opened in DIM_IDEA at stage Triage; held clusters\
-          \ left unwritten."
+        note: "Formulation feedback loop complete \u2014 reformulation briefs opened\
+          \ in DIM_IDEA at stage Triage; held clusters left unwritten."
   related_kpis:
   - AvgStoreRating
   related_signals_events:

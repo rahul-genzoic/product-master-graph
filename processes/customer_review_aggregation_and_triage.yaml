@@ -2,30 +2,40 @@ version: 1
 processes:
 - id: customer_review_aggregation_and_triage
   name: Customer Complaint Root-Cause Triage
-  description: "Traces each customer complaint back to its root cause, per dark store:\nstart at the Store, pull its complaints\
-    \ (each references an ORDER_ID), match\nthat to the sales table (BUSINESS_ANALYTICS.ONLINE_ORDER_ID) to see which\nproducts\
-    \ were in the order, then look up the store's inventory for that\nproduct ON the order date (the earliest-expiring available\
-    \ batch) and that\nSKU's configured shelf-life threshold. The AI classifies each complaint\nOPERATIONS vs PRODUCT; for\
-    \ PRODUCT complaints it checks whether the stock\nsold was near expiry on the order date and flags that as the likely\
-    \ cause.\nReviews are aggregated per store (average rating, all reviews, themes) but\nnot traced. After the overview gate,\
-    \ the reviewer walks the complaints STORE\nBY STORE (one approve/reject gate per store), and the confirmed triage is\n\
-    emailed via the Genzoic Email Formatter skill.\n\nFor the agent: `complaint_root_cause` is ALREADY traced by the system\
-    \ \u2014 one\nrow per complaint x product in its order, carrying that product's inventory\nON the order date (`inventory_that_day`,\
-    \ `earliest_expiry_that_day`) and the\nSKU's `min_days_shelf_life`. CLASSIFY each complaint as OPERATIONS (delivery,\n\
-    packaging/spillage, wrong or missing items, service, timing) or PRODUCT\n(freshness/expiry, taste, quality, ingredients,\
-    \ hygiene) from `Complaint` +\n`Issue_type` + `Complaint_item`. For PRODUCT complaints, compute remaining\nlife = (`earliest_expiry_that_day`\
-    \ \u2212 `Order_date`) and compare to\n`min_days_shelf_life` (treat 2 days if null): if <= threshold (or negative =\n\
-    sold expired), flag near-expiry stock as the LIKELY ROOT CAUSE; else leave it\na plain quality issue. A null `Product_name`/`Order_date`\
-    \ = order not traced\n(can't assess). `store_reviews` is untraced \u2014 report the average rating and\nPRODUCT-vs-OPERATIONS\
-    \ themes and cross-check against the complaints. Write a\nSHORT summary (OPERATIONS vs PRODUCT split, how many PRODUCT\
-    \ complaints are\nnear-expiry-explained with standout examples, and the review picture).\nRecommend APPROVE at the overview\
-    \ gate to action the triage store by store;\nrecommend REJECT (no action) only if both facts are empty.\n"
+  description: "Traces each customer complaint back to its root cause, per dark store:\n\
+    start at the Store, pull its complaints (each references an ORDER_ID), match\n\
+    that to the sales table (BUSINESS_ANALYTICS.ONLINE_ORDER_ID) to see which\nproducts\
+    \ were in the order, then look up the store's inventory for that\nproduct ON the\
+    \ order date (the earliest-expiring available batch) and that\nSKU's configured\
+    \ shelf-life threshold. The AI classifies each complaint\nOPERATIONS vs PRODUCT;\
+    \ for PRODUCT complaints it checks whether the stock\nsold was near expiry on\
+    \ the order date and flags that as the likely cause.\nReviews are aggregated per\
+    \ store (average rating, all reviews, themes) but\nnot traced. After the overview\
+    \ gate, the reviewer walks the complaints STORE\nBY STORE (one approve/reject\
+    \ gate per store), and the confirmed triage is\nemailed via the Genzoic Email\
+    \ Formatter skill.\n\nFor the agent: `complaint_root_cause` is ALREADY traced\
+    \ by the system \u2014 one\nrow per complaint x product in its order, carrying\
+    \ that product's inventory\nON the order date (`inventory_that_day`, `earliest_expiry_that_day`)\
+    \ and the\nSKU's `min_days_shelf_life`. CLASSIFY each complaint as OPERATIONS\
+    \ (delivery,\npackaging/spillage, wrong or missing items, service, timing) or\
+    \ PRODUCT\n(freshness/expiry, taste, quality, ingredients, hygiene) from `Complaint`\
+    \ +\n`Issue_type` + `Complaint_item`. For PRODUCT complaints, compute remaining\n\
+    life = (`earliest_expiry_that_day` \u2212 `Order_date`) and compare to\n`min_days_shelf_life`\
+    \ (treat 2 days if null): if <= threshold (or negative =\nsold expired), flag\
+    \ near-expiry stock as the LIKELY ROOT CAUSE; else leave it\na plain quality issue.\
+    \ A null `Product_name`/`Order_date` = order not traced\n(can't assess). `store_reviews`\
+    \ is untraced \u2014 report the average rating and\nPRODUCT-vs-OPERATIONS themes\
+    \ and cross-check against the complaints. Write a\nSHORT summary (OPERATIONS vs\
+    \ PRODUCT split, how many PRODUCT complaints are\nnear-expiry-explained with standout\
+    \ examples, and the review picture).\nRecommend APPROVE at the overview gate to\
+    \ action the triage store by store;\nrecommend REJECT (no action) only if both\
+    \ facts are empty.\n"
   domain: Product Reviews & Complaints
   owner: cx_team
   definition_type: text
   applies_to:
-  - entity: Store
-  - entity: Store
+  - entity: Channel
+  - entity: Channel
     where:
     - field: id
       op: ne
@@ -61,23 +71,30 @@ processes:
   - id: review_triage
     name: Review complaint triage
     type: decision
-    description: Production / marketing owner reviews the AI's root-cause triage and decides whether to action it store by
-      store.
-    instruction: "ALL the data you need is ALREADY in the FACTS \u2014 `complaint_root_cause` (the traced complaints) and\
-      \ `store_reviews` (the reviews) were assembled and handed to you by the system. Do NOT call collect_context, run_skill,\
-      \ call_connector or any other tool to fetch or verify data \u2014 there is nothing more to gather and no external credentials\
-      \ are needed. If a table looks short, that IS the data; never treat present-but-small data as missing. Work ONLY from\
-      \ the provided FACTS and go straight to finish_decision.\n`complaint_root_cause` is traced one row per complaint x product\
-      \ in its order, carrying that product's inventory ON the order date and the SKU's shelf-life threshold. CLASSIFY every\
-      \ complaint OPERATIONS (delivery, packaging, wrong/missing items, service, timing) vs PRODUCT (freshness/expiry, taste,\
-      \ quality, hygiene) from `Complaint` + `Issue_type` + `Complaint_item`. For PRODUCT complaints compute remaining life\
-      \ = (`earliest_expiry_that_day` - `Order_date`) vs `min_days_shelf_life` (treat 2 days if null): <= threshold (or negative)\
-      \ => flag near-expiry stock as the likely root cause. `store_reviews` is untraced \u2014 report the average rating and\
-      \ PRODUCT vs OPERATIONS themes and cross-check against the complaints. Write a SHORT summary (OPS vs PRODUCT split,\
-      \ how many PRODUCT complaints are near-expiry-explained with standout examples, the review picture). Do not paste the\
-      \ raw tables.\nDEFAULT to APPROVE to action the triage store by store \u2014 recommend REJECT ONLY if BOTH `complaint_root_cause`\
-      \ and `store_reviews` are genuinely empty (no rows at all). Never REJECT because of a supposed data-access / credentials\
-      \ / incomplete-data problem: the data is already provided.\n"
+    description: Production / marketing owner reviews the AI's root-cause triage and
+      decides whether to action it store by store.
+    instruction: "ALL the data you need is ALREADY in the FACTS \u2014 `complaint_root_cause`\
+      \ (the traced complaints) and `store_reviews` (the reviews) were assembled and\
+      \ handed to you by the system. Do NOT call collect_context, run_skill, call_connector\
+      \ or any other tool to fetch or verify data \u2014 there is nothing more to\
+      \ gather and no external credentials are needed. If a table looks short, that\
+      \ IS the data; never treat present-but-small data as missing. Work ONLY from\
+      \ the provided FACTS and go straight to finish_decision.\n`complaint_root_cause`\
+      \ is traced one row per complaint x product in its order, carrying that product's\
+      \ inventory ON the order date and the SKU's shelf-life threshold. CLASSIFY every\
+      \ complaint OPERATIONS (delivery, packaging, wrong/missing items, service, timing)\
+      \ vs PRODUCT (freshness/expiry, taste, quality, hygiene) from `Complaint` +\
+      \ `Issue_type` + `Complaint_item`. For PRODUCT complaints compute remaining\
+      \ life = (`earliest_expiry_that_day` - `Order_date`) vs `min_days_shelf_life`\
+      \ (treat 2 days if null): <= threshold (or negative) => flag near-expiry stock\
+      \ as the likely root cause. `store_reviews` is untraced \u2014 report the average\
+      \ rating and PRODUCT vs OPERATIONS themes and cross-check against the complaints.\
+      \ Write a SHORT summary (OPS vs PRODUCT split, how many PRODUCT complaints are\
+      \ near-expiry-explained with standout examples, the review picture). Do not\
+      \ paste the raw tables.\nDEFAULT to APPROVE to action the triage store by store\
+      \ \u2014 recommend REJECT ONLY if BOTH `complaint_root_cause` and `store_reviews`\
+      \ are genuinely empty (no rows at all). Never REJECT because of a supposed data-access\
+      \ / credentials / incomplete-data problem: the data is already provided.\n"
     decision_options:
     - APPROVE
     - REJECT
@@ -85,7 +102,8 @@ processes:
     - triage_decision
     key_data:
     - title: Complaint root-cause (traced)
-      summary: Each complaint x product in its order, with that day's inventory & shelf-life threshold
+      summary: Each complaint x product in its order, with that day's inventory &
+        shelf-life threshold
       views:
       - view: table
         from: complaint_root_cause
@@ -118,11 +136,13 @@ processes:
     after: review_triage
     for_each: complaint_root_cause
     group_by: MASTER_STORE_ID
-    description: For each store, review its complaints and approve to confirm them into the emailed triage, or reject to hold
-      them.
-    instruction: "{{Store_name}}: review this store's traced complaints in the table \u2014 the OPERATIONS vs PRODUCT split\
-      \ and any PRODUCT complaints explained by near-expiry stock (remaining life vs the SKU's shelf-life threshold). Approve\
-      \ to confirm this store's complaints into the emailed triage report, or Reject to hold them.\n"
+    description: For each store, review its complaints and approve to confirm them
+      into the emailed triage, or reject to hold them.
+    instruction: "{{Store_name}}: review this store's traced complaints in the table\
+      \ \u2014 the OPERATIONS vs PRODUCT split and any PRODUCT complaints explained\
+      \ by near-expiry stock (remaining life vs the SKU's shelf-life threshold). Approve\
+      \ to confirm this store's complaints into the emailed triage report, or Reject\
+      \ to hold them.\n"
     decision_options:
     - APPROVE
     - REJECT
@@ -149,7 +169,8 @@ processes:
     name: Email triage report
     type: notify
     after: triage_by_store
-    description: Email the production & marketing owners the confirmed root-cause triage + the store reviews.
+    description: Email the production & marketing owners the confirmed root-cause
+      triage + the store reviews.
     produces:
     - report_done
     action:
@@ -163,11 +184,13 @@ processes:
           to: uzairtajmat7@gmail.com
           subject: "Complaint root-cause triage \u2014 product vs operational"
           title: Customer Complaint Root-Cause Triage
-          intro: The complaint sweep traced each complaint through its order (ORDER_ID -> ONLINE_ORDER_ID) to the products
-            in that order, then to the store's inventory for those products on the order date and the SKU's shelf-life threshold.
-            The confirmed complaints (reviewed store by store) are below, classified OPERATIONS vs PRODUCT with near-expiry
-            stock flagged as the likely cause where it fits, followed by the untraced store reviews. Please action the flagged
-            product-quality issues.
+          intro: The complaint sweep traced each complaint through its order (ORDER_ID
+            -> ONLINE_ORDER_ID) to the products in that order, then to the store's
+            inventory for those products on the order date and the SKU's shelf-life
+            threshold. The confirmed complaints (reviewed store by store) are below,
+            classified OPERATIONS vs PRODUCT with near-expiry stock flagged as the
+            likely cause where it fits, followed by the untraced store reviews. Please
+            action the flagged product-quality issues.
           sections:
           - type: table
             caption: "Confirmed complaints \u2014 traced, OPERATIONS vs PRODUCT"
@@ -193,9 +216,11 @@ processes:
             - Review_date
             - Customer
             records: '{{store_reviews}}'
-          footer_note: Generated automatically by the Customer Complaint Root-Cause Triage process.
-  learning: "Persist, per store x product, recurring PRODUCT complaints explained by\nnear-expiry stock \u2014 a repeat pattern\
-    \ points at a batch / cold-chain problem.\n"
+          footer_note: Generated automatically by the Customer Complaint Root-Cause
+            Triage process.
+  learning: "Persist, per store x product, recurring PRODUCT complaints explained\
+    \ by\nnear-expiry stock \u2014 a repeat pattern points at a batch / cold-chain\
+    \ problem.\n"
   related_kpis:
   - AvgStoreRating
   related_signals_events:
@@ -454,7 +479,8 @@ processes:
       required: false
     key_data:
     - title: Complaint root-cause (traced)
-      summary: Each complaint x product in its order, with that day's inventory & shelf-life threshold
+      summary: Each complaint x product in its order, with that day's inventory &
+        shelf-life threshold
       views:
       - view: table
         from: complaint_root_cause
@@ -482,38 +508,55 @@ processes:
         - Review_date
         - Customer
     policy_rules:
-    - 'COMPLAINTS: each row of `complaint_root_cause` is ONE complaint x ONE product that was in its order, already traced
-      by the system (complaint ORDER_ID -> sale ONLINE_ORDER_ID -> the order''s products -> that product''s inventory ON the
-      order date). Columns: `Store_name`, `Product_name` (a product in the order), `Complaint_date`, `Complaint` (customer
-      text), `Issue_type`, `Complaint_item` (what the customer named), `Order_item`, `Order_date`, `inventory_that_day` (qty
-      of that product available at the store on the order date), `earliest_expiry_that_day` (expiry of the earliest-expiring
-      batch available that day = the batch assumed used), and `min_days_shelf_life` (that SKU''s configured near-expiry threshold).
-      A null `Product_name`/`Order_date` means the order was NOT found in sales (can''t trace products); a null `earliest_expiry_that_day`
-      means no inventory snapshot existed for that product on the order date.'
-    - "CLASSIFY every complaint into EXACTLY ONE Category: OPERATIONS (delivery, packaging/spillage, wrong or missing items,\
-      \ service, timing) or PRODUCT (food quality, freshness/expiry, taste, ingredients, preparation, hygiene, appearance).\
-      \ Judge from `Complaint_item` + `Issue_type` + `Complaint`. If both are present use the PRIMARY concern; default food-related\
-      \ text to PRODUCT. One complaint may appear on several rows (one per product in its order) \u2014 treat it as a single\
-      \ complaint and focus the freshness check on the row whose `Order_item`/`Product_name` best matches `Complaint_item`."
-    - "ROOT CAUSE \u2014 PRODUCT complaints only: compute the stock's remaining life at the order date = (`earliest_expiry_that_day`\
-      \ - `Order_date`) in days, and compare to `min_days_shelf_life` (if `min_days_shelf_life` is null, treat 2 days as the\
-      \ near-expiry threshold). If remaining life <= threshold (or negative = already expired when sold), set `near_expiry_inventory_that_day`\
-      \ = YES and call this the LIKELY ROOT CAUSE \u2014 e.g. 'complaint says not fresh; the batch available on {Order_date}\
-      \ expired {earliest_expiry_that_day} (~{n} day(s) of life left vs {min_days_shelf_life}-day threshold) -> near-expiry\
-      \ stock is the probable cause'. Otherwise set `near_expiry_inventory_that_day` = NO and leave it as a plain product-quality\
-      \ issue not explained by expiry. If there is no traced product / no inventory, say so (cannot assess)."
-    - "OPERATIONS complaints: do NOT look at inventory \u2014 leave them as operational issues; set `near_expiry_inventory_that_day`\
-      \ = N/A."
-    - 'PRESENT the triage as a table with these columns: Store_name, Product_name, Complaint_date, Complaint, Category, inventory_that_day,
-      near_expiry_inventory_that_day.'
-    - 'REVIEWS: `store_reviews` is per-store customer reviews (NOT traced to orders). For each store report the AVERAGE `Rating`
-      and the review count, list/summarise the low-rated reviews (`rating_band` = low), and extract the recurring themes split
-      PRODUCT (taste, freshness, quality) vs OPERATIONS (delivery, packaging, service). Cross-check: call out stores that
-      have BOTH product-quality complaints AND low review ratings / product-themed reviews (a corroborated quality problem),
+    - 'COMPLAINTS: each row of `complaint_root_cause` is ONE complaint x ONE product
+      that was in its order, already traced by the system (complaint ORDER_ID -> sale
+      ONLINE_ORDER_ID -> the order''s products -> that product''s inventory ON the
+      order date). Columns: `Store_name`, `Product_name` (a product in the order),
+      `Complaint_date`, `Complaint` (customer text), `Issue_type`, `Complaint_item`
+      (what the customer named), `Order_item`, `Order_date`, `inventory_that_day`
+      (qty of that product available at the store on the order date), `earliest_expiry_that_day`
+      (expiry of the earliest-expiring batch available that day = the batch assumed
+      used), and `min_days_shelf_life` (that SKU''s configured near-expiry threshold).
+      A null `Product_name`/`Order_date` means the order was NOT found in sales (can''t
+      trace products); a null `earliest_expiry_that_day` means no inventory snapshot
+      existed for that product on the order date.'
+    - "CLASSIFY every complaint into EXACTLY ONE Category: OPERATIONS (delivery, packaging/spillage,\
+      \ wrong or missing items, service, timing) or PRODUCT (food quality, freshness/expiry,\
+      \ taste, ingredients, preparation, hygiene, appearance). Judge from `Complaint_item`\
+      \ + `Issue_type` + `Complaint`. If both are present use the PRIMARY concern;\
+      \ default food-related text to PRODUCT. One complaint may appear on several\
+      \ rows (one per product in its order) \u2014 treat it as a single complaint\
+      \ and focus the freshness check on the row whose `Order_item`/`Product_name`\
+      \ best matches `Complaint_item`."
+    - "ROOT CAUSE \u2014 PRODUCT complaints only: compute the stock's remaining life\
+      \ at the order date = (`earliest_expiry_that_day` - `Order_date`) in days, and\
+      \ compare to `min_days_shelf_life` (if `min_days_shelf_life` is null, treat\
+      \ 2 days as the near-expiry threshold). If remaining life <= threshold (or negative\
+      \ = already expired when sold), set `near_expiry_inventory_that_day` = YES and\
+      \ call this the LIKELY ROOT CAUSE \u2014 e.g. 'complaint says not fresh; the\
+      \ batch available on {Order_date} expired {earliest_expiry_that_day} (~{n} day(s)\
+      \ of life left vs {min_days_shelf_life}-day threshold) -> near-expiry stock\
+      \ is the probable cause'. Otherwise set `near_expiry_inventory_that_day` = NO\
+      \ and leave it as a plain product-quality issue not explained by expiry. If\
+      \ there is no traced product / no inventory, say so (cannot assess)."
+    - "OPERATIONS complaints: do NOT look at inventory \u2014 leave them as operational\
+      \ issues; set `near_expiry_inventory_that_day` = N/A."
+    - 'PRESENT the triage as a table with these columns: Store_name, Product_name,
+      Complaint_date, Complaint, Category, inventory_that_day, near_expiry_inventory_that_day.'
+    - 'REVIEWS: `store_reviews` is per-store customer reviews (NOT traced to orders).
+      For each store report the AVERAGE `Rating` and the review count, list/summarise
+      the low-rated reviews (`rating_band` = low), and extract the recurring themes
+      split PRODUCT (taste, freshness, quality) vs OPERATIONS (delivery, packaging,
+      service). Cross-check: call out stores that have BOTH product-quality complaints
+      AND low review ratings / product-themed reviews (a corroborated quality problem),
       and note stores whose complaints are operational but whose reviews are fine.'
-    - 'Write a SHORT decision summary in plain business language: total complaints triaged, the OPERATIONS vs PRODUCT split,
-      how many PRODUCT complaints were explained by near-expiry stock (with standout Store x Product x Order_date examples),
-      and the review picture (average ratings, notable low-rated stores/themes). Do NOT paste the raw tables verbatim.'
-    - At the OVERVIEW gate recommend APPROVE to action the triage store by store, then a per-store loop confirms each store's
-      complaints and the confirmed set is emailed (root-cause triage + store reviews) to the production & marketing owners.
-      If both `complaint_root_cause` and `store_reviews` are empty, recommend REJECT (no action).
+    - 'Write a SHORT decision summary in plain business language: total complaints
+      triaged, the OPERATIONS vs PRODUCT split, how many PRODUCT complaints were explained
+      by near-expiry stock (with standout Store x Product x Order_date examples),
+      and the review picture (average ratings, notable low-rated stores/themes). Do
+      NOT paste the raw tables verbatim.'
+    - At the OVERVIEW gate recommend APPROVE to action the triage store by store,
+      then a per-store loop confirms each store's complaints and the confirmed set
+      is emailed (root-cause triage + store reviews) to the production & marketing
+      owners. If both `complaint_root_cause` and `store_reviews` are empty, recommend
+      REJECT (no action).

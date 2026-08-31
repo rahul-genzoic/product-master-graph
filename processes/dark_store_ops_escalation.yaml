@@ -2,23 +2,28 @@ version: 1
 processes:
 - id: dark_store_ops_escalation
   name: Dark Store Partner Ops Escalation
-  description: "Flags dark stores with a concentration of last-mile OPERATIONS complaints\n(late delivery, bad condition /\
-    \ packaging, wrong or missing items \u2014 the\npartner's responsibility, NOT our product quality) and, on the demand\n\
-    person's approval, emails a structured issue report per store to escalate\nto the dark-store partner.\n\nFor the agent:\
-    \ `ops_concentration` is ALREADY assembled and filtered by the\nsystem to the FLAGGED stores only \u2014 one row per dark\
-    \ store that hit the\nconcentration threshold, with `ops_complaints` (total last-mile ops\ncomplaints in the window) plus\
-    \ a breakdown: `late_delivery`, `bad_condition`\nand `wrong_missing`, and `total_complaints` (all complaints, for context).\n\
-    `ops_complaints` (the second fact) is the underlying complaint rows for those\nsame flagged stores \u2014 the evidence.\
-    \ Do NOT re-classify or re-filter; the\nOPS-vs-product split and the threshold have already been applied. Write a\nSHORT\
-    \ report: how many stores are flagged, which are worst (highest\n`ops_complaints`), the dominant issue at each (late delivery\
-    \ vs bad condition\nvs wrong/missing), and 1-2 standout complaints as evidence. Recommend APPROVE\nto email the escalation;\
-    \ if `ops_concentration` is empty, recommend no action\n(no store is over the bar this run).\n"
+  description: "Flags dark stores with a concentration of last-mile OPERATIONS complaints\n\
+    (late delivery, bad condition / packaging, wrong or missing items \u2014 the\n\
+    partner's responsibility, NOT our product quality) and, on the demand\nperson's\
+    \ approval, emails a structured issue report per store to escalate\nto the dark-store\
+    \ partner.\n\nFor the agent: `ops_concentration` is ALREADY assembled and filtered\
+    \ by the\nsystem to the FLAGGED stores only \u2014 one row per dark store that\
+    \ hit the\nconcentration threshold, with `ops_complaints` (total last-mile ops\n\
+    complaints in the window) plus a breakdown: `late_delivery`, `bad_condition`\n\
+    and `wrong_missing`, and `total_complaints` (all complaints, for context).\n`ops_complaints`\
+    \ (the second fact) is the underlying complaint rows for those\nsame flagged stores\
+    \ \u2014 the evidence. Do NOT re-classify or re-filter; the\nOPS-vs-product split\
+    \ and the threshold have already been applied. Write a\nSHORT report: how many\
+    \ stores are flagged, which are worst (highest\n`ops_complaints`), the dominant\
+    \ issue at each (late delivery vs bad condition\nvs wrong/missing), and 1-2 standout\
+    \ complaints as evidence. Recommend APPROVE\nto email the escalation; if `ops_concentration`\
+    \ is empty, recommend no action\n(no store is over the bar this run).\n"
   domain: Dark Store Operations
   owner: demand_planning_team
   definition_type: text
   applies_to:
-  - entity: Store
-  - entity: Store
+  - entity: Channel
+  - entity: Channel
     where:
     - field: id
       op: ne
@@ -61,25 +66,30 @@ processes:
     name: Classify last-mile ops
     type: agent
     after: collect_complaints
-    description: Split each complaint into last-mile OPERATIONS (late delivery, bad condition, wrong/missing item) vs PRODUCT,
-      by ISSUE_TYPE.
-    instruction: Tag each complaint OPERATIONS (late/condition/wrong/missing) or not, from its ISSUE_TYPE.
+    description: Split each complaint into last-mile OPERATIONS (late delivery, bad
+      condition, wrong/missing item) vs PRODUCT, by ISSUE_TYPE.
+    instruction: Tag each complaint OPERATIONS (late/condition/wrong/missing) or not,
+      from its ISSUE_TYPE.
     produces:
     - classified
   - id: flag_concentration
     name: Flag concentrated stores
     type: agent
     after: classify_ops
-    description: Roll up per store and keep only stores at/above the ops-complaint concentration threshold.
-    instruction: Count ops complaints per store over the window and keep stores at/above the threshold.
+    description: Roll up per store and keep only stores at/above the ops-complaint
+      concentration threshold.
+    instruction: Count ops complaints per store over the window and keep stores at/above
+      the threshold.
     produces:
     - ops_concentration
   - id: review
     name: Demand owner review
     type: decision
     after: flag_concentration
-    description: The demand person reviews the flagged stores and approves the escalation (or holds it).
-    instruction: Review the flagged dark stores and APPROVE to email the escalation report, or REJECT to hold.
+    description: The demand person reviews the flagged stores and approves the escalation
+      (or holds it).
+    instruction: Review the flagged dark stores and APPROVE to email the escalation
+      report, or REJECT to hold.
     decision_options:
     - APPROVE
     - REJECT
@@ -87,11 +97,13 @@ processes:
     name: Email escalation report
     type: notify
     after: review
-    description: On approve, format the escalation as a Genzoic HTML email (via the Genzoic Email Formatter skill) and send
-      it.
-    instruction: On approve, email the demand owner the formatted dark-store ops escalation report.
-  learning: "Persist, per store, whether the ops concentration recurs run over run and\nwhether the demand person escalated\
-    \ \u2014 a store that stays flagged points at a\nsystemic dark-store partner problem, not a one-off bad week.\n"
+    description: On approve, format the escalation as a Genzoic HTML email (via the
+      Genzoic Email Formatter skill) and send it.
+    instruction: On approve, email the demand owner the formatted dark-store ops escalation
+      report.
+  learning: "Persist, per store, whether the ops concentration recurs run over run\
+    \ and\nwhether the demand person escalated \u2014 a store that stays flagged points\
+    \ at a\nsystemic dark-store partner problem, not a one-off bad week.\n"
   related_kpis:
   - AvgStoreRating
   related_signals_events:
@@ -544,7 +556,8 @@ processes:
       required: false
     key_data:
     - title: Flagged dark stores (ops-complaint concentration)
-      summary: Stores over the last-mile ops-complaint threshold, worst first, with the issue breakdown
+      summary: Stores over the last-mile ops-complaint threshold, worst first, with
+        the issue breakdown
       views:
       - view: table
         from: ops_concentration
@@ -569,31 +582,41 @@ processes:
         - Complaint
         - Order_id
     policy_rules:
-    - "`ops_concentration` has ALREADY been assembled and filtered to FLAGGED stores only \u2014 one row per dark store with\
-      \ >= 3 last-mile OPERATIONS complaints in the last 60 days. Columns: `Store_name`, `ops_complaints` (total last-mile\
-      \ ops complaints), `late_delivery` / `bad_condition` / `wrong_missing` (the breakdown), and `total_complaints` (ALL\
-      \ complaints at the store in the same 60 days, ops and product alike, for share context). Rows are sorted worst-first.\
+    - "`ops_concentration` has ALREADY been assembled and filtered to FLAGGED stores\
+      \ only \u2014 one row per dark store with >= 3 last-mile OPERATIONS complaints\
+      \ in the last 60 days. Columns: `Store_name`, `ops_complaints` (total last-mile\
+      \ ops complaints), `late_delivery` / `bad_condition` / `wrong_missing` (the\
+      \ breakdown), and `total_complaints` (ALL complaints at the store in the same\
+      \ 60 days, ops and product alike, for share context). Rows are sorted worst-first.\
       \ Do NOT re-filter or re-classify."
-    - "OPERATIONS (last-mile, the dark-store partner's responsibility) = late delivery, bad condition / packaging, wrong or\
-      \ missing items. PRODUCT (ours) = quality, taste, freshness, expiry \u2014 those are EXCLUDED already and are not this\
+    - "OPERATIONS (last-mile, the dark-store partner's responsibility) = late delivery,\
+      \ bad condition / packaging, wrong or missing items. PRODUCT (ours) = quality,\
+      \ taste, freshness, expiry \u2014 those are EXCLUDED already and are not this\
       \ process's concern (they go through the complaint-triage process)."
-    - "`total_complaints` counts every complaint at that store in the window, so it EQUALS `ops_complaints` whenever the store\
-      \ had no product complaints in those 60 days. That is a real finding, not a data error \u2014 say '5 of 5, every complaint\
-      \ was a last-mile failure', do not treat it as a bug or omit it."
-    - The classification comes from `Issue_type` (the structured category), NOT from the free-text `Complaint`. Comments are
-      missing on roughly 40% of rows and are sometimes just an item list, so treat a blank `Complaint` as normal and quote
+    - "`total_complaints` counts every complaint at that store in the window, so it\
+      \ EQUALS `ops_complaints` whenever the store had no product complaints in those\
+      \ 60 days. That is a real finding, not a data error \u2014 say '5 of 5, every\
+      \ complaint was a last-mile failure', do not treat it as a bug or omit it."
+    - The classification comes from `Issue_type` (the structured category), NOT from
+      the free-text `Complaint`. Comments are missing on roughly 40% of rows and are
+      sometimes just an item list, so treat a blank `Complaint` as normal and quote
       `Issue_type` instead of guessing.
-    - '`ops_complaints` is the underlying evidence: the individual last-mile ops complaints for the SAME flagged stores (`Store_name`,
-      `Complaint_date`, `ops_category`, `Issue_type`, `Complaint_item`, `Complaint`, `Order_id`). Use it to pull 1-2 standout
-      examples per worst store; do not paste the whole table. Prefer rows that HAVE a real customer comment when picking examples.'
-    - "Write a SHORT report in plain business language: how many stores are flagged, which are worst (highest `ops_complaints`),\
-      \ the DOMINANT issue at each (compare `late_delivery` vs `bad_condition` vs `wrong_missing`), the ops share (`ops_complaints`\
-      \ vs `total_complaints`), and a standout complaint or two as evidence. Example tone: 'Store X: 6 last-mile ops complaints\
-      \ in 60 days (4 late delivery, 2 bad condition) out of 9 total \u2014 a delivery-timing problem; e.g. \"order arrived\
-      \ 90 min late, melted\".'"
-    - Recommend APPROVE to email the structured escalation report to the demand owner so the dark-store partner issue is documented
-      and escalated in writing (the current informal routing leaves no trail). If `ops_concentration` is empty, recommend
-      no action (no store is over the bar this run).
+    - '`ops_complaints` is the underlying evidence: the individual last-mile ops complaints
+      for the SAME flagged stores (`Store_name`, `Complaint_date`, `ops_category`,
+      `Issue_type`, `Complaint_item`, `Complaint`, `Order_id`). Use it to pull 1-2
+      standout examples per worst store; do not paste the whole table. Prefer rows
+      that HAVE a real customer comment when picking examples.'
+    - "Write a SHORT report in plain business language: how many stores are flagged,\
+      \ which are worst (highest `ops_complaints`), the DOMINANT issue at each (compare\
+      \ `late_delivery` vs `bad_condition` vs `wrong_missing`), the ops share (`ops_complaints`\
+      \ vs `total_complaints`), and a standout complaint or two as evidence. Example\
+      \ tone: 'Store X: 6 last-mile ops complaints in 60 days (4 late delivery, 2\
+      \ bad condition) out of 9 total \u2014 a delivery-timing problem; e.g. \"order\
+      \ arrived 90 min late, melted\".'"
+    - Recommend APPROVE to email the structured escalation report to the demand owner
+      so the dark-store partner issue is documented and escalated in writing (the
+      current informal routing leaves no trail). If `ops_concentration` is empty,
+      recommend no action (no store is over the bar this run).
     actions:
     - name: email_ops_escalation
       decision: APPROVE
@@ -606,13 +629,16 @@ processes:
           to: uzairtajmat7@gmail.com
           subject: "Dark store partner ops escalation \u2014 last-mile complaint concentration"
           title: Dark Store Partner Ops Escalation
-          intro: "The daily complaint sweep flagged the dark stores below for a concentration of last-mile OPERATIONS complaints\
-            \ (late delivery, bad condition / packaging, wrong or missing items) over the last 60 days \u2014 issues owned\
-            \ by the dark-store partner, not our product quality. The flagged stores and the supporting complaints follow.\
-            \ Please escalate to the relevant partner and track resolution."
+          intro: "The daily complaint sweep flagged the dark stores below for a concentration\
+            \ of last-mile OPERATIONS complaints (late delivery, bad condition / packaging,\
+            \ wrong or missing items) over the last 60 days \u2014 issues owned by\
+            \ the dark-store partner, not our product quality. The flagged stores\
+            \ and the supporting complaints follow. Please escalate to the relevant\
+            \ partner and track resolution."
           sections:
           - type: table
-            caption: "Flagged dark stores \u2014 ops-complaint concentration (worst first)"
+            caption: "Flagged dark stores \u2014 ops-complaint concentration (worst\
+              \ first)"
             columns:
             - Store_name
             - ops_complaints
@@ -632,11 +658,13 @@ processes:
             - Complaint
             - Order_id
             records: '{{facts.ops_complaints}}'
-          footer_note: Generated automatically by the Dark Store Partner Ops Escalation process.
+          footer_note: Generated automatically by the Dark Store Partner Ops Escalation
+            process.
     - name: hold_no_action
       decision: REJECT
       connector: notify
       config:
         type: notify
         recipient: demand_planning_team
-        message: "Dark-store ops escalation reviewed and held \u2014 no email sent this run."
+        message: "Dark-store ops escalation reviewed and held \u2014 no email sent\
+          \ this run."

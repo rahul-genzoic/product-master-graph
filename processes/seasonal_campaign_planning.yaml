@@ -2,16 +2,18 @@ version: 1
 processes:
 - id: seasonal_campaign_planning
   name: Seasonal Campaign Planning
-  description: "Given an upcoming event and its comparable window last year, evaluates how every (store, campaign) actually\
-    \ performed in that window using the same evidence-based action ladder as Campaign Planning & Optimisation, flags stores\
-    \ with proven demand but no budget allocated yet for the upcoming event, and \u2014 after reviewer approval \u2014 emails\
-    \ the marketing team a seasonal campaign brief with a build-up timeline.\n"
+  description: "Given an upcoming event and its comparable window last year, evaluates\
+    \ how every (store, campaign) actually performed in that window using the same\
+    \ evidence-based action ladder as Campaign Planning & Optimisation, flags stores\
+    \ with proven demand but no budget allocated yet for the upcoming event, and \u2014\
+    \ after reviewer approval \u2014 emails the marketing team a seasonal campaign\
+    \ brief with a build-up timeline.\n"
   domain: Marketing
   owner: marketing_team
   definition_type: text
   applies_to:
-  - entity: Store
-  - entity: Store
+  - entity: Channel
+  - entity: Channel
     where:
     - field: id
       op: ne
@@ -31,20 +33,27 @@ processes:
   - id: discover_upcoming_events
     name: Discover Upcoming Events
     type: agent
-    description: Identify every notable event coming up in India within the next 6 weeks, from the agent's own calendar knowledge.
-    instruction: "List every notable event relevant to India (national holidays, cultural/religious festivals, globally-observed\
-      \ occasions celebrated there, and marketing-seasonal periods) whose date falls between today and 6 weeks from today.\
-      \ Use metadata.event_categories as a taxonomy and example list, not an exhaustive one \u2014 include any other well-known\
-      \ India-relevant event of the same nature that you are confident falls in this window.\nFor each event output: title,\
-      \ date (this year's occurrence, YYYY-MM-DD), country: [\"India\"], event_type (one of Global, National, Cultural, Religious,\
-      \ Marketing/Seasonal, Regional, Industry \u2014 per metadata.event_categories), and confidence (0-1; use 1.0 for a fixed\
-      \ civil-calendar date you are certain of, e.g. Republic Day or Christmas; lower, e.g. 0.5, for a lunar/lunisolar festival\
-      \ date \u2014 e.g. Diwali, Holi, Eid \u2014 that shifts year to year and you are less certain of). Do not invent an\
-      \ event you don't actually recognize.\nIf you cannot confidently identify ANY event in this window, set `discover_ok`\
-      \ to false, `discovered_events` to [], and `discover_error` to a one-line reason. Otherwise set `discover_ok` to true,\
-      \ `discover_error` to null, and output `discovered_events` as the JSON array described above.\nAnswer directly from\
-      \ your own knowledge \u2014 do NOT call collect_context, run_skill, or any other tool for this. No calendar skill or\
-      \ connector is scoped to this process; a tool search will find nothing and is not evidence that no events exist.\n"
+    description: Identify every notable event coming up in India within the next 6
+      weeks, from the agent's own calendar knowledge.
+    instruction: "List every notable event relevant to India (national holidays, cultural/religious\
+      \ festivals, globally-observed occasions celebrated there, and marketing-seasonal\
+      \ periods) whose date falls between today and 6 weeks from today. Use metadata.event_categories\
+      \ as a taxonomy and example list, not an exhaustive one \u2014 include any other\
+      \ well-known India-relevant event of the same nature that you are confident\
+      \ falls in this window.\nFor each event output: title, date (this year's occurrence,\
+      \ YYYY-MM-DD), country: [\"India\"], event_type (one of Global, National, Cultural,\
+      \ Religious, Marketing/Seasonal, Regional, Industry \u2014 per metadata.event_categories),\
+      \ and confidence (0-1; use 1.0 for a fixed civil-calendar date you are certain\
+      \ of, e.g. Republic Day or Christmas; lower, e.g. 0.5, for a lunar/lunisolar\
+      \ festival date \u2014 e.g. Diwali, Holi, Eid \u2014 that shifts year to year\
+      \ and you are less certain of). Do not invent an event you don't actually recognize.\n\
+      If you cannot confidently identify ANY event in this window, set `discover_ok`\
+      \ to false, `discovered_events` to [], and `discover_error` to a one-line reason.\
+      \ Otherwise set `discover_ok` to true, `discover_error` to null, and output\
+      \ `discovered_events` as the JSON array described above.\nAnswer directly from\
+      \ your own knowledge \u2014 do NOT call collect_context, run_skill, or any other\
+      \ tool for this. No calendar skill or connector is scoped to this process; a\
+      \ tool search will find nothing and is not evidence that no events exist.\n"
     produces:
     - discovered_events
     - discover_ok
@@ -53,16 +62,21 @@ processes:
     name: Select Highest-Priority Discovered Event
     type: agent
     after: discover_upcoming_events
-    description: Rank discovered events and select the single highest-priority one to plan for this run.
-    instruction: "If `discover_ok` is false, or `discovered_events` is empty, do NOT set `event_name` \u2014 leave it unset\
-      \ and output a one-line `discovery_summary` stating plainly that no upcoming events were found in India within the scanned\
-      \ window (quoting `discover_error` if present). The next step (lookup_event_dates) will then fail gracefully on its\
-      \ own with an empty event_name, which the rest of this process already treats as \"nothing to plan\" \u2014 do not fabricate\
-      \ a fallback event.\nOtherwise, sort `discovered_events` by `date` ascending (soonest first); break ties by event_type\
-      \ order Global, National, Cultural, Religious, Marketing/Seasonal, Regional, Industry. Set `event_name` to the top pick's\
-      \ `title` (this becomes the SAME `event_name` every downstream step already reads). Output `discovery_summary`: one\
-      \ or two plain-language sentences naming how many events were found in the window, which one was selected and why (its\
-      \ date and event_type), and that the rest were left for a future run.\n"
+    description: Rank discovered events and select the single highest-priority one
+      to plan for this run.
+    instruction: "If `discover_ok` is false, or `discovered_events` is empty, do NOT\
+      \ set `event_name` \u2014 leave it unset and output a one-line `discovery_summary`\
+      \ stating plainly that no upcoming events were found in India within the scanned\
+      \ window (quoting `discover_error` if present). The next step (lookup_event_dates)\
+      \ will then fail gracefully on its own with an empty event_name, which the rest\
+      \ of this process already treats as \"nothing to plan\" \u2014 do not fabricate\
+      \ a fallback event.\nOtherwise, sort `discovered_events` by `date` ascending\
+      \ (soonest first); break ties by event_type order Global, National, Cultural,\
+      \ Religious, Marketing/Seasonal, Regional, Industry. Set `event_name` to the\
+      \ top pick's `title` (this becomes the SAME `event_name` every downstream step\
+      \ already reads). Output `discovery_summary`: one or two plain-language sentences\
+      \ naming how many events were found in the window, which one was selected and\
+      \ why (its date and event_type), and that the rest were left for a future run.\n"
     produces:
     - event_name
     - discovery_summary
@@ -70,18 +84,24 @@ processes:
     name: Look Up Event Dates
     type: agent
     after: select_top_event
-    description: Resolve this year's and last year's date for event_name from the agent's own calendar knowledge.
-    instruction: "If `event_name` is unset or empty, set `event_lookup_ok` to false, `event_lookup_error` to \"no event_name\
-      \ to look up\", and leave event_date_this_year/last_year_event_date/event_lookup_confidence/ event_lookup_sources null.\
-      \ Stop.\nOtherwise, resolve `event_date_this_year` (this year's occurrence of `event_name`, YYYY-MM-DD) and `last_year_event_date`\
-      \ (last year's occurrence, YYYY-MM-DD) from your own knowledge of the Indian event calendar. Set `event_lookup_confidence`\
-      \ to \"HIGH\" for a fixed civil-calendar date you are certain of (e.g. Republic Day, Independence Day, Christmas, Valentine's\
-      \ Day), or \"LOW\" for a lunar/lunisolar festival (e.g. Diwali, Holi, Eid, Navratri) whose exact date you are less certain\
-      \ of. `event_lookup_sources` is always null \u2014 this is the agent's own knowledge, not a fetched source. Set `event_lookup_ok`\
-      \ to true and `event_lookup_error` to null.\nIf you do not recognize `event_name` at all, or cannot confidently resolve\
-      \ either date, set `event_lookup_ok` to false, `event_lookup_error` to a one-line reason, and leave both dates null\
-      \ \u2014 do not guess.\nAnswer directly from your own knowledge \u2014 do NOT call collect_context, run_skill, or any\
-      \ other tool for this. No calendar skill or connector is scoped to this process; a tool search will find nothing and\
+    description: Resolve this year's and last year's date for event_name from the
+      agent's own calendar knowledge.
+    instruction: "If `event_name` is unset or empty, set `event_lookup_ok` to false,\
+      \ `event_lookup_error` to \"no event_name to look up\", and leave event_date_this_year/last_year_event_date/event_lookup_confidence/\
+      \ event_lookup_sources null. Stop.\nOtherwise, resolve `event_date_this_year`\
+      \ (this year's occurrence of `event_name`, YYYY-MM-DD) and `last_year_event_date`\
+      \ (last year's occurrence, YYYY-MM-DD) from your own knowledge of the Indian\
+      \ event calendar. Set `event_lookup_confidence` to \"HIGH\" for a fixed civil-calendar\
+      \ date you are certain of (e.g. Republic Day, Independence Day, Christmas, Valentine's\
+      \ Day), or \"LOW\" for a lunar/lunisolar festival (e.g. Diwali, Holi, Eid, Navratri)\
+      \ whose exact date you are less certain of. `event_lookup_sources` is always\
+      \ null \u2014 this is the agent's own knowledge, not a fetched source. Set `event_lookup_ok`\
+      \ to true and `event_lookup_error` to null.\nIf you do not recognize `event_name`\
+      \ at all, or cannot confidently resolve either date, set `event_lookup_ok` to\
+      \ false, `event_lookup_error` to a one-line reason, and leave both dates null\
+      \ \u2014 do not guess.\nAnswer directly from your own knowledge \u2014 do NOT\
+      \ call collect_context, run_skill, or any other tool for this. No calendar skill\
+      \ or connector is scoped to this process; a tool search will find nothing and\
       \ is not evidence that the date is unresolvable.\n"
     produces:
     - event_date_this_year
@@ -94,91 +114,132 @@ processes:
     name: Seasonal Performance Evaluation & Action Recommendation
     type: agent
     after: lookup_event_dates
-    description: Evaluate last year's comparable-window performance for every (store, campaign), and recommend one evidence-backed
-      action per row for this year's event.
+    description: Evaluate last year's comparable-window performance for every (store,
+      campaign), and recommend one evidence-backed action per row for this year's
+      event.
     instruction: "FIRST, check `event_lookup_ok`. If it is false/absent, or `event_date_this_year`/`last_year_event_date`\
-      \ is missing, lookup_event_dates could not resolve `event_name` (`event_lookup_error` has the reason, e.g. an unrecognized\
-      \ event name) \u2014 output `seasonal_action_suggestions: []`, `last_year_window_start`/ `last_year_window_end` as null,\
-      \ and a one-line `seasonal_performance_summary` stating plainly that the event calendar lookup failed and no dates could\
-      \ be determined automatically for `event_name`, quoting `event_lookup_error` if present. Do NOT guess a date or invent\
-      \ a window when the lookup failed. Stop \u2014 do not evaluate anything below.\nOtherwise, compute the comparable window\
-      \ from `last_year_event_date`: `last_year_window_start` = `last_year_event_date` minus metadata.lookup_rules.comparison_window_before_days\
+      \ is missing, lookup_event_dates could not resolve `event_name` (`event_lookup_error`\
+      \ has the reason, e.g. an unrecognized event name) \u2014 output `seasonal_action_suggestions:\
+      \ []`, `last_year_window_start`/ `last_year_window_end` as null, and a one-line\
+      \ `seasonal_performance_summary` stating plainly that the event calendar lookup\
+      \ failed and no dates could be determined automatically for `event_name`, quoting\
+      \ `event_lookup_error` if present. Do NOT guess a date or invent a window when\
+      \ the lookup failed. Stop \u2014 do not evaluate anything below.\nOtherwise,\
+      \ compute the comparable window from `last_year_event_date`: `last_year_window_start`\
+      \ = `last_year_event_date` minus metadata.lookup_rules.comparison_window_before_days\
       \ (42) days; `last_year_window_end` = `last_year_event_date` plus metadata.lookup_rules.comparison_window_after_days\
-      \ (7) days. Output both as `last_year_window_start`/`last_year_window_end` (dates) \u2014 every downstream step and\
-      \ the final email reference them by these names.\n`seasonal_campaign_history` is fetched from V_STORE_CAMPAIGN_HISTORY\
-      \ \u2014 one row per (store, campaign, MONTH) across ALL history, each with AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, ROI,\
-      \ ROAS, CTR, ADS_M2O_PCT, and OVERALL_M2O_PCT already pre-computed for that month, plus WINDOW_START/WINDOW_END (the\
-      \ actual date span rolled into that row) and TARGETING/SEGMENTS. Do NOT recompute ROI, ROAS, CTR, or either M2O_PCT\
-      \ \u2014 they are already correct per row.\nKeep only rows whose MONTH falls inside the inclusive range [`last_year_window_start`,\
-      \ `last_year_window_end`] just computed (compare by calendar month \u2014 a row's MONTH is the first day of that month).\
-      \ Discard every other row before evaluating anything; they belong to a different period and must never be cited as evidence\
-      \ for `event_name`. If NO rows survive this filter, output `seasonal_action_suggestions: []` and stop \u2014 do not\
-      \ guess at similar events or invent numbers for a store/segment with no data in this window; state plainly in a one-line\
-      \ `seasonal_performance_summary` that no historical data exists for this window, rather than fabricating one.\nOtherwise,\
-      \ evaluate EVERY surviving row \u2014 every store that has data in this window, not only the strongest performers. The\
-      \ customer-acquisition SEGMENTS a campaign targets is the meaningful grouping here, not PRODUCT_TYPE (carry PRODUCT_TYPE\
-      \ on each row only as a reference field). SEGMENTS values are store-specific \u2014 never treat a SEGMENTS value at\
-      \ one store as equivalent to the same-named value at a different store; every comparison stays within one store_name.\n\
-      Assign exactly one `suggested_action` per row from this evidence-based ladder \u2014 identical to Campaign Planning\
-      \ & Optimisation's ladder, applied here to last year's WINDOW totals instead of month-to-date. Never assign an action\
-      \ without citing its evidence in `reason` \u2014 ROI alone is not evidence; cite ROI plus at least one of ROAS / AD_SPEND_RS\
-      \ / AD_SALES_RS / the ADS_M2O_PCT vs OVERALL_M2O_PCT comparison \u2014 AND, in the same `reason`, add one further sentence\
-      \ in plain business language explaining what that evidence means for `event_name` this year and why it leads to this\
-      \ suggested_action. Every `reason` must be composed fresh from this row's own figures \u2014 never copy or lightly reword\
-      \ another row's reason, and never state a trend, prediction, or cause that isn't directly computable from this row's\
-      \ own columns:\n  0a. AD_SPEND_RS = 0: suggested_action = \"cannot_evaluate\",\n     category = \"no_spend\", reason\
-      \ states there is no spend to\n     evaluate a return on for this window. Skip every other rung.\n  0b. AD_ORDERS <\
-      \ 5 (metadata.campaign_rules.not_enough_data.min_ad_orders):\n     suggested_action = \"not_enough_data\", category\
-      \ = \"insufficient_sample\",\n     reason cites AD_ORDERS and AD_SPEND_RS and states plainly the\n     sample from this\
-      \ window is too small to draw a conclusion\n     from. Skip every other rung.\n  1. ROI = 0 (AD_SALES_RS = 0 \u2014\
-      \ real spend converted to zero\n     attributed sales; its own rung, not lumped with a merely-weak\n     ROI=0.43 window,\
-      \ since it can mean true failure, an\n     attribution gap, or a timing artifact, and the reason must\n     name which\
-      \ is most likely from this row's own AD_SPEND_RS/\n     AD_ORDERS): suggested_action = \"avoid_repeat\"; category =\n\
-      \     \"critical_failure\" if AD_SPEND_RS >= 200\n     (metadata.campaign_rules.critical_failure.min_spend_rs) else\n\
-      \     \"underperforming\". reason cites AD_SPEND_RS and AD_ORDERS,\n     explains none of that spend converted last\
-      \ time, and \u2014 for\n     critical_failure only \u2014 explicitly recommends NOT repeating\n     this campaign as-is\
-      \ for `event_name` this year and instead\n     redirecting that budget toward a segment/platform that did\n     convert\
-      \ (see seasonal_budget_gaps).\n  2. 0 < ROI < 0.75: suggested_action = \"avoid_repeat\", category =\n     \"underperforming\"\
-      , reason cites the ROI plus AD_SPEND_RS and\n     AD_SALES_RS, explains this lost money last time relative to\n    \
-      \ spend, and recommends not repeating it at the same spend\n     level for `event_name` this year.\n  3. 0.75 <= ROI\
-      \ < 1.0: suggested_action = \"repeat_reduced_budget\",\n     category = \"weak\", reason cites the ROI and \u2014 if\
-      \ ADS_M2O_PCT\n     is at least 5 percentage points below OVERALL_M2O_PCT \u2014 cites\n     both percentages and explains\
-      \ ads converted materially worse\n     than the store's own average that window; otherwise states\n     plainly there's\
-      \ a modest loss without a clear conversion-gap\n     cause and that spend should start lower this year while the\n \
-      \    cause is investigated.\n  4. 1.0 <= ROI < 1.5 (break-even \u2014 NOT a \"stop\" or an \"increase\",\n     genuinely\
-      \ ambiguous with the evidence available):\n     suggested_action = \"repeat_same_budget\", category =\n     \"breakeven\"\
-      , reason cites the ROI and states plainly this was\n     roughly break-even \u2014 no clear case to cut or grow spend\
-      \ for\n     `event_name` this year, repeat at the same level and\n     re-evaluate.\n  5. 1.5 <= ROI < 2.5: suggested_action\
-      \ =\n     \"repeat_increased_budget_cautious\", category = \"good\", reason\n     cites the ROI and the ADS_M2O_PCT\
-      \ vs OVERALL_M2O_PCT\n     comparison, explains a positive return with this conversion\n     performance means the store\
-      \ can likely absorb somewhat more\n     spend for `event_name` this year, and explicitly frames this\n     as a cautious/modest\
-      \ increase.\n  6. 2.5 <= ROI <= 10: suggested_action =\n     \"repeat_increased_budget_confident\", category = \"excellent\"\
-      ,\n     reason cites the ROI, AD_SPEND_RS, and the SEGMENTS this\n     campaign targeted, and explains this is proven\
-      \ seasonal\n     demand at a real spend level worth capturing with more budget\n     this year rather than leaving it\
-      \ capped again.\n  7. ROI > 10: suggested_action = \"validate_before_repeating\",\n     category = \"outlier\", reason\
-      \ cites the ROI plus AD_SPEND_RS\n     and AD_ORDERS and states plainly a ROI this high from one\n     window is most\
-      \ often a small-spend or small-sample artifact,\n     so it needs a human look before being trusted as a repeatable\n\
-      \     seasonal result \u2014 do NOT recommend increasing budget or treat\n     this row as proof of anything on this\
-      \ number alone.\n\nFor every row (rungs 1-7 only; rungs 0a/0b always get confidence \"LOW\", priority \"LOW\", estimated_impact\
-      \ null), also set:\n  `confidence`: \"HIGH\" if AD_ORDERS >= 20 AND ROI is at least 0.3\n    away from the nearest ladder\
-      \ boundary (0.75, 1.0, 1.5, 2.5, or\n    10); \"LOW\" if AD_ORDERS < 20 OR ROI is within 0.1 of a boundary\n    OR suggested_action\
-      \ is \"validate_before_repeating\" (always\n    LOW); \"MEDIUM\" otherwise.\n  `priority`: \"HIGH\" if AD_SPEND_RS >=\
-      \ 5000\n    (metadata.campaign_rules.priority.high_spend_rs_gte) AND\n    suggested_action is \"avoid_repeat\" or starts\
-      \ with\n    \"repeat_increased_budget\" \u2014 real money is on the line; \"LOW\"\n    if AD_SPEND_RS < 1000 (.priority.low_spend_rs_lt)\
-      \ OR\n    suggested_action is \"repeat_same_budget\" or\n    \"validate_before_repeating\"; \"MEDIUM\" otherwise.\n\
-      \  `estimated_impact`: a short rupee estimate for `event_name` this\n    year, always caveated as approximate and based\
-      \ on last year's\n    window, never presented as a precise forecast \u2014\n    \"avoid_repeat\": \"~\u20B9<AD_SPEND_RS>\
-      \ not worth repeating at that\n    spend, based on last year\"; \"repeat_reduced_budget\": \"~\u20B9\n    <AD_SPEND_RS\
-      \ \xD7 campaign_rules.reduce_budget.reduce_pct%> lower\n    spend suggested, assuming ROI holds\"; \"repeat_increased_budget_cautious\"\
-      /\n    \"repeat_increased_budget_confident\": \"~\u20B9<AD_SPEND_RS \xD7\n    increase_pct% \xD7 ROI> additional sales\
-      \ if this segment performs\n    similarly to last year (returns typically diminish as spend\n    grows)\"; \"repeat_same_budget\"\
-      /\"validate_before_repeating\": null.\n\nIf `seasonal_campaign_history` has no rows in the requested window, return\
-      \ `seasonal_action_suggestions: []`. Otherwise output `seasonal_action_suggestions`: a JSON array, one object per surviving\
-      \ row, with exactly these keys: store_name, CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM, SEGMENTS, MONTH, ROI, ROAS, AD_SALES_RS,\
-      \ AD_SPEND_RS, AD_ORDERS, ADS_M2O_PCT, OVERALL_M2O_PCT, category, reason, suggested_action, confidence, priority, estimated_impact.\
-      \ Also output `seasonal_performance_summary`: one or two plain- language sentences on the overall shape of last year's\
-      \ window (e.g. how many stores had data, and the rough split between repeat/avoid/increase calls) \u2014 never a per-row\
-      \ restatement. Prepend `discovery_summary` as its own sentence first, so the reader knows how this event was auto-selected.\n"
+      \ (7) days. Output both as `last_year_window_start`/`last_year_window_end` (dates)\
+      \ \u2014 every downstream step and the final email reference them by these names.\n\
+      `seasonal_campaign_history` is fetched from V_STORE_CAMPAIGN_HISTORY \u2014\
+      \ one row per (store, campaign, MONTH) across ALL history, each with AD_SPEND_RS,\
+      \ AD_SALES_RS, AD_ORDERS, ROI, ROAS, CTR, ADS_M2O_PCT, and OVERALL_M2O_PCT already\
+      \ pre-computed for that month, plus WINDOW_START/WINDOW_END (the actual date\
+      \ span rolled into that row) and TARGETING/SEGMENTS. Do NOT recompute ROI, ROAS,\
+      \ CTR, or either M2O_PCT \u2014 they are already correct per row.\nKeep only\
+      \ rows whose MONTH falls inside the inclusive range [`last_year_window_start`,\
+      \ `last_year_window_end`] just computed (compare by calendar month \u2014 a\
+      \ row's MONTH is the first day of that month). Discard every other row before\
+      \ evaluating anything; they belong to a different period and must never be cited\
+      \ as evidence for `event_name`. If NO rows survive this filter, output `seasonal_action_suggestions:\
+      \ []` and stop \u2014 do not guess at similar events or invent numbers for a\
+      \ store/segment with no data in this window; state plainly in a one-line `seasonal_performance_summary`\
+      \ that no historical data exists for this window, rather than fabricating one.\n\
+      Otherwise, evaluate EVERY surviving row \u2014 every store that has data in\
+      \ this window, not only the strongest performers. The customer-acquisition SEGMENTS\
+      \ a campaign targets is the meaningful grouping here, not PRODUCT_TYPE (carry\
+      \ PRODUCT_TYPE on each row only as a reference field). SEGMENTS values are store-specific\
+      \ \u2014 never treat a SEGMENTS value at one store as equivalent to the same-named\
+      \ value at a different store; every comparison stays within one store_name.\n\
+      Assign exactly one `suggested_action` per row from this evidence-based ladder\
+      \ \u2014 identical to Campaign Planning & Optimisation's ladder, applied here\
+      \ to last year's WINDOW totals instead of month-to-date. Never assign an action\
+      \ without citing its evidence in `reason` \u2014 ROI alone is not evidence;\
+      \ cite ROI plus at least one of ROAS / AD_SPEND_RS / AD_SALES_RS / the ADS_M2O_PCT\
+      \ vs OVERALL_M2O_PCT comparison \u2014 AND, in the same `reason`, add one further\
+      \ sentence in plain business language explaining what that evidence means for\
+      \ `event_name` this year and why it leads to this suggested_action. Every `reason`\
+      \ must be composed fresh from this row's own figures \u2014 never copy or lightly\
+      \ reword another row's reason, and never state a trend, prediction, or cause\
+      \ that isn't directly computable from this row's own columns:\n  0a. AD_SPEND_RS\
+      \ = 0: suggested_action = \"cannot_evaluate\",\n     category = \"no_spend\"\
+      , reason states there is no spend to\n     evaluate a return on for this window.\
+      \ Skip every other rung.\n  0b. AD_ORDERS < 5 (metadata.campaign_rules.not_enough_data.min_ad_orders):\n\
+      \     suggested_action = \"not_enough_data\", category = \"insufficient_sample\"\
+      ,\n     reason cites AD_ORDERS and AD_SPEND_RS and states plainly the\n    \
+      \ sample from this window is too small to draw a conclusion\n     from. Skip\
+      \ every other rung.\n  1. ROI = 0 (AD_SALES_RS = 0 \u2014 real spend converted\
+      \ to zero\n     attributed sales; its own rung, not lumped with a merely-weak\n\
+      \     ROI=0.43 window, since it can mean true failure, an\n     attribution\
+      \ gap, or a timing artifact, and the reason must\n     name which is most likely\
+      \ from this row's own AD_SPEND_RS/\n     AD_ORDERS): suggested_action = \"avoid_repeat\"\
+      ; category =\n     \"critical_failure\" if AD_SPEND_RS >= 200\n     (metadata.campaign_rules.critical_failure.min_spend_rs)\
+      \ else\n     \"underperforming\". reason cites AD_SPEND_RS and AD_ORDERS,\n\
+      \     explains none of that spend converted last time, and \u2014 for\n    \
+      \ critical_failure only \u2014 explicitly recommends NOT repeating\n     this\
+      \ campaign as-is for `event_name` this year and instead\n     redirecting that\
+      \ budget toward a segment/platform that did\n     convert (see seasonal_budget_gaps).\n\
+      \  2. 0 < ROI < 0.75: suggested_action = \"avoid_repeat\", category =\n    \
+      \ \"underperforming\", reason cites the ROI plus AD_SPEND_RS and\n     AD_SALES_RS,\
+      \ explains this lost money last time relative to\n     spend, and recommends\
+      \ not repeating it at the same spend\n     level for `event_name` this year.\n\
+      \  3. 0.75 <= ROI < 1.0: suggested_action = \"repeat_reduced_budget\",\n   \
+      \  category = \"weak\", reason cites the ROI and \u2014 if ADS_M2O_PCT\n   \
+      \  is at least 5 percentage points below OVERALL_M2O_PCT \u2014 cites\n    \
+      \ both percentages and explains ads converted materially worse\n     than the\
+      \ store's own average that window; otherwise states\n     plainly there's a\
+      \ modest loss without a clear conversion-gap\n     cause and that spend should\
+      \ start lower this year while the\n     cause is investigated.\n  4. 1.0 <=\
+      \ ROI < 1.5 (break-even \u2014 NOT a \"stop\" or an \"increase\",\n     genuinely\
+      \ ambiguous with the evidence available):\n     suggested_action = \"repeat_same_budget\"\
+      , category =\n     \"breakeven\", reason cites the ROI and states plainly this\
+      \ was\n     roughly break-even \u2014 no clear case to cut or grow spend for\n\
+      \     `event_name` this year, repeat at the same level and\n     re-evaluate.\n\
+      \  5. 1.5 <= ROI < 2.5: suggested_action =\n     \"repeat_increased_budget_cautious\"\
+      , category = \"good\", reason\n     cites the ROI and the ADS_M2O_PCT vs OVERALL_M2O_PCT\n\
+      \     comparison, explains a positive return with this conversion\n     performance\
+      \ means the store can likely absorb somewhat more\n     spend for `event_name`\
+      \ this year, and explicitly frames this\n     as a cautious/modest increase.\n\
+      \  6. 2.5 <= ROI <= 10: suggested_action =\n     \"repeat_increased_budget_confident\"\
+      , category = \"excellent\",\n     reason cites the ROI, AD_SPEND_RS, and the\
+      \ SEGMENTS this\n     campaign targeted, and explains this is proven seasonal\n\
+      \     demand at a real spend level worth capturing with more budget\n     this\
+      \ year rather than leaving it capped again.\n  7. ROI > 10: suggested_action\
+      \ = \"validate_before_repeating\",\n     category = \"outlier\", reason cites\
+      \ the ROI plus AD_SPEND_RS\n     and AD_ORDERS and states plainly a ROI this\
+      \ high from one\n     window is most often a small-spend or small-sample artifact,\n\
+      \     so it needs a human look before being trusted as a repeatable\n     seasonal\
+      \ result \u2014 do NOT recommend increasing budget or treat\n     this row as\
+      \ proof of anything on this number alone.\n\nFor every row (rungs 1-7 only;\
+      \ rungs 0a/0b always get confidence \"LOW\", priority \"LOW\", estimated_impact\
+      \ null), also set:\n  `confidence`: \"HIGH\" if AD_ORDERS >= 20 AND ROI is at\
+      \ least 0.3\n    away from the nearest ladder boundary (0.75, 1.0, 1.5, 2.5,\
+      \ or\n    10); \"LOW\" if AD_ORDERS < 20 OR ROI is within 0.1 of a boundary\n\
+      \    OR suggested_action is \"validate_before_repeating\" (always\n    LOW);\
+      \ \"MEDIUM\" otherwise.\n  `priority`: \"HIGH\" if AD_SPEND_RS >= 5000\n   \
+      \ (metadata.campaign_rules.priority.high_spend_rs_gte) AND\n    suggested_action\
+      \ is \"avoid_repeat\" or starts with\n    \"repeat_increased_budget\" \u2014\
+      \ real money is on the line; \"LOW\"\n    if AD_SPEND_RS < 1000 (.priority.low_spend_rs_lt)\
+      \ OR\n    suggested_action is \"repeat_same_budget\" or\n    \"validate_before_repeating\"\
+      ; \"MEDIUM\" otherwise.\n  `estimated_impact`: a short rupee estimate for `event_name`\
+      \ this\n    year, always caveated as approximate and based on last year's\n\
+      \    window, never presented as a precise forecast \u2014\n    \"avoid_repeat\"\
+      : \"~\u20B9<AD_SPEND_RS> not worth repeating at that\n    spend, based on last\
+      \ year\"; \"repeat_reduced_budget\": \"~\u20B9\n    <AD_SPEND_RS \xD7 campaign_rules.reduce_budget.reduce_pct%>\
+      \ lower\n    spend suggested, assuming ROI holds\"; \"repeat_increased_budget_cautious\"\
+      /\n    \"repeat_increased_budget_confident\": \"~\u20B9<AD_SPEND_RS \xD7\n \
+      \   increase_pct% \xD7 ROI> additional sales if this segment performs\n    similarly\
+      \ to last year (returns typically diminish as spend\n    grows)\"; \"repeat_same_budget\"\
+      /\"validate_before_repeating\": null.\n\nIf `seasonal_campaign_history` has\
+      \ no rows in the requested window, return `seasonal_action_suggestions: []`.\
+      \ Otherwise output `seasonal_action_suggestions`: a JSON array, one object per\
+      \ surviving row, with exactly these keys: store_name, CAMPAIGN_ID, PRODUCT_TYPE,\
+      \ PLATFORM, SEGMENTS, MONTH, ROI, ROAS, AD_SALES_RS, AD_SPEND_RS, AD_ORDERS,\
+      \ ADS_M2O_PCT, OVERALL_M2O_PCT, category, reason, suggested_action, confidence,\
+      \ priority, estimated_impact. Also output `seasonal_performance_summary`: one\
+      \ or two plain- language sentences on the overall shape of last year's window\
+      \ (e.g. how many stores had data, and the rough split between repeat/avoid/increase\
+      \ calls) \u2014 never a per-row restatement. Prepend `discovery_summary` as\
+      \ its own sentence first, so the reader knows how this event was auto-selected.\n"
     produces:
     - seasonal_action_suggestions
     - seasonal_performance_summary
@@ -189,13 +250,17 @@ processes:
     type: decision
     after: evaluate_seasonal_performance
     condition: '{{seasonal_action_suggestions}} != []'
-    description: Marketing manager approves or rejects the recommended actions for the upcoming event.
-    instruction: "Review `seasonal_action_suggestions` \u2014 every (store, campaign)'s recommended action for `event_name`\
-      \ this year, based on last year's comparable window, each with an evidence-backed reason. Recommend APPROVE to carry\
-      \ these into the final brief, REJECT to hold the whole batch back this run (e.g. the event's scale or timing has materially\
-      \ changed this year).\n`seasonal_action_suggestions` is already provided above \u2014 do NOT call collect_context or\
-      \ any other tool to search for or verify it. A tool search for this fact will find nothing (it is a process fact, not\
-      \ a graph entity) and an empty tool result does NOT mean the data is missing; judge only what's already given to you.\n"
+    description: Marketing manager approves or rejects the recommended actions for
+      the upcoming event.
+    instruction: "Review `seasonal_action_suggestions` \u2014 every (store, campaign)'s\
+      \ recommended action for `event_name` this year, based on last year's comparable\
+      \ window, each with an evidence-backed reason. Recommend APPROVE to carry these\
+      \ into the final brief, REJECT to hold the whole batch back this run (e.g. the\
+      \ event's scale or timing has materially changed this year).\n`seasonal_action_suggestions`\
+      \ is already provided above \u2014 do NOT call collect_context or any other\
+      \ tool to search for or verify it. A tool search for this fact will find nothing\
+      \ (it is a process fact, not a graph entity) and an empty tool result does NOT\
+      \ mean the data is missing; judge only what's already given to you.\n"
     decision_options:
     - APPROVE
     - REJECT
@@ -204,8 +269,8 @@ processes:
     - seasonal_actions_decision
     key_data:
     - title: Seasonal Action Recommendations
-      summary: Every (store, campaign) with data in last year's comparable window, evaluated with an evidence-backed action
-        for this year.
+      summary: Every (store, campaign) with data in last year's comparable window,
+        evaluated with an evidence-backed action for this year.
       views:
       - view: table
         from: seasonal_action_suggestions
@@ -232,28 +297,39 @@ processes:
     name: Seasonal Budget Gap Discovery
     type: agent
     after: evaluate_seasonal_performance
-    description: Flag stores with proven seasonal demand last year but no budget allocated yet for this year's event month.
-    instruction: "FIRST, check `event_lookup_ok`. If it is false/absent, or `event_date_this_year` is missing, lookup_event_dates\
-      \ could not resolve `event_name` \u2014 output `seasonal_budget_gaps: []` and stop; there is no event month to check\
-      \ budget against. Do NOT guess a month or invent a fallback.\nOtherwise, `segment_budget` is fetched from V_SEGMENT_BUDGET\
-      \ \u2014 one row per (store, channel, BUDGET_MONTH) with ALLOCATED_BUDGET_RS. Keep only rows whose BUDGET_MONTH equals\
-      \ the calendar month of `event_date_this_year` \u2014 that is the budget that would fund `event_name` this year.\nFor\
-      \ every store with at least one row in `seasonal_action_suggestions` where suggested_action starts with \"repeat_increased_budget\"\
-      \ (a genuine proven result last year \u2014 never \"validate_before_repeating\": that rung is an unvalidated artifact,\
-      \ not proof of anything) AND AD_SPEND_RS >= metadata.expansion_rules.min_proof_point_spend_rs (500) AND AD_ORDERS >=\
-      \ metadata.expansion_rules.min_proof_point_orders (20), check whether that store + the proof-point campaign's PLATFORM\
-      \ has ANY `segment_budget` row this event month with ALLOCATED_BUDGET_RS > 0. If not, add ONE row: category = \"seasonal_budget_gap\"\
-      , suggested_action = \"allocate_budget_for_event\", CAMPAIGN_ID = the proof-point CAMPAIGN_ID (reference only), PRODUCT_TYPE,\
-      \ PLATFORM, SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT copied verbatim from that proof-point\
-      \ row \u2014 never invent numbers. reason = one line naming the proof point's ROI and stating plainly no budget is allocated\
-      \ yet for `event_name` this year on that platform at this store. confidence = \"MEDIUM\" (real evidence, from one window,\
-      \ not a controlled test). priority = \"HIGH\" if the proof-point's AD_SPEND_RS >= metadata.campaign_rules.priority.high_spend_rs_gte,\
-      \ else \"MEDIUM\". estimated_impact = \"~\u20B9<proof-point AD_SALES_RS> if this segment performs similarly to last\
-      \ year (approximate \u2014 no budget currently allocated to fund it)\".\nA store with no qualifying proof-point row,\
-      \ or one that already has budget allocated this event month on that platform, gets no row. If no store qualifies, return\
-      \ `seasonal_budget_gaps: []`. Otherwise output `seasonal_budget_gaps`: a JSON array with exactly these keys: store_name,\
-      \ CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM, SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT, category,\
-      \ reason, suggested_action, confidence, priority, estimated_impact.\n"
+    description: Flag stores with proven seasonal demand last year but no budget allocated
+      yet for this year's event month.
+    instruction: "FIRST, check `event_lookup_ok`. If it is false/absent, or `event_date_this_year`\
+      \ is missing, lookup_event_dates could not resolve `event_name` \u2014 output\
+      \ `seasonal_budget_gaps: []` and stop; there is no event month to check budget\
+      \ against. Do NOT guess a month or invent a fallback.\nOtherwise, `segment_budget`\
+      \ is fetched from V_SEGMENT_BUDGET \u2014 one row per (store, channel, BUDGET_MONTH)\
+      \ with ALLOCATED_BUDGET_RS. Keep only rows whose BUDGET_MONTH equals the calendar\
+      \ month of `event_date_this_year` \u2014 that is the budget that would fund\
+      \ `event_name` this year.\nFor every store with at least one row in `seasonal_action_suggestions`\
+      \ where suggested_action starts with \"repeat_increased_budget\" (a genuine\
+      \ proven result last year \u2014 never \"validate_before_repeating\": that rung\
+      \ is an unvalidated artifact, not proof of anything) AND AD_SPEND_RS >= metadata.expansion_rules.min_proof_point_spend_rs\
+      \ (500) AND AD_ORDERS >= metadata.expansion_rules.min_proof_point_orders (20),\
+      \ check whether that store + the proof-point campaign's PLATFORM has ANY `segment_budget`\
+      \ row this event month with ALLOCATED_BUDGET_RS > 0. If not, add ONE row: category\
+      \ = \"seasonal_budget_gap\", suggested_action = \"allocate_budget_for_event\"\
+      , CAMPAIGN_ID = the proof-point CAMPAIGN_ID (reference only), PRODUCT_TYPE,\
+      \ PLATFORM, SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT\
+      \ copied verbatim from that proof-point row \u2014 never invent numbers. reason\
+      \ = one line naming the proof point's ROI and stating plainly no budget is allocated\
+      \ yet for `event_name` this year on that platform at this store. confidence\
+      \ = \"MEDIUM\" (real evidence, from one window, not a controlled test). priority\
+      \ = \"HIGH\" if the proof-point's AD_SPEND_RS >= metadata.campaign_rules.priority.high_spend_rs_gte,\
+      \ else \"MEDIUM\". estimated_impact = \"~\u20B9<proof-point AD_SALES_RS> if\
+      \ this segment performs similarly to last year (approximate \u2014 no budget\
+      \ currently allocated to fund it)\".\nA store with no qualifying proof-point\
+      \ row, or one that already has budget allocated this event month on that platform,\
+      \ gets no row. If no store qualifies, return `seasonal_budget_gaps: []`. Otherwise\
+      \ output `seasonal_budget_gaps`: a JSON array with exactly these keys: store_name,\
+      \ CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM, SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS,\
+      \ ADS_M2O_PCT, OVERALL_M2O_PCT, category, reason, suggested_action, confidence,\
+      \ priority, estimated_impact.\n"
     produces:
     - seasonal_budget_gaps
   - id: approve_seasonal_budget_gaps
@@ -262,12 +338,15 @@ processes:
     after: find_seasonal_budget_gaps
     condition: '{{seasonal_budget_gaps}} != []'
     description: Marketing manager approves or rejects the budget-gap suggestions.
-    instruction: "Review `seasonal_budget_gaps` \u2014 stores with proven demand for `event_name` last year but no budget\
-      \ allocated yet this year, each modeled on a specific proof-point campaign. Recommend APPROVE to carry these into the\
-      \ final brief, REJECT to hold them back this run (e.g. budget is already committed elsewhere).\n`seasonal_budget_gaps`\
-      \ is already provided above \u2014 do NOT call collect_context or any other tool to search for or verify it. A tool\
-      \ search for this fact will find nothing (it is a process fact, not a graph entity) and an empty tool result does NOT\
-      \ mean the data is missing; judge only what's already given to you.\n"
+    instruction: "Review `seasonal_budget_gaps` \u2014 stores with proven demand for\
+      \ `event_name` last year but no budget allocated yet this year, each modeled\
+      \ on a specific proof-point campaign. Recommend APPROVE to carry these into\
+      \ the final brief, REJECT to hold them back this run (e.g. budget is already\
+      \ committed elsewhere).\n`seasonal_budget_gaps` is already provided above \u2014\
+      \ do NOT call collect_context or any other tool to search for or verify it.\
+      \ A tool search for this fact will find nothing (it is a process fact, not a\
+      \ graph entity) and an empty tool result does NOT mean the data is missing;\
+      \ judge only what's already given to you.\n"
     decision_options:
     - APPROVE
     - REJECT
@@ -276,7 +355,8 @@ processes:
     - seasonal_budget_decision
     key_data:
     - title: Seasonal Budget Gaps
-      summary: Stores with proven demand for this event last year but no budget allocated yet this year.
+      summary: Stores with proven demand for this event last year but no budget allocated
+        yet this year.
       views:
       - view: table
         from: seasonal_budget_gaps
@@ -298,28 +378,39 @@ processes:
     name: Seasonal Campaign Brief
     type: agent
     after: approve_seasonal_budget_gaps
-    description: Merge the approved seasonal-action and budget-gap suggestions into one brief, with a build-up timeline.
-    instruction: "`seasonal_action_suggestions` is governed by `seasonal_actions_decision`; `seasonal_budget_gaps` is governed\
-      \ separately by `seasonal_budget_decision`. A decision fact is present only when there was something to review; when\
-      \ the underlying suggestion list was already empty the gate was skipped and its decision fact won't exist \u2014 treat\
-      \ a missing decision the same as APPROVE. Include a set in `flagged_campaigns` UNLESS its governing decision is exactly\
-      \ \"REJECT\".\nConcatenate the included sets \u2014 `seasonal_action_suggestions`, then `seasonal_budget_gaps` \u2014\
-      \ into `flagged_campaigns`: a JSON array, each item already shaped with store_name, CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM,\
-      \ SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS, category, reason, suggested_action, confidence, priority, estimated_impact\
-      \ from the steps that produced them \u2014 a straight carry-over, never invent or recompute any of them. Sort by `priority`\
-      \ (HIGH first, then MEDIUM, then LOW), preserving original relative order within each band. If nothing is included,\
-      \ return `flagged_campaigns: []`. Never return null, a string, or omit the field.\nAlso output `seasonal_timeline`:\
-      \ a plain list of 8 lines, computed purely from calendar arithmetic on `event_date_this_year` (never treat this as data-backed,\
-      \ it is a schedule, not a forecast): \"Week -6 (<date, 42 days before>): Planning\", \"Week -5 (<35 days before>): Creative\
-      \ production\", \"Week -4 (<28 days before>): Landing page ready\", \"Week -3 (<21 days before>): Email setup\", \"\
-      Week -2 (<14 days before>): Ads live\", \"Week -1 (<7 days before>): Reminder campaign\", \"<event_date_this_year>:\
-      \ Peak promotions\", \"<event_date_this_year + 7 days>: Performance review\". Compute each date by subtracting/adding\
-      \ the stated number of days from `event_date_this_year`.\n`flagged_summary`: plain business language grouped by suggested_action,\
-      \ naming the specific action, citing its reason, and \u2014 whenever `estimated_impact` is not null \u2014 appending\
-      \ it in parentheses. If a set was rejected at its gate, note that plainly. If `flagged_campaigns` is empty overall,\
-      \ `flagged_summary` = \"No historical data was found for this event window.\" if `seasonal_campaign_history` had no\
-      \ rows in the requested window, else \"All suggestions were reviewed and held back this run.\" Describe actions only\
-      \ \u2014 do not paste the raw table or restate every metric already in `flagged_campaigns`.\n"
+    description: Merge the approved seasonal-action and budget-gap suggestions into
+      one brief, with a build-up timeline.
+    instruction: "`seasonal_action_suggestions` is governed by `seasonal_actions_decision`;\
+      \ `seasonal_budget_gaps` is governed separately by `seasonal_budget_decision`.\
+      \ A decision fact is present only when there was something to review; when the\
+      \ underlying suggestion list was already empty the gate was skipped and its\
+      \ decision fact won't exist \u2014 treat a missing decision the same as APPROVE.\
+      \ Include a set in `flagged_campaigns` UNLESS its governing decision is exactly\
+      \ \"REJECT\".\nConcatenate the included sets \u2014 `seasonal_action_suggestions`,\
+      \ then `seasonal_budget_gaps` \u2014 into `flagged_campaigns`: a JSON array,\
+      \ each item already shaped with store_name, CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM,\
+      \ SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS, category, reason, suggested_action,\
+      \ confidence, priority, estimated_impact from the steps that produced them \u2014\
+      \ a straight carry-over, never invent or recompute any of them. Sort by `priority`\
+      \ (HIGH first, then MEDIUM, then LOW), preserving original relative order within\
+      \ each band. If nothing is included, return `flagged_campaigns: []`. Never return\
+      \ null, a string, or omit the field.\nAlso output `seasonal_timeline`: a plain\
+      \ list of 8 lines, computed purely from calendar arithmetic on `event_date_this_year`\
+      \ (never treat this as data-backed, it is a schedule, not a forecast): \"Week\
+      \ -6 (<date, 42 days before>): Planning\", \"Week -5 (<35 days before>): Creative\
+      \ production\", \"Week -4 (<28 days before>): Landing page ready\", \"Week -3\
+      \ (<21 days before>): Email setup\", \"Week -2 (<14 days before>): Ads live\"\
+      , \"Week -1 (<7 days before>): Reminder campaign\", \"<event_date_this_year>:\
+      \ Peak promotions\", \"<event_date_this_year + 7 days>: Performance review\"\
+      . Compute each date by subtracting/adding the stated number of days from `event_date_this_year`.\n\
+      `flagged_summary`: plain business language grouped by suggested_action, naming\
+      \ the specific action, citing its reason, and \u2014 whenever `estimated_impact`\
+      \ is not null \u2014 appending it in parentheses. If a set was rejected at its\
+      \ gate, note that plainly. If `flagged_campaigns` is empty overall, `flagged_summary`\
+      \ = \"No historical data was found for this event window.\" if `seasonal_campaign_history`\
+      \ had no rows in the requested window, else \"All suggestions were reviewed\
+      \ and held back this run.\" Describe actions only \u2014 do not paste the raw\
+      \ table or restate every metric already in `flagged_campaigns`.\n"
     produces:
     - flagged_campaigns
     - flagged_summary
@@ -328,20 +419,26 @@ processes:
     name: Final Send Approval
     type: decision
     after: create_seasonal_campaign_brief
-    description: Marketing manager confirms sending the consolidated seasonal brief (or escalates if there was no historical
-      data at all).
-    instruction: "Review flagged_summary, flagged_campaigns, and seasonal_timeline \u2014 the CONSOLIDATED plan from the two\
-      \ gates above (each already approved or rejected individually). This gate is about whether to SEND it, not re-litigate\
-      \ each set. Recommend \"Escalate \u2014 No Data\" if `event_lookup_ok` was false (lookup_event_dates couldn't resolve\
-      \ `event_name` \u2014 nothing to review or send, see `event_lookup_error`), OR if `seasonal_campaign_history` had NO\
-      \ rows at all in [`last_year_window_start`, `last_year_window_end`] \u2014 nothing to review or send. An empty `flagged_campaigns`\
-      \ with historical data present is a different, normal case \u2014 every set was rejected above \u2014 and is NOT a reason\
-      \ to escalate; recommend \"Send Brief\" in that case too, since a \"nothing flagged\" brief is still worth sending.\
-      \ Only recommend \"Hold, Do Not Send\" if flagged_summary itself looks wrong or incomplete (e.g. contradicts flagged_campaigns)\
-      \ and shouldn't go out as-is.\n`flagged_summary`, `flagged_campaigns`, and `seasonal_timeline` are already provided\
-      \ above \u2014 do NOT call collect_context or any other tool to search for or verify them. A tool search for these facts\
-      \ will find nothing (they are process facts, not graph entities) and an empty tool result does NOT mean the data is\
-      \ missing; judge only what's already given to you.\n"
+    description: Marketing manager confirms sending the consolidated seasonal brief
+      (or escalates if there was no historical data at all).
+    instruction: "Review flagged_summary, flagged_campaigns, and seasonal_timeline\
+      \ \u2014 the CONSOLIDATED plan from the two gates above (each already approved\
+      \ or rejected individually). This gate is about whether to SEND it, not re-litigate\
+      \ each set. Recommend \"Escalate \u2014 No Data\" if `event_lookup_ok` was false\
+      \ (lookup_event_dates couldn't resolve `event_name` \u2014 nothing to review\
+      \ or send, see `event_lookup_error`), OR if `seasonal_campaign_history` had\
+      \ NO rows at all in [`last_year_window_start`, `last_year_window_end`] \u2014\
+      \ nothing to review or send. An empty `flagged_campaigns` with historical data\
+      \ present is a different, normal case \u2014 every set was rejected above \u2014\
+      \ and is NOT a reason to escalate; recommend \"Send Brief\" in that case too,\
+      \ since a \"nothing flagged\" brief is still worth sending. Only recommend \"\
+      Hold, Do Not Send\" if flagged_summary itself looks wrong or incomplete (e.g.\
+      \ contradicts flagged_campaigns) and shouldn't go out as-is.\n`flagged_summary`,\
+      \ `flagged_campaigns`, and `seasonal_timeline` are already provided above \u2014\
+      \ do NOT call collect_context or any other tool to search for or verify them.\
+      \ A tool search for these facts will find nothing (they are process facts, not\
+      \ graph entities) and an empty tool result does NOT mean the data is missing;\
+      \ judge only what's already given to you.\n"
     decision_options:
     - Send Brief
     - Hold, Do Not Send
@@ -351,7 +448,8 @@ processes:
     - report_decision
     key_data:
     - title: Seasonal Campaign Brief
-      summary: Evidence-backed actions and budget gaps for the upcoming event, plus the build-up timeline.
+      summary: Evidence-backed actions and budget gaps for the upcoming event, plus
+        the build-up timeline.
       views:
       - view: table
         from: flagged_campaigns
@@ -389,7 +487,8 @@ processes:
     type: notify
     after: review
     condition: '{{report_decision}} == "Send Brief"'
-    description: On approve, format and email the marketing team the seasonal campaign brief.
+    description: On approve, format and email the marketing team the seasonal campaign
+      brief.
     produces:
     - report_sent
     action:
@@ -402,9 +501,11 @@ processes:
           to: rahul.ab@genzoic.com
           subject: "Seasonal Campaign Brief \u2014 {{event_name}}"
           title: "Seasonal Campaign Planning \u2014 {{event_name}}"
-          intro: "Evaluated against last year's comparable window ({{last_year_window_start}} to {{last_year_window_end}})\
-            \ for {{event_name}} on {{event_date_this_year}} \u2014 dates resolved automatically from the agent's own event-calendar\
-            \ knowledge, confidence: {{event_lookup_confidence}} (Zomato/Swiggy only, Meta/Google pending warehouse). {{flagged_summary}}"
+          intro: "Evaluated against last year's comparable window ({{last_year_window_start}}\
+            \ to {{last_year_window_end}}) for {{event_name}} on {{event_date_this_year}}\
+            \ \u2014 dates resolved automatically from the agent's own event-calendar\
+            \ knowledge, confidence: {{event_lookup_confidence}} (Zomato/Swiggy only,\
+            \ Meta/Google pending warehouse). {{flagged_summary}}"
           sections:
           - type: table
             caption: "Flagged actions and budget gaps \u2014 action, data, and reason"
@@ -437,18 +538,21 @@ processes:
     action:
       type: simulated
       config:
-        note: "Seasonal campaign brief reviewed and held \u2014 no email sent this run."
+        note: "Seasonal campaign brief reviewed and held \u2014 no email sent this\
+          \ run."
   - id: escalate_review
     name: "Escalate \u2014 No Historical Data"
     type: notify
     after: review
     condition: "{{report_decision}} == \"Escalate \u2014 No Data\""
-    description: "Event date lookup failed, or no historical data found for the computed window \u2014 escalate for review."
+    description: "Event date lookup failed, or no historical data found for the computed\
+      \ window \u2014 escalate for review."
     action:
       type: simulated
       config:
-        note: "Seasonal campaign planning escalated \u2014 either event_name's date could not be resolved, or no historical\
-          \ campaign data was found for the computed window."
+        note: "Seasonal campaign planning escalated \u2014 either event_name's date\
+          \ could not be resolved, or no historical campaign data was found for the\
+          \ computed window."
   related_signals_events:
   - MKT_FestivalSeasonalOpportunity
   - MKT_CulturalSportingEvent
@@ -604,7 +708,8 @@ processes:
           as: store_name
     key_data:
     - title: Discovered Upcoming Events
-      summary: Every event discover_upcoming_events identified in India within the scan window.
+      summary: Every event discover_upcoming_events identified in India within the
+        scan window.
       views:
       - view: table
         from: discovered_events
@@ -629,8 +734,8 @@ processes:
         - AD_SALES_RS
         - AD_SPEND_RS
     - title: Seasonal Action Recommendations
-      summary: Every (store, campaign) with data in last year's window, evaluated with an evidence-backed action for this
-        year.
+      summary: Every (store, campaign) with data in last year's window, evaluated
+        with an evidence-backed action for this year.
       views:
       - view: table
         from: seasonal_action_suggestions
@@ -652,7 +757,8 @@ processes:
         - priority
         - estimated_impact
     - title: Seasonal Budget Gaps
-      summary: Stores with proven demand for this event last year but no budget allocated yet this year.
+      summary: Stores with proven demand for this event last year but no budget allocated
+        yet this year.
       views:
       - view: table
         from: seasonal_budget_gaps
@@ -671,7 +777,8 @@ processes:
         - priority
         - estimated_impact
     - title: Seasonal Campaign Brief (Final Plan)
-      summary: The consolidated brief across all approved sets, with the build-up timeline.
+      summary: The consolidated brief across all approved sets, with the build-up
+        timeline.
       views:
       - view: table
         from: flagged_campaigns

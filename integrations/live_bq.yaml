@@ -1,10 +1,5 @@
 # Live integration — erp-setup bronze / silver / gold (the daily pulse).
-# The Product node comes from pim_bq; the edges below attach to it by SKU
-# (Product.SKU == live SKU_ID / product_sku). Run pim_bq FIRST, then live_bq.
-#
-# Helper views (V_STOCKED_AT, V_TRANSFER_ROUTE) must exist
-# first — see sql/views.sql. Views live in the `bronze` dataset and reach
-# silver/gold via fully-qualified names.
+# The Products node comes from pim_bq; live feeds attach to it by SKU.
 #
 # Run:  contextgraph apply -C ./product-master-graph -s live_bq
 
@@ -16,74 +11,15 @@ connection:
   dataset:     bronze
   credentials: ${env.GOOGLE_APPLICATION_CREDENTIALS_JSON}
 
-# Slow-vs-fast split (2026-07): the MASTER_* slow tables plus the static
-# transfer_route edge are materialised on apply. The fast-moving tables that
-# used to live here (InventoryBatch, Review, Complaint entities; stocked_at,
-# forecast_for, batch_of_product, batch_at_store, review_about_store,
-# complaint_about_store edges) are NOT fetched on apply anymore — they are
-# declared as lazy dataset links in technical_assets/catalog/link_datasets.yaml
-# (fetched on demand at widget render time via this same `live_bq` connection).
-# This connection block is what those links resolve to via `connection: live_bq`.
-
 entities:
-  - type: Store
+  - type: Channel
     table: MASTER_STORE
     id: MASTER_STORE_ID
     properties:
-      name:                 STORE_NAME
-      city:                 CITY
-      latitude:             LATITUDE
-      longitude:            LONGITUDE
-      pos_software:         POS_SOFTWARE
-      type:                 TYPE
-      location_description: LOCATION_DESCRIPTION
+      type: TYPE
 
-  - type: CustomerSegment
+  - type: Consumers
     table: MARKETING_SEGMENT_MASTER
     id: SEGMENT_ID
     properties:
-      name:      SEGMENT_NAME
-      code:      SEGMENT_CODE
-      channel:   CHANNEL
-      is_active: IS_ACTIVE
-
-# The fast-moving edges (stocked_at, forecast_for, batch_*, review/complaint)
-# stay as lazy dataset links. transfer_route is the exception: inter-store
-# distances are static reference data, not fast-moving, so it's materialised
-# here as a proper Store->Store edge. Mapped via V_TRANSFER_ROUTE, which casts
-# FROM/TO_STORE_ID (INT64 in the base table) to STRING so they join to Store.id
-# (MASTER_STORE_ID). The source data already holds ~2 nearest stores per store.
-# Note: silver.BUSINESS_ANALYTICS (transactional sales) was already excluded as
-# too large; serve sales as KPIs over pre-aggregated views instead.
-relationships:
-  - type: transfer_route
-    table: V_TRANSFER_ROUTE
-    from: { entity: Store, column: FROM_STORE_ID }
-    to:   { entity: Store, column: TO_STORE_ID }
-    edge_properties:
-      distance_km:            DISTANCE_KM
-      preferred_for_transfer: PREFERRED_FOR_TRANSFER
-
-  # stock_config_for (ontology edge #30): per-(SKU, store) low-stock thresholds.
-  # Slow-moving config, so materialised here like transfer_route (not a lazy
-  # link). Maps straight to the base table — SKU_ID / STORE_ID are already
-  # STRING, so they join to Product.id (SKU) and Store.id (MASTER_STORE_ID)
-  # with no casting view. CONFIG_ID is 100% NULL upstream, so it's not mapped.
-  - type: stock_config_for
-    table: LOW_STOCK_CONFIG
-    from: { entity: Product, column: SKU_ID }
-    to:   { entity: Store,   column: STORE_ID }
-    edge_properties:
-      min_days_shelf_life: MIN_DAYS_SHELF_LIFE
-      min_count:           MIN_COUNT
-      absolute_risk_count: ABSOLUTE_RISK_COUNT
-      is_active:           IS_ACTIVE
-
-  # segment_on_channel (ontology edge #28): each marketing segment runs on one
-  # delivery channel. CHANNEL ('SWIGGY'/'ZOMATO') resolved to the Channel node
-  # (CH-012/CH-015) by V_SEGMENT_ON_CHANNEL. To-entity Channel is seeded by
-  # pim_bq; this edge just binds the two id values.
-  - type: segment_on_channel
-    table: V_SEGMENT_ON_CHANNEL
-    from: { entity: CustomerSegment, column: SEGMENT_ID }
-    to:   { entity: Channel,         column: CHANNEL_ID }
+      household_segment: SEGMENT_NAME

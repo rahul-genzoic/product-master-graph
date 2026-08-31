@@ -2,19 +2,22 @@ version: 1
 processes:
 - id: demand_forecast
   name: Demand Forecast
-  description: "Assembles each dark store's per-(store, SKU) demand plan (transfer / liquidate\n/ supply-from-factory), then\
-    \ lets the demand planner action it ROW BY ROW:\napprove a row to fire its action\nnow, or reject to skip it. When every\
-    \ row has been decided, a single report is\nemailed listing what was actioned and what was held.\n\nFor the agent: `demand_plan`\
-    \ is ALREADY assembled and pre-scored \u2014 one row per\nat-risk (store, SKU) with `available_quantity`, `expiring_qty`,\
-    \ `forecast_units`\n(ceiled next-3-day demand), `nearest_store_name` (+ `distance_km`) and an\n`action` (`transfer` /\
-    \ `liquidate` / `supply_factory`). At the overview gate,\nsummarise it (how many of each action, most urgent); do NOT\
-    \ re-list every row.\n"
+  description: "Assembles each dark store's per-(store, SKU) demand plan (transfer\
+    \ / liquidate\n/ supply-from-factory), then lets the demand planner action it\
+    \ ROW BY ROW:\napprove a row to fire its action\nnow, or reject to skip it. When\
+    \ every row has been decided, a single report is\nemailed listing what was actioned\
+    \ and what was held.\n\nFor the agent: `demand_plan` is ALREADY assembled and\
+    \ pre-scored \u2014 one row per\nat-risk (store, SKU) with `available_quantity`,\
+    \ `expiring_qty`, `forecast_units`\n(ceiled next-3-day demand), `nearest_store_name`\
+    \ (+ `distance_km`) and an\n`action` (`transfer` / `liquidate` / `supply_factory`).\
+    \ At the overview gate,\nsummarise it (how many of each action, most urgent);\
+    \ do NOT re-list every row.\n"
   domain: SupplyChain
   owner: demand_planning_team
   definition_type: text
   applies_to:
-  - entity: Store
-  - entity: Store
+  - entity: Channel
+  - entity: Channel
     where:
     - field: id
       op: ne
@@ -42,11 +45,13 @@ processes:
   - id: review_plan
     name: Review the demand plan
     type: decision
-    description: Demand planner reviews the full plan and decides whether to action it row by row.
-    instruction: '`demand_plan` is the fully-assembled, pre-scored plan. Write a SHORT summary: how many SKUs to transfer
-      vs liquidate vs supply-from-factory, across how many stores, and the most urgent (smallest days_to_expiry). Recommend
-      "Action the Plan" to begin actioning the plan row by row; recommend REJECT to hold the whole plan. Do not paste the
-      table.
+    description: Demand planner reviews the full plan and decides whether to action
+      it row by row.
+    instruction: '`demand_plan` is the fully-assembled, pre-scored plan. Write a SHORT
+      summary: how many SKUs to transfer vs liquidate vs supply-from-factory, across
+      how many stores, and the most urgent (smallest days_to_expiry). Recommend "Action
+      the Plan" to begin actioning the plan row by row; recommend REJECT to hold the
+      whole plan. Do not paste the table.
 
       '
     decision_options:
@@ -56,7 +61,8 @@ processes:
     - plan_decision
     key_data:
     - title: "Demand plan \u2014 all rows"
-      summary: 'Per (store, SKU): action, on-hand, forecast, expiring qty and nearest store'
+      summary: 'Per (store, SKU): action, on-hand, forecast, expiring qty and nearest
+        store'
       views:
       - view: table
         from: demand_plan
@@ -76,9 +82,11 @@ processes:
     after: review_plan
     for_each: demand_plan
     group_by: store_id
-    description: For each store, review all its recommended actions and approve to take them all, or reject to hold the store.
-    instruction: '{{store_name}}: review all the recommended actions for this store in the table. Choose "Approve Actions"
-      to take ALL of them now, or Reject to hold this store''s actions.
+    description: For each store, review all its recommended actions and approve to
+      take them all, or reject to hold the store.
+    instruction: '{{store_name}}: review all the recommended actions for this store
+      in the table. Choose "Approve Actions" to take ALL of them now, or Reject to
+      hold this store''s actions.
 
       '
     decision_options:
@@ -108,8 +116,8 @@ processes:
       config:
         type: notify
         recipient: demand_planning_team
-        message: '{{action}} actioned for {{product_name}} at {{store_name}} (nearest {{nearest_store_name}}, {{distance_km}}
-          km; {{expiring_qty}} expiring).'
+        message: '{{action}} actioned for {{product_name}} at {{store_name}} (nearest
+          {{nearest_store_name}}, {{distance_km}} km; {{expiring_qty}} expiring).'
   - id: dispatch_report
     name: Email actions taken vs held
     type: notify
@@ -128,8 +136,9 @@ processes:
           to: uzairtajmat7@gmail.com
           subject: "Demand plan \u2014 actions taken vs held (row-by-row review)"
           title: "Demand Plan \u2014 Actions Taken vs Held"
-          intro: Row-by-row review of the demand plan is complete. The tables below list the (store, SKU) rows actioned now
-            (transfer / liquidate / supply-from-factory) and those held / skipped this run.
+          intro: Row-by-row review of the demand plan is complete. The tables below
+            list the (store, SKU) rows actioned now (transfer / liquidate / supply-from-factory)
+            and those held / skipped this run.
           sections:
           - type: table
             caption: "Actioned rows \u2014 dispatched now"

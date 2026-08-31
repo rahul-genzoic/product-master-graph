@@ -2,15 +2,16 @@ version: 1
 processes:
 - id: dark_store_licence_management
   name: Dark Store FSSAI Licence Management
-  description: 'Track all dark-store locations (partner, address, licence, expiry) with periodic partner check-ins, flagging
-    non-responders, expiring licences and address changes, and drafting the required amendment applications.
+  description: 'Track all dark-store locations (partner, address, licence, expiry)
+    with periodic partner check-ins, flagging non-responders, expiring licences and
+    address changes, and drafting the required amendment applications.
 
     '
   domain: Compliance
   owner: compliance_team
   definition_type: text
   applies_to:
-  - entity: Store
+  - entity: Channel
   triggers:
   - type: schedule
     cron: 0 6 * * 1
@@ -33,10 +34,13 @@ processes:
   - id: assemble_dark_store_register
     name: Assemble Dark Store Register
     type: agent
-    description: Compiles the dark-store register with partner, address, licence and check-in status.
-    instruction: 'Reason over the event inputs and gathered graph context to assemble the current register of dark-store locations,
-      capturing partner, address, FSSAI licence number and expiry for each. Separately collect the latest periodic partner
-      check-in responses and their dates. Do NOT invent data beyond what is gathered; output empty lists where there is none.
+    description: Compiles the dark-store register with partner, address, licence and
+      check-in status.
+    instruction: 'Reason over the event inputs and gathered graph context to assemble
+      the current register of dark-store locations, capturing partner, address, FSSAI
+      licence number and expiry for each. Separately collect the latest periodic partner
+      check-in responses and their dates. Do NOT invent data beyond what is gathered;
+      output empty lists where there is none.
 
       '
     produces:
@@ -52,11 +56,13 @@ processes:
     name: Evaluate Licence and Check-in Status
     type: agent
     after: assemble_dark_store_register
-    description: Evaluates the register against check-ins to detect issues needing action.
-    instruction: 'Evaluate store_register against checkin_responses to identify non-responding partners, licences that are
-      expired or expiring soon, and address changes that diverge from the licensed address. Produce a findings list of affected
-      stores with the issue type, a one-line summary of overall status, and an escalation level fact reflecting the most severe
-      finding.
+    description: Evaluates the register against check-ins to detect issues needing
+      action.
+    instruction: 'Evaluate store_register against checkin_responses to identify non-responding
+      partners, licences that are expired or expiring soon, and address changes that
+      diverge from the licensed address. Produce a findings list of affected stores
+      with the issue type, a one-line summary of overall status, and an escalation
+      level fact reflecting the most severe finding.
 
       '
     produces:
@@ -67,10 +73,13 @@ processes:
     name: Licence Review Gate
     type: decision
     after: evaluate_licence_status
-    description: Compliance team reviews findings and decides whether to draft amendment applications.
-    instruction: 'Review licence_findings. Choose "Draft Amendment Applications" when there are expiring licences, address
-      changes or unresolved non-responders requiring a licence amendment; choose "No Action Needed" when there is nothing
-      to act on. Recommend "Draft Amendment Applications" whenever a material finding is present.
+    description: Compliance team reviews findings and decides whether to draft amendment
+      applications.
+    instruction: 'Review licence_findings. Choose "Draft Amendment Applications" when
+      there are expiring licences, address changes or unresolved non-responders requiring
+      a licence amendment; choose "No Action Needed" when there is nothing to act
+      on. Recommend "Draft Amendment Applications" whenever a material finding is
+      present.
 
       '
     decision_options:

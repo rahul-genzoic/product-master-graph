@@ -1,0 +1,14 @@
+# Re-projects the ontology after aligning master data, integrations,
+# technical assets, policies, and processes to the FMCG canonical ontology.
+# Ingest is idempotent per-migration; 0001-0004 already ran.
+
+id: 0005_fmcg_ontology_migration
+description: |
+  Migrates graph to canonical 10-entity FMCG ontology (Products, Plants,
+  Suppliers, DistributionCenters, Channel, QualityInspections, Consumers,
+  Regions, Campaigns, Materials) and 15 relationships.
+  Reconciles all master data, integrations, dataset links, constraints,
+  and process definitions.
+created_at: 2026-08-31
+operations:
+  - kind: ingest_ontology

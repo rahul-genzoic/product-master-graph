@@ -2,15 +2,16 @@ version: 1
 processes:
 - id: channel_listing_claim_audit
   name: Channel Listing Claim Audit
-  description: 'Weekly scan of all live channel listings against the current approved product record in PIM, flagging claim
-    drift, outdated nutritional info, wrong FSSAI number and old images.
+  description: 'Weekly scan of all live channel listings against the current approved
+    product record in PIM, flagging claim drift, outdated nutritional info, wrong
+    FSSAI number and old images.
 
     '
   domain: Compliance
   owner: compliance_team
   definition_type: text
   applies_to:
-  - entity: Product
+  - entity: Products
   triggers:
   - type: schedule
     cron: 0 6 * * 1
@@ -34,9 +35,10 @@ processes:
     name: Gather Live Listings and Approved Record
     type: agent
     description: Assembles the live channel listings alongside the approved PIM record.
-    instruction: 'Reason over the event inputs and gathered graph context to assemble the set of live channel listings for
-      the product together with the current approved product record from PIM. Output the structured lists named in produces.
-      Do NOT invent data beyond what is gathered; output empty lists where there is none.
+    instruction: 'Reason over the event inputs and gathered graph context to assemble
+      the set of live channel listings for the product together with the current approved
+      product record from PIM. Output the structured lists named in produces. Do NOT
+      invent data beyond what is gathered; output empty lists where there is none.
 
       '
     produces:
@@ -53,9 +55,10 @@ processes:
     type: agent
     after: gather_listings
     description: Evaluates each listing against the approved record for discrepancies.
-    instruction: 'Compare each live listing against the approved PIM record and identify claim drift, outdated nutritional
-      info, wrong FSSAI number and old images. Produce a findings list of discrepancies, a one-line summary and a risk level
-      fact. Do NOT invent data; output an empty findings list where there are no discrepancies.
+    instruction: 'Compare each live listing against the approved PIM record and identify
+      claim drift, outdated nutritional info, wrong FSSAI number and old images. Produce
+      a findings list of discrepancies, a one-line summary and a risk level fact.
+      Do NOT invent data; output an empty findings list where there are no discrepancies.
 
       '
     produces:
@@ -66,9 +69,11 @@ processes:
     name: Compliance Review Gate
     type: decision
     after: evaluate_drift
-    description: Compliance team reviews the drift findings and decides whether correction is needed.
-    instruction: 'Review drift_findings. Choose "Flag for Correction" when any listing shows claim drift, outdated nutritional
-      info, a wrong FSSAI number or an old image; choose "No Issues" when there is nothing to act on. Recommend "Flag for
+    description: Compliance team reviews the drift findings and decides whether correction
+      is needed.
+    instruction: 'Review drift_findings. Choose "Flag for Correction" when any listing
+      shows claim drift, outdated nutritional info, a wrong FSSAI number or an old
+      image; choose "No Issues" when there is nothing to act on. Recommend "Flag for
       Correction" whenever a material discrepancy is present.
 
       '

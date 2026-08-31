@@ -4,7 +4,7 @@
 constraints:
   - name: product_sku_unique
     description: SKUs must be unique across products.
-    applies_to: Product
+    applies_to: Products
     rule: "UNIQUE(sku)"
     severity: error
 
@@ -13,78 +13,33 @@ constraints:
       Every live SKU_ID / product_sku (FLAGGED_INVENTORY, STORE_INVENTORY_DAILY,
       FORECAST_RESULTS_UPDATE) must resolve to a DIM_PRODUCT.SKU. Unmatched live
       SKUs are sold-but-not-in-PIM or casing/whitespace mismatches.
-    applies_to: Product
+    applies_to: Products
     rule: "documentation_only"
     severity: warning
 
   - name: bom_must_close
-    description: Every active product should have at least one ingredient (BOM closure).
-    applies_to: Product
-    rule: "NOT is_active OR EXISTS (SELECT 1 FROM MAP_PRODUCT_INGREDIENT WHERE SKU = ${entity.id})"
+    description: Every active product should have at least one raw material / ingredient (BOM closure).
+    applies_to: Products
+    rule: "NOT is_active OR EXISTS (requires_material -> Materials)"
     severity: warning
 
-  - name: no_restricted_ingredient
-    description: An active product must not contain an ingredient restricted by an Enforced regulation.
-    applies_to: Product
-    rule: "NOT EXISTS (contains_ingredient -> Ingredient <- restricts_ingredient WHERE Regulation.status = 'Enforced')"
-    severity: error
-
-  - name: claim_must_substantiate
-    description: A Substantiated claim must have a supporting nutrient value or ingredient link.
-    applies_to: Claim
-    rule: "status != 'Substantiated' OR EXISTS (substantiated_by_nutrient OR claim_depends_on_ingredient)"
-    severity: warning
-
-  - name: certification_validity
-    description: A certificate marked Valid must not be past its expiry date.
-    applies_to: Certification
-    rule: "status != 'Valid' OR expiry_date >= today"
+  - name: quality_inspection_validity
+    description: A quality inspection check on a plant or product must record a passing result.
+    applies_to: QualityInspections
+    rule: "result != 'Fail'"
     severity: error
 
   - name: nutrition_report_current
     description: An active product's nutrition lab report should be under a year old.
-    applies_to: Product
+    applies_to: Products
     rule: "documentation_only"
     severity: info
 
-  - name: recipe_mass_closes
+  - name: channel_transfer_viability
     description: |
-      A recipe's lines must sum to the batch size it declares, within 1%. Catches a
-      mis-scaled version fork — the failure that makes a 500g pack look as cheap as a 70g one.
-    applies_to: Recipe
-    rule: "ABS(V_RECIPE_COGS.MASS_VARIANCE_G) <= 0.01 * batch_size_g"
-    severity: error
-
-  - name: recipe_current_version_unique
-    description: Exactly one recipe per SKU, and one per Idea, may carry IS_CURRENT.
-    applies_to: Recipe
-    rule: "UNIQUE(sku) WHERE is_current; UNIQUE(idea_id) WHERE is_current"
-    severity: error
-
-  - name: recipe_meets_target_cogs
-    description: |
-      A recipe carrying a target COGS must roll up at or under it. THE thesis check for
-      recipe development, evaluated per version so a fork that breaks the target is visible
-      before approval. Warning, not error: an over-target draft is a legitimate work state.
-    applies_to: Recipe
-    rule: "target_cogs_inr IS NULL OR V_RECIPE_COGS.TARGET_FIT IN ('INSIDE', 'MARGINAL')"
-    severity: warning
-
-  - name: ingredient_price_covers_recipe
-    description: |
-      Every ingredient on a current recipe must have a live price row. A missing rate does
-      not raise the computed COGS — it LOWERS it, so this cannot be left to be noticed.
-      The seeder validates this once at load; this rule is what guards the case where an
-      agent later adds an unpriced ingredient to a formulation.
-    applies_to: Ingredient
-    rule: "NOT EXISTS (recipe_uses_ingredient <- Recipe WHERE Recipe.is_current) OR V_INGREDIENT_CURRENT_COST.IS_COSTED"
-    severity: error
-
-  - name: cross_store_transfer_viability
-    description: |
-      An inter-store transfer of a short-shelf-life SKU is only viable when the
+      An inter-channel transfer of a short-shelf-life SKU is only viable when the
       soonest expiry leaves enough sellable life after transit. Below that,
       accept wastage or mark down locally instead.
-    applies_to: Store
+    applies_to: Channel
     rule: "documentation_only"
     severity: warning

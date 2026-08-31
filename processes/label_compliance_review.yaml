@@ -2,8 +2,9 @@ version: 1
 processes:
 - id: label_compliance_review
   name: Label Compliance Review
-  description: 'Identifies label changes required when a regulation (FSSAI) or a product formulation/spec changes, briefs
-    the designer with a structured change request, and verifies the completed label against FSSAI labelling guidelines (checklist
+  description: 'Identifies label changes required when a regulation (FSSAI) or a product
+    formulation/spec changes, briefs the designer with a structured change request,
+    and verifies the completed label against FSSAI labelling guidelines (checklist
     + image analysis) before print approval.
 
     '
@@ -11,7 +12,7 @@ processes:
   owner: compliance_team
   definition_type: text
   applies_to:
-  - entity: Product
+  - entity: Products
   triggers:
   - type: event
     event_type: regulation_changed
@@ -43,13 +44,17 @@ processes:
   - id: assemble_label_context
     name: Assemble Label Context
     type: agent
-    description: Summarise what the current label declares and capture its Google Drive artwork link.
-    instruction: "From product_label_facts, summarise the SKU's current on-pack declarations (name, veg/non-veg, serving size,\
-      \ MRP, shelf life, barcode, labelling compliance status). For the artwork: read IMAGES_LINK \u2014 this is the Google\
-      \ Drive location of the label artwork (a Drive file URL, a Drive folder URL, or a bare file id). Output drive_label_link\
-      \ set to the IMAGES_LINK value verbatim (an empty string if IMAGES_LINK is absent); it is kept for display/audit. The\
-      \ label file itself is downloaded from Google Drive in the NEXT step (download_label_from_drive) via the google-drive\
-      \ skill. Output label_facts (a concise structured summary) and drive_label_link.\n"
+    description: Summarise what the current label declares and capture its Google
+      Drive artwork link.
+    instruction: "From product_label_facts, summarise the SKU's current on-pack declarations\
+      \ (name, veg/non-veg, serving size, MRP, shelf life, barcode, labelling compliance\
+      \ status). For the artwork: read IMAGES_LINK \u2014 this is the Google Drive\
+      \ location of the label artwork (a Drive file URL, a Drive folder URL, or a\
+      \ bare file id). Output drive_label_link set to the IMAGES_LINK value verbatim\
+      \ (an empty string if IMAGES_LINK is absent); it is kept for display/audit.\
+      \ The label file itself is downloaded from Google Drive in the NEXT step (download_label_from_drive)\
+      \ via the google-drive skill. Output label_facts (a concise structured summary)\
+      \ and drive_label_link.\n"
     produces:
     - label_facts
     - drive_label_link
@@ -57,13 +62,16 @@ processes:
     name: Download Label File from Google Drive
     type: agent
     after: assemble_label_context
-    description: Download the SKU's current label artwork from its Google Drive folder via the Drive API skill.
-    instruction: "The google-drive skill's download_folder operation has already run over the SKU's Drive folder (images_link)\
-      \ and its full result is in state as drive_download. Your ONLY job is to set the branch flag label_file_status: set\
-      \ it to \"found\" when drive_download.file_paths is a non-empty list, otherwise \"missing\" (empty folder, missing/blank\
-      \ images_link, or an error in drive_download). Do NOT copy the file paths or URLs into other facts \u2014 downstream\
-      \ steps read drive_download.file_paths and drive_download.file_urls directly from state. Never report \"found\" when\
-      \ no file was downloaded.\n"
+    description: Download the SKU's current label artwork from its Google Drive folder
+      via the Drive API skill.
+    instruction: "The google-drive skill's download_folder operation has already run\
+      \ over the SKU's Drive folder (images_link) and its full result is in state\
+      \ as drive_download. Your ONLY job is to set the branch flag label_file_status:\
+      \ set it to \"found\" when drive_download.file_paths is a non-empty list, otherwise\
+      \ \"missing\" (empty folder, missing/blank images_link, or an error in drive_download).\
+      \ Do NOT copy the file paths or URLs into other facts \u2014 downstream steps\
+      \ read drive_download.file_paths and drive_download.file_urls directly from\
+      \ state. Never report \"found\" when no file was downloaded.\n"
     skill:
       name: google-drive
       operation: download_folder
@@ -85,10 +93,13 @@ processes:
     type: agent
     after: download_label_from_drive
     condition: '{{drive_download.file_count}} > 0'
-    description: Run the FSSAI labelling checklist against the label file downloaded from Drive.
-    instruction: 'Review the compliance-verifier result for the CURRENT label downloaded from Google Drive. Summarise the
-      FSSAI verdicts, list every checklist item that is not_satisfied or unclear, and flag any that are license_blocking.
-      This assesses the on-market label as it stands today and feeds the change identification that follows.
+    description: Run the FSSAI labelling checklist against the label file downloaded
+      from Drive.
+    instruction: 'Review the compliance-verifier result for the CURRENT label downloaded
+      from Google Drive. Summarise the FSSAI verdicts, list every checklist item that
+      is not_satisfied or unclear, and flag any that are license_blocking. This assesses
+      the on-market label as it stands today and feeds the change identification that
+      follows.
 
       '
     skill:
@@ -123,13 +134,17 @@ processes:
     type: decision
     after: download_label_from_drive
     condition: '{{drive_download.file_count}} == 0'
-    description: "The label file could not be downloaded from Drive \u2014 reviewer retries or proceeds."
-    instruction: "The current label artwork could NOT be downloaded from the on-record Google Drive link (IMAGES_LINK) \u2014\
-      \ the link may point to an empty or inaccessible folder, the file may be missing, or access may be denied. This system\
-      \ CANNOT upload files to Google Drive \u2014 the reviewer must add the label artwork to the SKU's Google Drive folder\
-      \ themselves (outside this system), then retry. Recommend \"Retry Drive download\": re-attempt the Google Drive download\
-      \ (use this once the artwork has been placed in the Drive folder). In your reasons, state plainly that the label file\
-      \ could not be downloaded and that the artwork must be added to the SKU's Google Drive folder before retrying. The alternative\
+    description: "The label file could not be downloaded from Drive \u2014 reviewer\
+      \ retries or proceeds."
+    instruction: "The current label artwork could NOT be downloaded from the on-record\
+      \ Google Drive link (IMAGES_LINK) \u2014 the link may point to an empty or inaccessible\
+      \ folder, the file may be missing, or access may be denied. This system CANNOT\
+      \ upload files to Google Drive \u2014 the reviewer must add the label artwork\
+      \ to the SKU's Google Drive folder themselves (outside this system), then retry.\
+      \ Recommend \"Retry Drive download\": re-attempt the Google Drive download (use\
+      \ this once the artwork has been placed in the Drive folder). In your reasons,\
+      \ state plainly that the label file could not be downloaded and that the artwork\
+      \ must be added to the SKU's Google Drive folder before retrying. The alternative\
       \ is \"Evaluate artwork\" (proceed to assess with whatever is available).\n"
     decision_options:
     - Retry Drive download
@@ -149,20 +164,26 @@ processes:
     - verify_current_label
     - provide_current_label
     description: Derive the field-level label edits required by the change.
-    instruction: "Produce a concrete, field-level list of label edits to make on this SKU. Reason over: (a) product_label_facts\
-      \ and label_facts (current on-pack declarations); (b) GATHERED CONTEXT \u2014 the SKU's related graph entities (allergens,\
-      \ ingredients, nutrients, claims) when present; (c) the FSSAI packaged-food mandatory declarations that every label\
-      \ must carry; and (d) current_label_verdicts / current_unsatisfied_items \u2014 the FSSAI findings from the label downloaded\
-      \ from Google Drive (when present, prioritise fixing every not_satisfied / license_blocking item they list). You MUST\
-      \ return a non-empty required_changes list. Even when the exact new regulation clause is not supplied, walk the FSSAI\
-      \ mandatory declarations and, for EACH, emit an entry checking the current label against it: FSSAI logo + 14-digit licence\
-      \ number; name of food; ingredient list in descending order of weight; allergen declaration (contains / may contain)\
-      \ in the mandated format; nutritional information panel (energy, protein, carbohydrate incl. sugars, fat) per 100 g/ml\
-      \ AND per serving; veg/non-veg symbol; net quantity; mfg & use-by/expiry date; batch/lot; MRP; name & address of manufacturer;\
-      \ storage instructions; country of origin. For a formulation change, additionally flag ingredient / allergen / nutrition\
-      \ / claim deltas from the gathered context. For each change output {field, current_value (from the facts, or \"not declared\"\
-      \ if absent), new_required_value, driving_clause}. Give a one-line change_rationale and rate change_severity overall\
-      \ as license_blocking, must_have, or good_to_have.\n"
+    instruction: "Produce a concrete, field-level list of label edits to make on this\
+      \ SKU. Reason over: (a) product_label_facts and label_facts (current on-pack\
+      \ declarations); (b) GATHERED CONTEXT \u2014 the SKU's related graph entities\
+      \ (allergens, ingredients, nutrients, claims) when present; (c) the FSSAI packaged-food\
+      \ mandatory declarations that every label must carry; and (d) current_label_verdicts\
+      \ / current_unsatisfied_items \u2014 the FSSAI findings from the label downloaded\
+      \ from Google Drive (when present, prioritise fixing every not_satisfied / license_blocking\
+      \ item they list). You MUST return a non-empty required_changes list. Even when\
+      \ the exact new regulation clause is not supplied, walk the FSSAI mandatory\
+      \ declarations and, for EACH, emit an entry checking the current label against\
+      \ it: FSSAI logo + 14-digit licence number; name of food; ingredient list in\
+      \ descending order of weight; allergen declaration (contains / may contain)\
+      \ in the mandated format; nutritional information panel (energy, protein, carbohydrate\
+      \ incl. sugars, fat) per 100 g/ml AND per serving; veg/non-veg symbol; net quantity;\
+      \ mfg & use-by/expiry date; batch/lot; MRP; name & address of manufacturer;\
+      \ storage instructions; country of origin. For a formulation change, additionally\
+      \ flag ingredient / allergen / nutrition / claim deltas from the gathered context.\
+      \ For each change output {field, current_value (from the facts, or \"not declared\"\
+      \ if absent), new_required_value, driving_clause}. Give a one-line change_rationale\
+      \ and rate change_severity overall as license_blocking, must_have, or good_to_have.\n"
     produces:
     - required_changes
     - change_rationale
@@ -172,11 +193,13 @@ processes:
     type: decision
     after: identify_required_changes
     description: Compliance lead approves the structured change request for design.
-    instruction: 'Review the structured change request (required_changes) against the current label. Choose "Send to Designer"
-      to route the required edits to the design team (they revise the artwork, the reviewer uploads it, and it is FSSAI-verified
-      before print). Choose "Push to Print" ONLY when the current label already needs no changes and can go straight to print
-      approval. Recommend "Send to Designer" whenever there are outstanding required_changes; recommend "Push to Print" only
-      when the label is already fully compliant.
+    instruction: 'Review the structured change request (required_changes) against
+      the current label. Choose "Send to Designer" to route the required edits to
+      the design team (they revise the artwork, the reviewer uploads it, and it is
+      FSSAI-verified before print). Choose "Push to Print" ONLY when the current label
+      already needs no changes and can go straight to print approval. Recommend "Send
+      to Designer" whenever there are outstanding required_changes; recommend "Push
+      to Print" only when the label is already fully compliant.
 
       '
     decision_options:
@@ -222,8 +245,9 @@ processes:
           to: shiva@genzoic.com
           subject: "Label change request \u2014 {{sku}} ({{change_severity}})"
           title: Label Change Request for {{sku}}
-          intro: The FSSAI compliance review of the current on-pack artwork for {{sku}} is complete. Please apply the field-level
-            label changes below to the artwork and return the revised label so it can be re-verified before print.
+          intro: The FSSAI compliance review of the current on-pack artwork for {{sku}}
+            is complete. Please apply the field-level label changes below to the artwork
+            and return the revised label so it can be re-verified before print.
           sections:
           - type: table
             caption: Required label changes
@@ -233,15 +257,18 @@ processes:
             - new_required_value
             - driving_clause
             records: '{{required_changes}}'
-          footer_note: Generated automatically by the FSSAI Label Compliance Review process.
+          footer_note: Generated automatically by the FSSAI Label Compliance Review
+            process.
   - id: submit_completed_label
     name: Submit Completed Label
     type: decision
     after: send_change_request
     condition: '{{designer_route}} == "Send to Designer"'
-    description: Confirm the designer has uploaded the revised label to Drive, to re-pull and verify it.
-    instruction: "Once the design team has uploaded the revised label to the SKU's Google Drive folder, choose \"Run Compliance\
-      \ Check\" \u2014 the system re-pulls the latest file from the same Drive folder and runs the FSSAI compliance check\
+    description: Confirm the designer has uploaded the revised label to Drive, to
+      re-pull and verify it.
+    instruction: "Once the design team has uploaded the revised label to the SKU's\
+      \ Google Drive folder, choose \"Run Compliance Check\" \u2014 the system re-pulls\
+      \ the latest file from the same Drive folder and runs the FSSAI compliance check\
       \ on it. Reject if the label is not ready.\n"
     decision_options:
     - Run Compliance Check
@@ -262,14 +289,18 @@ processes:
     name: Re-download Revised Label from Google Drive
     type: agent
     after: submit_completed_label
-    condition: '{{designer_route}} == "Send to Designer" and {{completed_label_submitted}} == "Run Compliance Check"'
-    description: Re-download the SKU's revised label artwork from the same Google Drive folder.
-    instruction: "The google-drive skill's download_folder operation has already re-pulled the SKU's Drive folder (images_link)\
-      \ \u2014 where the designer uploaded the revised label \u2014 and its full result is in state as completed_drive_download.\
-      \ Your ONLY job is to set the branch flag completed_label_status: \"found\" when completed_drive_download.file_paths\
-      \ is a non-empty list, otherwise \"missing\" (empty folder, missing/blank images_link, or an error). Do NOT copy the\
-      \ file paths or URLs into other facts \u2014 the verify step reads completed_drive_download.file_paths and completed_drive_download.file_urls\
-      \ directly from state.\n"
+    condition: '{{designer_route}} == "Send to Designer" and {{completed_label_submitted}}
+      == "Run Compliance Check"'
+    description: Re-download the SKU's revised label artwork from the same Google
+      Drive folder.
+    instruction: "The google-drive skill's download_folder operation has already re-pulled\
+      \ the SKU's Drive folder (images_link) \u2014 where the designer uploaded the\
+      \ revised label \u2014 and its full result is in state as completed_drive_download.\
+      \ Your ONLY job is to set the branch flag completed_label_status: \"found\"\
+      \ when completed_drive_download.file_paths is a non-empty list, otherwise \"\
+      missing\" (empty folder, missing/blank images_link, or an error). Do NOT copy\
+      \ the file paths or URLs into other facts \u2014 the verify step reads completed_drive_download.file_paths\
+      \ and completed_drive_download.file_urls directly from state.\n"
     skill:
       name: google-drive
       operation: download_folder
@@ -282,7 +313,8 @@ processes:
     - completed_label_status
     key_data:
     - title: Revised Label (re-downloaded from Drive)
-      summary: The revised label artwork the designer uploaded to the SKU's Google Drive folder.
+      summary: The revised label artwork the designer uploaded to the SKU's Google
+        Drive folder.
       views:
       - view: image
         from: completed_drive_download.file_urls
@@ -290,11 +322,14 @@ processes:
     name: Verify Completed Label (FSSAI + Image Analysis)
     type: agent
     after: download_completed_label_from_drive
-    condition: '{{designer_route}} == "Send to Designer" and {{completed_label_submitted}} == "Run Compliance Check"'
-    description: Run the FSSAI labelling checklist against the revised artwork re-pulled from Drive.
-    instruction: 'Review the compliance-verifier result for the completed label. Summarise the FSSAI verdicts, list every
-      checklist item that is not_satisfied or unclear, flag any that are license_blocking, and set print_recommendation to
-      REJECT if any license_blocking item is unsatisfied, else "Send to Final Printing".
+    condition: '{{designer_route}} == "Send to Designer" and {{completed_label_submitted}}
+      == "Run Compliance Check"'
+    description: Run the FSSAI labelling checklist against the revised artwork re-pulled
+      from Drive.
+    instruction: 'Review the compliance-verifier result for the completed label. Summarise
+      the FSSAI verdicts, list every checklist item that is not_satisfied or unclear,
+      flag any that are license_blocking, and set print_recommendation to REJECT if
+      any license_blocking item is unsatisfied, else "Send to Final Printing".
 
       '
     skill:
@@ -314,10 +349,12 @@ processes:
     name: Approve Label for Print
     type: decision
     after: verify_completed_label
-    condition: '{{designer_route}} == "Send to Designer" and {{completed_label_submitted}} == "Run Compliance Check"'
+    condition: '{{designer_route}} == "Send to Designer" and {{completed_label_submitted}}
+      == "Run Compliance Check"'
     description: Regulatory affairs approves or rejects the label for print.
-    instruction: 'Review the FSSAI verification of the completed label. Recommend "Send to Final Printing" only when no license_blocking
-      or not_satisfied items remain; otherwise recommend REJECT and send it back to design.
+    instruction: 'Review the FSSAI verification of the completed label. Recommend
+      "Send to Final Printing" only when no license_blocking or not_satisfied items
+      remain; otherwise recommend REJECT and send it back to design.
 
       '
     decision_options:
@@ -346,7 +383,8 @@ processes:
     name: Record Print Approval
     type: notify
     after: approve_for_print
-    condition: '{{designer_route}} == "Push to Print" or {{print_decision}} == "Send to Final Printing"'
+    condition: '{{designer_route}} == "Push to Print" or {{print_decision}} == "Send
+      to Final Printing"'
     description: Record that the label is approved for print.
     produces:
     - print_recorded

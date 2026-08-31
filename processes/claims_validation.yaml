@@ -2,14 +2,15 @@ version: 1
 processes:
 - id: claims_validation
   name: Claims Validation
-  description: "Verifies every on-pack and channel claim a SKU makes against its current formulation, nutrition facts and\
-    \ the regulatory thresholds for the target market, and flags any claim that no longer holds (claim drift) \u2014 e.g.\
-    \ a \"Natural Colour\" claim invalidated by a synthetic colour in the recipe.\n"
+  description: "Verifies every on-pack and channel claim a SKU makes against its current\
+    \ formulation, nutrition facts and the regulatory thresholds for the target market,\
+    \ and flags any claim that no longer holds (claim drift) \u2014 e.g. a \"Natural\
+    \ Colour\" claim invalidated by a synthetic colour in the recipe.\n"
   domain: Compliance
   owner: compliance_team
   definition_type: text
   applies_to:
-  - entity: Product
+  - entity: Products
   triggers:
   - type: schedule
     cron: 0 6 * * 1
@@ -43,18 +44,24 @@ processes:
   - id: fetch_claims_and_formulation
     name: Fetch Claims & Current Formulation
     type: agent
-    description: Show every claim the SKU makes alongside its current ingredients and nutrition facts.
-    instruction: "Assemble, for this SKU, the two data points to validate against each other. Reason over: product_facts (the\
-      \ SKU's PIM attributes) and sku_graph \u2014 the SKU's related graph entities grouped by edge: sku_graph.claimed_by\
-      \ = its CLAIMS (each row's name is the claim text), sku_graph.contains_ingredient = its INGREDIENTS, sku_graph. declares_nutrient\
-      \ = its NUTRIENTS (each row carries value/unit), sku_graph. declares_allergen = its ALLERGENS. Output: - claims_list:\
-      \ every on-pack / channel claim \u2014 {claim, claim_type (e.g. natural,\n  nutrition, free-from, origin, marketing),\
-      \ status, depends_on (any ingredient the\n  claim relies on, from claim_depends_on_ingredient), substantiated_by (any\
-      \ nutrient\n  it asserts, from substantiated_by_nutrient)}.\n- ingredients_list: the current formulation \u2014 {ingredient,\
-      \ category, note} where note\n  flags anything claim-relevant: synthetic / artificial colour (e.g. Red Dye 3,\n  Tartrazine),\
-      \ added sugar / syrup, animal-derived (dairy, egg, gelatin, collagen),\n  or a known allergen.\n- nutrition_facts: {nutrient,\
-      \ value, unit} for the declared nutrition panel. Do NOT invent claims or ingredients beyond the gathered data; output\
-      \ empty lists where the graph has none.\n"
+    description: Show every claim the SKU makes alongside its current ingredients
+      and nutrition facts.
+    instruction: "Assemble, for this SKU, the two data points to validate against\
+      \ each other. Reason over: product_facts (the SKU's PIM attributes) and sku_graph\
+      \ \u2014 the SKU's related graph entities grouped by edge: sku_graph.claimed_by\
+      \ = its CLAIMS (each row's name is the claim text), sku_graph.contains_ingredient\
+      \ = its INGREDIENTS, sku_graph. declares_nutrient = its NUTRIENTS (each row\
+      \ carries value/unit), sku_graph. declares_allergen = its ALLERGENS. Output:\
+      \ - claims_list: every on-pack / channel claim \u2014 {claim, claim_type (e.g.\
+      \ natural,\n  nutrition, free-from, origin, marketing), status, depends_on (any\
+      \ ingredient the\n  claim relies on, from claim_depends_on_ingredient), substantiated_by\
+      \ (any nutrient\n  it asserts, from substantiated_by_nutrient)}.\n- ingredients_list:\
+      \ the current formulation \u2014 {ingredient, category, note} where note\n \
+      \ flags anything claim-relevant: synthetic / artificial colour (e.g. Red Dye\
+      \ 3,\n  Tartrazine), added sugar / syrup, animal-derived (dairy, egg, gelatin,\
+      \ collagen),\n  or a known allergen.\n- nutrition_facts: {nutrient, value, unit}\
+      \ for the declared nutrition panel. Do NOT invent claims or ingredients beyond\
+      \ the gathered data; output empty lists where the graph has none.\n"
     produces:
     - claims_list
     - ingredients_list
@@ -88,20 +95,28 @@ processes:
     name: Validate Claims Against Formulation
     type: agent
     after: fetch_claims_and_formulation
-    description: Cross-check every claim against the current formulation and regulatory thresholds; list the conflicts.
-    instruction: "For EACH claim in claims_list, decide whether it still holds against ingredients_list, nutrition_facts,\
-      \ and the regulatory thresholds for the target market (default FSSAI / India \u2014 use the regulation context in the\
-      \ GATHERED CONTEXT where present). Apply the usual claim\u2194formulation rules, for example: - \"Natural\" / \"Natural\
-      \ Colour\" / \"No artificial colours\" \u2014 INVALIDATED by any\n  synthetic / artificial colour in the formulation\
-      \ (e.g. Red Dye 3, Red 40, Tartrazine).\n- \"No added sugar\" \u2014 invalidated by any added sugar / syrup ingredient.\
-      \ - \"Vegan\" / \"Plant-based\" \u2014 invalidated by any animal-derived ingredient (dairy, egg,\n  gelatin, collagen).\n\
-      - \"High protein\" / \"Source of <nutrient>\" \u2014 holds only if nutrition_facts meets the\n  regulatory threshold\
-      \ for that claim.\n- free-from / allergen claims \u2014 invalidated by the presence of that ingredient/allergen. Output\
-      \ claim_conflicts: one row per claim that is NOT cleanly valid \u2014 {claim, verdict (invalidated | at_risk | unclear),\
-      \ invalidated_by (the specific ingredient/nutrient/ rule, e.g. \"Red Dye 3\"), reason (one line, e.g. \"'Natural Colour'\
-      \ claim invalidated by Red Dye 3 in the formulation\"), market, severity (license_blocking | must_have | good_to_have)}.\
-      \ Also output a one-line claim_drift_summary and drift_risk_level (high | medium | low) \u2014 HIGH when any license_blocking\
-      \ claim is invalidated. If every claim holds, output an empty claim_conflicts list and drift_risk_level \"low\".\n"
+    description: Cross-check every claim against the current formulation and regulatory
+      thresholds; list the conflicts.
+    instruction: "For EACH claim in claims_list, decide whether it still holds against\
+      \ ingredients_list, nutrition_facts, and the regulatory thresholds for the target\
+      \ market (default FSSAI / India \u2014 use the regulation context in the GATHERED\
+      \ CONTEXT where present). Apply the usual claim\u2194formulation rules, for\
+      \ example: - \"Natural\" / \"Natural Colour\" / \"No artificial colours\" \u2014\
+      \ INVALIDATED by any\n  synthetic / artificial colour in the formulation (e.g.\
+      \ Red Dye 3, Red 40, Tartrazine).\n- \"No added sugar\" \u2014 invalidated by\
+      \ any added sugar / syrup ingredient. - \"Vegan\" / \"Plant-based\" \u2014 invalidated\
+      \ by any animal-derived ingredient (dairy, egg,\n  gelatin, collagen).\n- \"\
+      High protein\" / \"Source of <nutrient>\" \u2014 holds only if nutrition_facts\
+      \ meets the\n  regulatory threshold for that claim.\n- free-from / allergen\
+      \ claims \u2014 invalidated by the presence of that ingredient/allergen. Output\
+      \ claim_conflicts: one row per claim that is NOT cleanly valid \u2014 {claim,\
+      \ verdict (invalidated | at_risk | unclear), invalidated_by (the specific ingredient/nutrient/\
+      \ rule, e.g. \"Red Dye 3\"), reason (one line, e.g. \"'Natural Colour' claim\
+      \ invalidated by Red Dye 3 in the formulation\"), market, severity (license_blocking\
+      \ | must_have | good_to_have)}. Also output a one-line claim_drift_summary and\
+      \ drift_risk_level (high | medium | low) \u2014 HIGH when any license_blocking\
+      \ claim is invalidated. If every claim holds, output an empty claim_conflicts\
+      \ list and drift_risk_level \"low\".\n"
     produces:
     - claim_conflicts
     - claim_drift_summary
@@ -110,11 +125,13 @@ processes:
     name: Review Conflicting Claims
     type: decision
     after: validate_claims
-    description: Compliance lead reviews the claim conflicts and decides whether to flag them for remediation.
-    instruction: 'Review claim_conflicts against the claims and formulation. Choose "Flag for Remediation" when one or more
-      claims no longer hold and must be corrected on pack / channel (claim drift). Choose "No Issues" when every claim is
-      valid (empty claim_conflicts) or the conflicts are immaterial. Recommend "Flag for Remediation" whenever any invalidated
-      / license_blocking conflict is present.
+    description: Compliance lead reviews the claim conflicts and decides whether to
+      flag them for remediation.
+    instruction: 'Review claim_conflicts against the claims and formulation. Choose
+      "Flag for Remediation" when one or more claims no longer hold and must be corrected
+      on pack / channel (claim drift). Choose "No Issues" when every claim is valid
+      (empty claim_conflicts) or the conflicts are immaterial. Recommend "Flag for
+      Remediation" whenever any invalidated / license_blocking conflict is present.
 
       '
     decision_options:
@@ -157,14 +174,16 @@ processes:
     type: notify
     after: review_claim_conflicts
     condition: '{{claim_review_decision}} == "Flag for Remediation"'
-    description: Record the claims flagged for remediation and route them to the brand / compliance owner.
+    description: Record the claims flagged for remediation and route them to the brand
+      / compliance owner.
     produces:
     - claim_review_recorded
     action:
       type: simulated
       name: record_claim_review
       config:
-        summary: "Claim validation for {{product_name}} \u2014 claims flagged for remediation"
+        summary: "Claim validation for {{product_name}} \u2014 claims flagged for\
+          \ remediation"
         sku: '{{sku}}'
         drift_risk: '{{drift_risk_level}}'
         conflicts: '{{claim_conflicts}}'

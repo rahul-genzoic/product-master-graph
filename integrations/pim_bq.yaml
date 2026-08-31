@@ -1,7 +1,5 @@
 # PIM integration — erp-set-up.ctx_upside_master_data (static product truth).
-# Maps 7 entity types and 8 relationships to BigQuery tables/views.
-# Helper views (V_PRODUCT_ENRICHED, V_PRODUCT_CLAIM, V_NUTRIENT_DIM) must
-# exist first — see sql/views.sql.
+# Maps canonical FMCG entity types and relationships to BigQuery tables/views.
 #
 # Run:  contextgraph apply -C ./product-master-graph -s pim_bq
 
@@ -9,240 +7,39 @@ name: pim_bq
 kind: bigquery
 
 connection:
-  project:     ${env.GCP_PROJECT}          
-  dataset:     ctx_upside_master_data      # the "product_master" dataset never existed under this name — this is it
+  project:     ${env.GCP_PROJECT}
+  dataset:     ctx_upside_master_data
   credentials: ${env.GOOGLE_APPLICATION_CREDENTIALS_JSON}
 
 entities:
-  # Business identity — one row in ctx_upside_master_data.COMPANY. Read by the
-  # competitive-pricing skill to build the profile (brand + category + city).
-  # Company and Brand come from the same row (single-brand company).
-  - type: Company
-    table: COMPANY
-    id: COMPANY_ID
-    properties:
-      name:     COMPANY_NAME
-      brand:    BRAND_NAME
-      category: CATEGORY
-      city:     CITY
-      country:  COUNTRY
-      pincode:  PINCODE
-
-  - type: Brand
-    table: COMPANY
-    id: BRAND_NAME
-    properties:
-      name:     BRAND_NAME
-      category: CATEGORY
-      city:     CITY
-      country:  COUNTRY
-      pincode:  PINCODE
-
-  - type: Product
-    table: V_PRODUCT_ENRICHED              # DIM_PRODUCT + PRICING + PACKAGING + NUTRITION (1:1) on SKU
+  - type: Products
+    table: V_PRODUCT_ENRICHED
     id: SKU
     properties:
-      name:                     DISPLAY_NAME
-      flavour:                  FLAVOUR
-      size_gm:                  SIZE_GM
-      size_label:               SIZE_LABEL
-      version:                  VERSION
-      status:                   STATUS
-      veg_nonveg:               VEG_NONVEG
-      is_active:                IS_ACTIVE
-      description:              DESCRIPTION
-      images_link:              IMAGES_LINK
-      base_price_inr:           BASE_PRICE_INR
-      gst_rate:                 GST_RATE
-      mrp_inr:                  MRP_INR
-      total_cogs_inr:           TOTAL_COGS_INR
-      shelf_life_days:          SHELF_LIFE_DAYS
-      packaging_type:           PACKAGING_TYPE
-      gs1_barcode:              GS1_BARCODE
-      org_labelling_compliance: ORG_LABELLING_COMPLIANCE
-      serving_size:             SERVING_SIZE
+      product_name: DISPLAY_NAME
+      mrp:          MRP_INR
 
-  - type: Category
-    table: DIM_CATEGORY
-    id: CATEGORY_ID
-    properties: { name: CATEGORY_NAME }
-
-  - type: ProductLine
-    table: DIM_PRODUCT_LINE
-    id: PRODUCT_LINE_ID
-    properties: { name: PRODUCT_LINE_NAME }
-
-  - type: Ingredient
+  - type: Materials
     table: DIM_INGREDIENT
     id: INGREDIENT_ID
-    properties: { name: INGREDIENT_NAME, category: CATEGORY }
-
-  - type: Recipe
-    table: DIM_RECIPE
-    id: RECIPE_ID
     properties:
-      name:                RECIPE_NAME
-      version_no:          VERSION_NO
-      status:              STATUS
-      is_current:          IS_CURRENT
-      batch_size_g:        BATCH_SIZE_G
-      packaging_cost_inr:  PACKAGING_COST_INR
-      labour_overhead_inr: LABOUR_OVERHEAD_INR
-      target_cogs_inr:     TARGET_COGS_INR
-      author:              AUTHOR
-      notes:               NOTES
-      created_at:          CREATED_AT
-
-  # Declared in entities.yaml but never projected until now — recipe_for_idea needs a real
-  # node on the other end. 12 rows.
-  - type: Idea
-    table: DIM_IDEA
-    id: IDEA_ID
-    properties:
-      name:            NAME
-      stage:           STAGE
-      hypothesis:      HYPOTHESIS
-      thesis_fit:      THESIS_FIT
-      target_cogs_inr: TARGET_COGS_INR
-
-  - type: Allergen
-    table: DIM_ALLERGEN
-    id: ALLERGEN_ID
-    properties: { name: ALLERGEN_NAME }
-
-  - type: Nutrient
-    table: V_NUTRIENT_DIM                   # SELECT DISTINCT NUTRIENT_NAME (empty until nutrient OCR runs)
-    id: NUTRIENT_NAME
-    properties: { name: NUTRIENT_NAME }
+      material_code: INGREDIENT_ID
+      material_name: INGREDIENT_NAME
+      material_type: CATEGORY
 
   - type: Channel
     table: DIM_CHANNEL
     id: CHANNEL_ID
-    properties: { name: CHANNEL_NAME, channel_type: CHANNEL_TYPE }
-
-  - type: Claim
-    table: V_PRODUCT_CLAIM                  # PRODUCT_HIGHLIGHT + surrogate CLAIM_ID
-    id: CLAIM_ID
-    properties: { text: HIGHLIGHT_TEXT }
-
-  # Competitive pricing — curated competitor brands + their SKUs (DIM_COMPETITOR,
-  # DIM_COMPETITOR_PRODUCT). Read by the competitive-pricing skill; mirrors the
-  # Monginis graph. CITY on each competitor product must match the scan city.
-  - type: Competitor
-    table: DIM_COMPETITOR
-    id: COMPETITOR_ID
     properties:
-      name:        COMPETITOR_NAME
-      website:     WEBSITE
-      hq_city:     HQ_CITY
-      country:     COUNTRY
-      category:    CATEGORY
-      tier:        TIER
-      channels:    CHANNELS
-      is_active:   IS_ACTIVE
-
-  - type: CompetitorProduct
-    table: DIM_COMPETITOR_PRODUCT
-    id: COMPETITOR_PRODUCT_ID
-    properties:
-      product_name: PRODUCT_NAME
-      size:         SIZE
-      city:         CITY
-      is_active:    IS_ACTIVE
+      type: CHANNEL_TYPE
 
 relationships:
-  - type: in_product_line
-    table: DIM_PRODUCT
-    from: { entity: Product,     column: SKU }
-    to:   { entity: ProductLine, column: PRODUCT_LINE_ID }
-
-  - type: in_category
-    table: DIM_PRODUCT
-    from: { entity: Product,  column: SKU }
-    to:   { entity: Category, column: CATEGORY_ID }
-
-  - type: line_in_category
-    table: DIM_PRODUCT_LINE
-    from: { entity: ProductLine, column: PRODUCT_LINE_ID }
-    to:   { entity: Category,    column: CATEGORY_ID }
-
-  # REPOINTED from MAP_PRODUCT_INGREDIENT: recipe-first, with the frozen legacy table as
-  # fallback for SKUs that have no current recipe. See V_PRODUCT_INGREDIENT in sql/views.sql.
-  - type: contains_ingredient
+  - type: requires_material
     table: V_PRODUCT_INGREDIENT
-    from: { entity: Product,    column: SKU }
-    to:   { entity: Ingredient, column: INGREDIENT_ID }
+    from: { entity: Products,  column: SKU }
+    to:   { entity: Materials, column: INGREDIENT_ID }
 
-  # Both edges come off DIM_RECIPE; the extractor drops rows whose join column is null
-  # (extract.py:197), so Idea recipes and SKU recipes separate themselves.
-  - type: recipe_for_product
-    table: DIM_RECIPE
-    from: { entity: Recipe,  column: RECIPE_ID }
-    to:   { entity: Product, column: SKU }
-
-  - type: recipe_for_idea
-    table: DIM_RECIPE
-    from: { entity: Recipe, column: RECIPE_ID }
-    to:   { entity: Idea,   column: IDEA_ID }
-
-  - type: recipe_uses_ingredient
-    table: MAP_RECIPE_INGREDIENT
-    from: { entity: Recipe,     column: RECIPE_ID }
-    to:   { entity: Ingredient, column: INGREDIENT_ID }
-    edge_properties:
-      qty_net_g:    QTY_NET_G
-      qty_authored: QTY_AUTHORED
-      uom:          UOM
-      loss_pct:     LOSS_PCT
-      role:         ROLE
-      line_seq:     LINE_SEQ
-      is_optional:  IS_OPTIONAL
-
-  - type: declares_allergen
-    table: MAP_PRODUCT_ALLERGEN
-    from: { entity: Product,  column: SKU }
-    to:   { entity: Allergen, column: ALLERGEN_ID }
-    edge_properties:
-      contains_type: CONTAINS_TYPE
-
-  - type: declares_nutrient
-    table: PRODUCT_NUTRIENT                 # empty until parse_nutrients.py populates it
-    from: { entity: Product,  column: SKU }
-    to:   { entity: Nutrient, column: NUTRIENT_NAME }
-    edge_properties:
-      value:  VALUE
-      unit:   UNIT
-      dv_pct: DV_PCT
-
-  - type: listed_on
+  - type: stocked_at
     table: MAP_PRODUCT_CHANNEL
-    from: { entity: Product, column: SKU }
-    to:   { entity: Channel, column: CHANNEL_ID }
-    edge_properties:
-      applicable:              APPLICABLE
-      channel_base_price_inr:  CHANNEL_BASE_PRICE_INR
-      channel_gst_rate:        CHANNEL_GST_RATE
-      channel_mrp_inr:         CHANNEL_MRP_INR
-      channel_cogs_inr:        CHANNEL_COGS_INR
-      channel_shelf_life_days: CHANNEL_SHELF_LIFE_DAYS
-      primary_sales_owner:     PRIMARY_SALES_OWNER
-
-  - type: claimed_by
-    table: V_PRODUCT_CLAIM
-    from: { entity: Claim,   column: CLAIM_ID }
-    to:   { entity: Product, column: SKU }
-
-  # CompetitorProduct → our Product (Product id column is SKU here, not PRODUCT_ID).
-  - type: maps_to_product
-    table: MAP_COMPETITOR_PRODUCT_TO_PRODUCT
-    from: { entity: CompetitorProduct, column: COMPETITOR_PRODUCT_ID }
-    to:   { entity: Product,           column: SKU }
-    edge_properties:
-      match_confidence: MATCH_CONFIDENCE
-      note:             NOTE
-
-  # CompetitorProduct → Competitor (edge projected off DIM_COMPETITOR_PRODUCT.COMPETITOR_ID).
-  - type: catalogued_by
-    table: DIM_COMPETITOR_PRODUCT
-    from: { entity: CompetitorProduct, column: COMPETITOR_PRODUCT_ID }
-    to:   { entity: Competitor,        column: COMPETITOR_ID }
+    from: { entity: Products, column: SKU }
+    to:   { entity: Channel,  column: CHANNEL_ID }

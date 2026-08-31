@@ -2,20 +2,24 @@ version: 1
 processes:
 - id: shelf_life_risk_monitoring
   name: Shelf-Life Risk Monitoring
-  description: "Monitors inventory age across dark-store locations against each SKU's\nremaining shelf life and flags SKUs\
-    \ at risk before the wastage window\ncloses, then emails the supply-chain owner the at-risk report on approval.\n\nFor\
-    \ the agent: `at_risk_products` is ALREADY assembled and filtered by the\nsystem to at-risk (store, SKU) rows only \u2014\
-    \ rolled up from each store's\nlatest inventory snapshot and scored against that pair's configured\nthresholds (from the\
-    \ stock_config_for edge). Each row carries a `risk_type`:\n`wastage` (near expiry), `low_stock` (below safety stock),\
-    \ `critical_low`\n(below the hard floor) or `both`. Do NOT re-filter or re-list every row.\nWrite a SHORT summary: how\
-    \ many SKUs are near-expiry vs low on stock, across\nhow many stores, and call out the most urgent (smallest days_to_expiry,\
-    \ plus\nany critical_low/both). Recommend APPROVE to email the report; if\n`at_risk_products` is empty, recommend no action.\n"
+  description: "Monitors inventory age across dark-store locations against each SKU's\n\
+    remaining shelf life and flags SKUs at risk before the wastage window\ncloses,\
+    \ then emails the supply-chain owner the at-risk report on approval.\n\nFor the\
+    \ agent: `at_risk_products` is ALREADY assembled and filtered by the\nsystem to\
+    \ at-risk (store, SKU) rows only \u2014 rolled up from each store's\nlatest inventory\
+    \ snapshot and scored against that pair's configured\nthresholds (from the stock_config_for\
+    \ edge). Each row carries a `risk_type`:\n`wastage` (near expiry), `low_stock`\
+    \ (below safety stock), `critical_low`\n(below the hard floor) or `both`. Do NOT\
+    \ re-filter or re-list every row.\nWrite a SHORT summary: how many SKUs are near-expiry\
+    \ vs low on stock, across\nhow many stores, and call out the most urgent (smallest\
+    \ days_to_expiry, plus\nany critical_low/both). Recommend APPROVE to email the\
+    \ report; if\n`at_risk_products` is empty, recommend no action.\n"
   domain: SupplyChain
   owner: supply_chain_team
   definition_type: text
   applies_to:
-  - entity: Store
-  - entity: Store
+  - entity: Channel
+  - entity: Channel
     where:
     - field: id
       op: ne
@@ -50,8 +54,10 @@ processes:
   - id: collect_inventory
     name: Collect current inventory
     type: agent
-    description: Read each store's latest inventory snapshot (sellable, non-expired stock).
-    instruction: For every store, read the latest STORE_INVENTORY_DAILY snapshot and keep only non-expired, sellable batches.
+    description: Read each store's latest inventory snapshot (sellable, non-expired
+      stock).
+    instruction: For every store, read the latest STORE_INVENTORY_DAILY snapshot and
+      keep only non-expired, sellable batches.
     produces:
     - current_inventory
   - id: thresholds
@@ -59,24 +65,28 @@ processes:
     type: agent
     after: collect_inventory
     description: Walk stock_config_for to bring each (SKU, store)'s configured thresholds.
-    instruction: For each (SKU, store) walk the stock_config_for edge and attach min_days_shelf_life, min_count and absolute_risk_count.
+    instruction: For each (SKU, store) walk the stock_config_for edge and attach min_days_shelf_life,
+      min_count and absolute_risk_count.
     produces:
     - thresholds
   - id: assess
     name: Assess risk
     type: agent
     after: thresholds
-    description: Roll up per (store, SKU) and flag wastage / low-stock / critical risk.
-    instruction: Roll up to one row per (store, SKU); classify each as wastage, low_stock, critical_low or both against its
-      thresholds and drop the rest.
+    description: Roll up per (store, SKU) and flag wastage / low-stock / critical
+      risk.
+    instruction: Roll up to one row per (store, SKU); classify each as wastage, low_stock,
+      critical_low or both against its thresholds and drop the rest.
     produces:
     - at_risk_products
   - id: review
     name: Supply owner review
     type: decision
     after: assess
-    description: Supply-chain owner reviews the at-risk report and approves / rejects / revises.
-    instruction: Review the at-risk report and APPROVE to email it, REJECT to hold, or REVISE with changes.
+    description: Supply-chain owner reviews the at-risk report and approves / rejects
+      / revises.
+    instruction: Review the at-risk report and APPROVE to email it, REJECT to hold,
+      or REVISE with changes.
     decision_options:
     - APPROVE
     - REJECT
@@ -85,8 +95,8 @@ processes:
     name: Email at-risk report
     type: notify
     after: review
-    description: On approve, format the at-risk report as a Genzoic HTML email (via the Genzoic Email Formatter skill) and
-      send it to the supply-chain owner.
+    description: On approve, format the at-risk report as a Genzoic HTML email (via
+      the Genzoic Email Formatter skill) and send it to the supply-chain owner.
     instruction: On approve, email the supply-chain owner the formatted at-risk report.
   learning: 'Persist, per (store, SKU), which risk_type recurs and whether the owner
 
@@ -235,17 +245,22 @@ processes:
         - soonest_expiry
         - batches
     policy_rules:
-    - '`at_risk_products` has ALREADY been assembled and filtered by the system to at-risk (store, SKU) rows only, rolled
-      up from the latest inventory snapshot and scored against each pair''s configured thresholds (from the stock_config_for
-      edge). Each row has a `risk_type`: `wastage` (near expiry: 0 <= days_to_expiry <= min_days_shelf_life; already-expired
-      stock is excluded), `low_stock` (total_available <= min_count), `critical_low` (total_available <= absolute_risk_count),
-      or `both`. Do NOT re-filter or re-list every row.'
-    - "Write a SHORT decision summary in plain business language covering BOTH risks: how many SKUs are near-expiry (wastage)\
-      \ vs running low on stock, across how many stores, and call out the most urgent \u2014 smallest days_to_expiry for wastage,\
-      \ and any `critical_low`/`both` rows. Example tone: 'Store 100008: 3 SKUs expiring within 2 days and 2 SKUs critically\
-      \ low; 6 stores affected overall.' Do not paste the table."
-    - Recommend APPROVE to email the supply-chain owner the combined at-risk report so the manual daily monitoring is captured
-      in writing. If `at_risk_products` is empty, recommend no action (nothing is at risk today).
+    - '`at_risk_products` has ALREADY been assembled and filtered by the system to
+      at-risk (store, SKU) rows only, rolled up from the latest inventory snapshot
+      and scored against each pair''s configured thresholds (from the stock_config_for
+      edge). Each row has a `risk_type`: `wastage` (near expiry: 0 <= days_to_expiry
+      <= min_days_shelf_life; already-expired stock is excluded), `low_stock` (total_available
+      <= min_count), `critical_low` (total_available <= absolute_risk_count), or `both`.
+      Do NOT re-filter or re-list every row.'
+    - "Write a SHORT decision summary in plain business language covering BOTH risks:\
+      \ how many SKUs are near-expiry (wastage) vs running low on stock, across how\
+      \ many stores, and call out the most urgent \u2014 smallest days_to_expiry for\
+      \ wastage, and any `critical_low`/`both` rows. Example tone: 'Store 100008:\
+      \ 3 SKUs expiring within 2 days and 2 SKUs critically low; 6 stores affected\
+      \ overall.' Do not paste the table."
+    - Recommend APPROVE to email the supply-chain owner the combined at-risk report
+      so the manual daily monitoring is captured in writing. If `at_risk_products`
+      is empty, recommend no action (nothing is at risk today).
     actions:
     - name: email_at_risk_report
       decision: APPROVE
@@ -258,9 +273,11 @@ processes:
           to: uzairtajmat7@gmail.com
           subject: Inventory risk - near-expiry & low-stock SKUs (all stores)
           title: Shelf-Life Risk - Daily Inventory Report
-          intro: The scheduled inventory sweep flagged the at-risk (store, SKU) pairs below across all dark stores - both
-            wastage risk (nearing expiry) and low-stock risk (below configured safety stock), each scored against the pair's
-            own thresholds. Please action transfers / markdowns for near-expiry stock and replenishment for low-stock SKUs.
+          intro: The scheduled inventory sweep flagged the at-risk (store, SKU) pairs
+            below across all dark stores - both wastage risk (nearing expiry) and
+            low-stock risk (below configured safety stock), each scored against the
+            pair's own thresholds. Please action transfers / markdowns for near-expiry
+            stock and replenishment for low-stock SKUs.
           sections:
           - type: table
             caption: At-risk (store, SKU) pairs - most urgent first
@@ -280,7 +297,8 @@ processes:
       config:
         type: notify
         recipient: supply_chain_team
-        message: "Shelf-life risk sweep reviewed and held \u2014 no email sent this run."
+        message: "Shelf-life risk sweep reviewed and held \u2014 no email sent this\
+          \ run."
     - name: escalate_review
       decision: ESCALATE
       connector: simulated

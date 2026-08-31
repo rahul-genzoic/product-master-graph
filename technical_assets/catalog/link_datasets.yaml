@@ -1,657 +1,747 @@
-# Lazy dataset links for the fast-moving data that used to be materialised on
-# apply (see integrations/live_bq.yaml). Each link binds an entity TYPE to a
-# BigQuery source table via a join key; NO rows are copied at apply time — the
-# data is fetched on demand, scoped to one entity instance, when a widget below
-# renders on that entity's page. `connection: live_bq` resolves to the live_bq
-# integration's connection block.
-#
-# Join keys: Product.id == SKU (pim_bq maps Product id: SKU); Store.id ==
-# MASTER_STORE_ID (live_bq maps Store id: MASTER_STORE_ID). So the entity id is
-# the join value in every link below.
+# Lazy dataset links for fast-moving data.
+# Binds canonical entity types to BigQuery source tables/views via join keys.
 
 datasets:
-  # --- attached to Store -------------------------------------------------
-  - entity_type: Store
-    name: Reviews
-    description: Customer review events for this store (lazy).
-    source_table: CUSTOMER_REVIEW_EVENTS
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: MASTER_STORE_ID }
-    columns: [REVIEW_ID, REVIEW_TEXT, STAR_RATING, REVIEW_DATE, SOURCE_SYSTEM, CUSTOMER_NAME, MASTER_STORE_ID]
-
-  - entity_type: Store
-    name: Review complaint candidates
-    description: Low-rated reviews from the last 30 days, narrowed for the
-      formulation_feedback_loop agent step. One-letter columns and a 140-char text cap keep
-      the rowset inside that step's 9000-char prompt budget. S = store id, D = review date,
-      N = integer day index (the 14-day test is done on N, not on D), T = review text,
-      P = the SKU whose catalog family name appears in T, or ''. The clustering step reads
-      [S, D, N, T] and deliberately NOT P -- `columns` is chosen per read, so P costs it
-      nothing -- while the `reviewed_products` context key reads [P] alone to mint Product
-      cards. See sql/views.sql.
-    source_table: V_REVIEW_COMPLAINT_CANDIDATES
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: S }
-    columns: [S, D, N, T, P]
-
-  - entity_type: Store
-    name: Complaints
-    description: Complaint events for this store (lazy). Base table (not the
-      V_COMPLAINT_EVENTS view) — the complaint carries ORDER_ID, matched to the
-      sale's ONLINE_ORDER_ID in the complaint-triage process.
-    source_table: CUSTOMER_COMPLAINT_EVENTS
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: MASTER_STORE_ID }
-    columns: [EVENT_ID, ISSUE_TYPE, ITEM_NAME, CUSTOMER_COMMENTS, SOURCE_SYSTEM, ORDER_ID, COMPLAINT_RECEIVED_AT, MASTER_STORE_ID]
-
-  - entity_type: Store
-    name: Inventory batches
-    description: Latest inventory snapshot at this store (lazy).
-    source_table: STORE_INVENTORY_DAILY
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: store_id }
-    columns: [inventory_record_id, snapshot_date, batch_row_number, available_quantity, expiry_date, batch_hash, product_sku, store_id]
-
-  - entity_type: Store
-    name: Current campaigns
-    description: Zomato/Swiggy ad campaigns running this month at this store (lazy). V_STORE_CAMPAIGN_CURRENT resolves RES_ID->store and re-scopes to "running now / this month" on each render.
-    source_table: V_STORE_CAMPAIGN_CURRENT
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: MASTER_STORE_ID }
-    columns: [MASTER_STORE_ID, CAMPAIGN_ID, RES_ID, PLATFORM, PRODUCT_TYPE, TARGETING, SEGMENTS, DATE, AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, AD_IMPRESSIONS, AD_CLICKS, ROI, ADS_M2O_PCT, OVERALL_M2O_PCT, ROAS, CTR]
-
-  - entity_type: Store
-    name: Sales
-    description: Order-line sales for this store from the silver BASE table (no view) — queried via raw SQL fully-qualifying silver.BUSINESS_ANALYTICS. Anchor for the per-SKU sales widget.
-    source_table: silver.BUSINESS_ANALYTICS   # dataset-qualified so the gather's dataset-read path hits silver, not the connection's default bronze
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: STORE_ID }
-    columns: [STORE_ID, SKU_ID, ITEM_SOURCE_NAME, QUANTITY, TOTAL, NET, ORDER_DATE, ORDER_STATE, ONLINE_ORDER_ID]
-
-  - entity_type: Store
-    name: Campaign history
-    description: Zomato/Swiggy ad campaign performance for this store across ALL history, rolled up to one row per (campaign, calendar month) — no CURRENT_DATE() scoping, unlike "Current campaigns" above (lazy). Read by seasonal_campaign_planning.yaml's seasonal_campaign_history context key to evaluate past comparable-window performance for an upcoming event.
-    source_table: V_STORE_CAMPAIGN_HISTORY
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: MASTER_STORE_ID }
-    columns: [MASTER_STORE_ID, CAMPAIGN_ID, MONTH, RES_ID, PLATFORM, PRODUCT_TYPE, TARGETING, SEGMENTS, WINDOW_START, WINDOW_END, AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, AD_IMPRESSIONS, AD_CLICKS, ROI, ADS_M2O_PCT, OVERALL_M2O_PCT, ROAS, CTR]
-
-  # Same V_SEGMENT_BUDGET table as the CustomerSegment link below, joined by
-  # STORE instead — lets a Store-anchored gather (e.g. campaign_planning_
-  # optimisation.yaml's segment_budget context key) resolve it directly,
-  # symmetric with "Current campaigns" above.
-  - entity_type: Store
-    name: Budget allocations
-    description: This store's marketing budget allocated per segment, by channel/month (lazy).
-    source_table: V_SEGMENT_BUDGET
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: MASTER_STORE_ID }
-    columns: [SEGMENT_ID, MASTER_STORE_ID, STORE_NAME, CHANNEL, BUDGET_MONTH, ALLOCATED_BUDGET_RS, EXPECTED_REVENUE_RS]
-
-  # --- attached to Product ----------------------------------------------
-  # Static product truth (1:1 on SKU) from the PIM dataset, not bronze — hence
-  # `connection: pim_bq`, whose default dataset is ctx_upside_master_data.
-  # IMAGES_LINK is the Drive folder holding the SKU's label artwork; the
-  # label_compliance_review process reads it from here and lists that folder
-  # directly, instead of searching Drive by product name.
-  - entity_type: Product
-    name: Product label facts
-    description: On-pack declarations + label artwork Drive folder link (IMAGES_LINK) for this SKU (lazy, 1:1).
-    source_table: DIM_PRODUCT
-    connection: pim_bq
-    cardinality: "1:1"
-    join_keys:
-      - { entity_attribute: id, table_column: SKU }
-    columns: [SKU, DISPLAY_NAME, VEG_NONVEG, SIZE_LABEL, SIZE_GM, VERSION, STATUS, DESCRIPTION, IMAGES_LINK]
-
-  - entity_type: Product
-    name: Inventory batches
-    description: Latest inventory snapshot for this product across stores (lazy).
-    source_table: STORE_INVENTORY_DAILY
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: product_sku }
-    columns: [inventory_record_id, snapshot_date, batch_row_number, available_quantity, expiry_date, batch_hash, product_sku, store_id]
-
-  - entity_type: Product
-    name: Stock by store
-    description: Current stock / wastage flags per store for this product (lazy).
-    source_table: V_STOCKED_AT
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: SKU_ID }
-    columns: [SKU_ID, MASTER_STORE_ID, TOTAL_STOCK, SAFE_STOCK, EXPIRED_STOCK, SOONEST_EXPIRY, QTY_EXPIRING_WITHIN_RISK_DAYS, WASTAGE_FLAG, LOW_STOCK_FLAG, SHELF_LIFE_DAYS]
-
-  - entity_type: Product
-    name: Forecast
-    description: Latest-run demand forecast (next 1-3 days) per store for this product, from the gold BASE table. source_table is dataset-qualified (gold.) so the dataset-read path (widgets + the demand_forecast gather) resolves it in gold, not the connection's default bronze dataset.
-    source_table: gold.FORECAST_RESULTS_UPDATE
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: SKU_ID }
-    columns: [SKU_ID, MASTER_STORE_ID, FORECAST_DATE, PREDICTED_SALES_QUANTITY, DAYS_AHEAD, IS_LATEST_FORECAST]
-
-  # Same gold forecast table, joined by STORE — lets the demand_forecast
-  # gather START from the Store node (per-store forecast read), symmetric with inventory.
-  - entity_type: Store
-    name: Forecast by store
-    description: Latest-run demand forecast per SKU for this store, from gold. Store-anchored (join on MASTER_STORE_ID) so a gather can traverse Store -> forecast.
-    source_table: gold.FORECAST_RESULTS_UPDATE
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: MASTER_STORE_ID }
-    columns: [SKU_ID, MASTER_STORE_ID, FORECAST_DATE, PREDICTED_SALES_QUANTITY, DAYS_AHEAD, IS_LATEST_FORECAST]
-
-  - entity_type: Product
-    name: Sales
-    description: Order-line sales for this product from the silver BASE table (no view) — queried via raw SQL fully-qualifying silver.BUSINESS_ANALYTICS. Anchor for the qty-sold / revenue widgets.
-    source_table: silver.BUSINESS_ANALYTICS   # dataset-qualified (silver) for the dataset-read path
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: SKU_ID }
-    columns: [SKU_ID, STORE_ID, QUANTITY, TOTAL, NET, ORDER_DATE, ORDER_STATE]
-
-  # Master cost/price facts (static PIM truth) exposed as a 1:1 self-link so a
-  # gather can read cost/MRP/shelf-life by SKU (they're Product NODE properties,
-  # not otherwise reachable via search_dataset). connection: pim_bq resolves to
-  # the pim_bq integration (dataset ctx_upside_master_data), NOT live_bq/bronze.
-  # Used by the shelf_life_rescue_desk process to compute ₹ value-at-risk.
-  - entity_type: Product
-    name: Product cost & price
-    description: Static master cost/price/shelf-life for this product from V_PRODUCT_ENRICHED (lazy, 1:1 on SKU).
-    source_table: V_PRODUCT_ENRICHED
-    connection: pim_bq
-    cardinality: "1:1"
-    join_keys:
-      - { entity_attribute: id, table_column: SKU }
-    columns: [SKU, DISPLAY_NAME, MRP_INR, TOTAL_COGS_INR, SHELF_LIFE_DAYS]
-
-  # --- attached to CustomerSegment --------------------------------------
-  - entity_type: CustomerSegment
-    name: Budget allocations
-    description: Per-store marketing budget allocated to this segment, by channel/month (lazy).
-    source_table: V_SEGMENT_BUDGET
-    connection: live_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: SEGMENT_ID }
-    columns: [SEGMENT_ID, MASTER_STORE_ID, STORE_NAME, CHANNEL, BUDGET_MONTH, ALLOCATED_BUDGET_RS, EXPECTED_REVENUE_RS]
-
-  - entity_type: Product
-    name: All Ideas
-    description: Ideas table for innovation triage
-    source_table: DIM_IDEA
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: IDEA_ID }
-    columns: [IDEA_ID, NAME, STAGE, HYPOTHESIS, THESIS_FIT, TARGET_COGS_INR, STAGE_ENTERED_AT]
-
-  # Read as the `active_briefs` context key, and browsable per idea here.
-  - entity_type: Product
-    name: Brief scoring inputs
-    description: Per-idea priority-scoring inputs for the active pipeline (V_IDEA_PRIORITY_INPUTS)
-      — DAYS_IN_STAGE, STAGE_RANK, TARGET_COGS_INR vs the portfolio COGS envelope, and the
-      COGS_FIT band. Active briefs only (STAGE not Rejected/Launch).
-    source_table: V_IDEA_PRIORITY_INPUTS
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: IDEA_ID }
-    columns: [IDEA_ID, NAME, STAGE, HYPOTHESIS, THESIS_FIT, TARGET_COGS_INR, DAYS_IN_STAGE, STAGE_RANK, PORTFOLIO_MIN_COGS_INR, PORTFOLIO_MAX_COGS_INR, COGS_FIT]
-
-  - entity_type: Product
-    name: Portfolio products
-    description: Enriched product catalog
-    source_table: V_PRODUCT_ENRICHED
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: SKU }
-    columns: [SKU, DISPLAY_NAME, DESCRIPTION, STATUS, IS_ACTIVE, CATEGORY]
-
-  - entity_type: Competitor
-    name: Active competitors
-    description: Competitors table
-    source_table: DIM_COMPETITOR
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: COMPETITOR_ID }
-    columns: [COMPETITOR_ID, COMPETITOR_NAME, CATEGORY, IS_ACTIVE]
-
-  - entity_type: CompetitorProduct
-    name: Active competitor products
-    description: Competitor products table
-    source_table: DIM_COMPETITOR_PRODUCT
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: COMPETITOR_PRODUCT_ID }
-    columns: [COMPETITOR_PRODUCT_ID, PRODUCT_NAME, CITY, IS_ACTIVE, COMPETITOR_ID]
-
-  - entity_type: Ingredient
-    name: Ingredient master
-    description: Every ingredient the company sources (DIM_INGREDIENT). Each one is already used in at least one live SKU, so presence here means "we already buy this". Carries no stock quantities. Read by idea_capture_triage's ingredient-availability step.
-    source_table: DIM_INGREDIENT
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: INGREDIENT_ID }
-    columns: [INGREDIENT_ID, INGREDIENT_NAME, CATEGORY]
-
-  - entity_type: ProductLine
-    name: Production capability
-    description: Product lines actually manufactured today, with active SKU count, COGS range and shelf life. Read by idea_capture_triage's feasibility step.
-    source_table: V_PRODUCT_LINE_CAPABILITY
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: PRODUCT_LINE_ID }
-    columns: [PRODUCT_LINE_ID, PRODUCT_LINE_NAME, CATEGORY_NAME, ACTIVE_SKUS, MIN_COGS_INR, MAX_COGS_INR, AVG_SHELF_LIFE_DAYS]
-
-  - entity_type: Product
-    name: Product family names
-    description: >-
-      ONE ROW whose NM is every active product family, pipe-separated -- the closed vocabulary
-      formulation_feedback_loop's clustering step must pick from when it infers a product from
-      free review text. Aggregated into a single row on purpose: a context_package fact that is
-      a list of more than 4 rows is previewed down to 4 before the step sees it, so 24 family
-      rows would arrive as 4. Not entity-scoped -- never rendered as a Product widget.
-      CG pairs the same families with their entry-pack COGS, so an approved reformulation brief
-      can carry TARGET_COGS_INR. Families with no costed active SKU are absent from CG.
-    source_table: V_PRODUCT_FAMILY_NAMES
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: ID }
-    columns: [ID, NM, CG]
-
-  - entity_type: Product
-    name: Triage similarity candidates
-    description: >-
-      Pipeline ideas + live SKUs + per-category counts + competitor examples + an end-of-list
-      sentinel, unioned into one candidate set behind a numerically-prefixed SRC discriminator.
-      Read cross-type via dataset_search by idea_capture_triage's TWO matching steps, each
-      filtering SRC to its own arms so each gets its own 9000-char step-input budget. FOUR
-      PACKED COLUMNS: a column name is a JSON key on every row, and the previous ten-column
-      shape measured 16904 chars against a 9000 cap. Per-grain fields are packed positionally
-      into D — see sql/views.sql for the layout. Every column a step references, in `columns`
-      or in `filters`, must be declared below or the read 400s. Not entity-scoped — never
-      rendered as a Product widget.
-    source_table: V_TRIAGE_SIMILARITY_CANDIDATES
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: ID }
-    columns: [SRC, ID, NM, D]
-
-  - entity_type: Product
-    name: Pipeline priority candidates
-    description: Active briefs + per-category demand/compliance/channel reference + the cost
-      envelope + the ingredient master, unioned into one narrow rowset behind a SRC
-      discriminator, read cross-type via dataset_search by innovation_pipeline_prioritisation's
-      scoring step so all ~38 briefs arrive un-truncated through a single fetch. Four columns
-      only, and the reference grains are packed into DATA, because STEP INPUT DATA is capped at
-      9000 chars (see the view's header comment in sql/views.sql). Not entity-scoped — never
-      rendered as a Product widget.
-    source_table: V_PIPELINE_PRIORITY_CANDIDATES
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: ID }
-    columns: [SRC, ID, NAME, DATA]
-
-  - entity_type: Product
-    name: Category market signal
-    description: Realised demand per product category (V_CATEGORY_MARKET_SIGNAL) — units and
-      revenue over the trailing 90 days vs the prior 90, growth %, forward forecast, active SKUs,
-      plus competitor counts as a tiebreaker. The evidence behind the market-signal factor in
-      innovation_pipeline_prioritisation. Category-grained, not entity-scoped.
-    source_table: V_CATEGORY_MARKET_SIGNAL
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: CATEGORY_NAME }
-    columns: [CATEGORY_NAME, UNITS_90D, NET_REVENUE_90D, UNITS_PRIOR_90D, GROWTH_PCT, FORECAST_UNITS_NEXT, ACTIVE_SKUS_IN_CATEGORY, ACTIVE_COMPETITOR_PRODUCTS, DISTINCT_COMPETITORS]
-
-  # --- attached to Category ----------------------------------------------
-  # REQUIRED for innovation_pipeline_prioritisation's `active_categories` context key.
-  # dataset_search resolves (entity_type, dataset) through THIS catalog, not through the
-  # process YAML: without this row the read fails with
-  #   POST /datasets/search -> 404: No dataset linking 'DIM_CATEGORY' to 'Category'.
-  # The key is `required: false`, so that 404 does not fail the run — it fails SILENTLY,
-  # and its real job is to mint Category nodes onto the entity snapshot. A full sweep
-  # resolves no entity from the event, so with this link missing the run ends with
-  # `entities=0`, save_entity_snapshot writes `entities: []`, and the UI hides the whole
-  # Full Context tab (page.tsx TABS.filter). Category.id == CATEGORY_ID, matching the
-  # `post.resolve` spec on that context key ({field: CATEGORY_ID, type: Category}).
-  - entity_type: Category
-    name: Category master
-    description: Every product category in the taxonomy (DIM_CATEGORY) — Desserts, Health
-      Bars, Snacks, Mithai, Savories, Dessert bites. Read as the `active_categories`
-      context key so a sweep's entity snapshot carries the categories it scored against.
-    source_table: DIM_CATEGORY
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: CATEGORY_ID }
-    columns: [CATEGORY_ID, CATEGORY_NAME]
-
-  # --- attached to Recipe (use-case #18) ---------------------------------
-  - entity_type: Recipe
-    name: Recipe header
-    description: The versioned formulation record (lazy, 1:1). The two costs here are the
-      NON-ingredient components only — packaging and conversion. The ingredient component and
-      the total are computed live by V_RECIPE_COGS and deliberately not stored.
-      PARENT_RECIPE_ID is how the version chain is read; there is no supersedes edge.
-    source_table: DIM_RECIPE
-    connection: pim_bq
-    cardinality: "1:1"
-    join_keys:
-      - { entity_attribute: id, table_column: RECIPE_ID }
-    columns: [RECIPE_ID, SKU, IDEA_ID, RECIPE_NAME, VERSION_NO, PARENT_RECIPE_ID, STATUS, IS_CURRENT, BATCH_SIZE_G, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR, TARGET_COGS_INR, AUTHOR, NOTES, CREATED_AT]
-
-  - entity_type: Recipe
-    name: Recipe COGS
-    description: Live rolled-up COGS for this version — ingredients + packaging + overhead,
-      each named, plus yield, mass closure, variance against the SKU's master TOTAL_COGS_INR
-      and the TARGET_FIT band. Recomputed on every read. Read IS_FULLY_COSTED alongside the
-      total, because an unpriced line makes a recipe look CHEAPER rather than dearer.
-    source_table: V_RECIPE_COGS
-    connection: pim_bq
-    cardinality: "1:1"
-    join_keys:
-      - { entity_attribute: id, table_column: RECIPE_ID }
-    columns: [RECIPE_ID, SKU, IDEA_ID, RECIPE_NAME, VERSION_NO, PARENT_RECIPE_ID, STATUS, IS_CURRENT, LINES, UNCOSTED_LINES, IS_FULLY_COSTED, BATCH_SIZE_G, NET_MASS_G, GROSS_MASS_G, YIELD_PCT, MASS_VARIANCE_G, INGREDIENT_COST_INR, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR, RECIPE_COGS_INR, INGREDIENT_SHARE_PCT, OVERHEAD_SHARE_PCT, COGS_PER_100G_INR, MASTER_COGS_INR, MASTER_VARIANCE_INR, MASTER_VARIANCE_PCT, TARGET_COGS_INR, TARGET_FIT]
-
-  - entity_type: Recipe
-    name: Recipe lines
-    description: This recipe's BOM lines priced at today's rates. The read behind "which line
-      is the money" — sort by COST_SHARE_PCT desc to pick a substitution target.
-    source_table: V_RECIPE_LINE_COST
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: RECIPE_ID }
-    columns: [RECIPE_LINE_ID, RECIPE_ID, INGREDIENT_ID, INGREDIENT_NAME, LINE_SEQ, ROLE, QTY_NET_G, QTY_GROSS_G, QTY_AUTHORED, UOM, LOSS_PCT, IS_OPTIONAL, PRICE_INR_PER_KG, IS_COSTED, PRICE_SOURCE, SUPPLIER_NAME, LINE_COST_INR, COST_SHARE_PCT]
-
-  - entity_type: Recipe
-    name: Recipe workbench
-    description: >-
-      Header + the 3 dearest priced lines + the parent version's 3 dearest + evaluated
-      thesis checks + capped swap candidates + an end-of-list sentinel, unioned behind a
-      numerically-prefixed SRC discriminator. FIVE PACKED COLUMNS because step input data
-      is capped at 9000 chars -- see the view header in sql/views.sql for the per-grain D
-      layout and the re-measure query. ST carries the version's STATUS on every arm, so a
-      step reads only what is under review (ST in ('Draft','InTrial')); without it the
-      payload grows with the portfolio and silently overflows.
-    source_table: V_RECIPE_WORKBENCH
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: ID }
-    columns: [SRC, ID, NM, D, ST]
-
-  - entity_type: Recipe
-    name: Recipe formulation context
-    description: >-
-      The reformulation loop's single read: the COGS header, plus this version's whole BOM
-      (LINES), today's priced swap candidates each already judged against the brief's claim
-      and brand bans (CANDS), and the bans themselves (BANS) -- three packed columns on ONE
-      row. One row because a list-valued fact is previewed down to 4 rows before a step sees
-      it, so a 12-line BOM would arrive as 4 lines; packed, it arrives whole. END_MARK absent
-      means the row was cut and the guardrail columns cannot be trusted. See the view header
-      in sql/views.sql for the per-column layout, the caps and the re-measure query.
-    source_table: V_RECIPE_FORMULATION_CONTEXT
-    connection: pim_bq
-    cardinality: "1:1"
-    join_keys:
-      - { entity_attribute: id, table_column: RECIPE_ID }
-    columns: [RECIPE_ID, RECIPE_NAME, IDEA_ID, SKU, VERSION_NO, PARENT_RECIPE_ID, STATUS, RECIPE_COGS_INR, TARGET_COGS_INR, TARGET_FIT, IS_FULLY_COSTED, BATCH_SIZE_G, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR, NET_MASS_G, AUTHOR, N_LINES, LINES, N_CAND, CANDS, N_BANS, BANS, END_MARK]
-
-  # --- attached to Idea --------------------------------------------------
-  # NEW entity_type in this catalog -- needs the Idea entity block in pim_bq.yaml, or
-  # dataset_search 404s with "No dataset linking 'V_RECIPE_COGS' to 'Idea'".
-  - entity_type: Idea
-    name: Trial recipes
-    description: Recipe versions formulating this brief, with live COGS against the brief's
-      TARGET_COGS_INR. The NPD half of use-case 18.
-    source_table: V_RECIPE_COGS
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: IDEA_ID }
-    columns: [RECIPE_ID, IDEA_ID, RECIPE_NAME, VERSION_NO, PARENT_RECIPE_ID, STATUS, IS_CURRENT, BATCH_SIZE_G, INGREDIENT_COST_INR, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR, RECIPE_COGS_INR, COGS_PER_100G_INR, TARGET_COGS_INR, TARGET_FIT, IS_FULLY_COSTED]
-
-  # --- attached to Ingredient --------------------------------------------
-  - entity_type: Ingredient
-    name: Current cost
-    description: Today's rate, normalised to INR/kg (litre quotes converted once, here), with
-      supplier, provenance and age in days. IS_COSTED is false for an ingredient with no live
-      price row. Cannot be served from DIM_INGREDIENT_PRICE directly, because picking the
-      current row needs EFFECTIVE_TO IS NULL and dataset filters have no is_null operator.
-    source_table: V_INGREDIENT_CURRENT_COST
-    connection: pim_bq
-    cardinality: "1:1"
-    join_keys:
-      - { entity_attribute: id, table_column: INGREDIENT_ID }
-    columns: [INGREDIENT_ID, INGREDIENT_NAME, SUPPLIER_NAME, PRICE_INR, PRICE_UOM, PRICE_INR_PER_KG, EFFECTIVE_FROM, EFFECTIVE_TO, PRICE_SOURCE, IS_COSTED, PRICE_AGE_DAYS]
-
-  - entity_type: Ingredient
-    name: Price history
-    description: Every quoted rate over time with its effective window and provenance. The
-      evidence behind "this is up 8% since Q1".
-    source_table: DIM_INGREDIENT_PRICE
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: INGREDIENT_ID }
-    columns: [PRICE_ID, INGREDIENT_ID, SUPPLIER_NAME, PRICE_INR, PRICE_UOM, DENSITY_G_PER_ML, EFFECTIVE_FROM, EFFECTIVE_TO, PRICE_SOURCE, NOTE]
-
-  # --- attached to Product -----------------------------------------------
-  - entity_type: Product
-    name: Recipe versions
-    description: Every recipe version for this SKU with its live rolled-up COGS and variance
-      against the master TOTAL_COGS_INR in PRODUCT_PRICING. A non-zero variance means the
-      master figure has gone stale, which is a finding, not a defect.
-    source_table: V_RECIPE_COGS
-    connection: pim_bq
-    cardinality: "1:m"
-    join_keys:
-      - { entity_attribute: id, table_column: SKU }
-    columns: [RECIPE_ID, SKU, RECIPE_NAME, VERSION_NO, STATUS, IS_CURRENT, INGREDIENT_COST_INR, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR, RECIPE_COGS_INR, MASTER_COGS_INR, MASTER_VARIANCE_INR, MASTER_VARIANCE_PCT, YIELD_PCT, IS_FULLY_COSTED, TARGET_FIT]
-
+- entity_type: Channel
+  name: Reviews
+  description: Customer review events for this store (lazy).
+  source_table: CUSTOMER_REVIEW_EVENTS
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: MASTER_STORE_ID
+  columns:
+  - REVIEW_ID
+  - REVIEW_TEXT
+  - STAR_RATING
+  - REVIEW_DATE
+  - SOURCE_SYSTEM
+  - CUSTOMER_NAME
+  - MASTER_STORE_ID
+- entity_type: Channel
+  name: Review complaint candidates
+  description: Low-rated reviews from the last 30 days, narrowed for the formulation_feedback_loop
+    agent step. One-letter columns and a 140-char text cap keep the rowset inside
+    that step's 9000-char prompt budget. S = store id, D = review date, N = integer
+    day index (the 14-day test is done on N, not on D), T = review text, P = the SKU
+    whose catalog family name appears in T, or ''. The clustering step reads [S, D,
+    N, T] and deliberately NOT P -- `columns` is chosen per read, so P costs it nothing
+    -- while the `reviewed_products` context key reads [P] alone to mint Product cards.
+    See sql/views.sql.
+  source_table: V_REVIEW_COMPLAINT_CANDIDATES
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: S
+  columns:
+  - S
+  - D
+  - N
+  - T
+  - P
+- entity_type: Channel
+  name: Complaints
+  description: "Complaint events for this store (lazy). Base table (not the V_COMPLAINT_EVENTS\
+    \ view) \u2014 the complaint carries ORDER_ID, matched to the sale's ONLINE_ORDER_ID\
+    \ in the complaint-triage process."
+  source_table: CUSTOMER_COMPLAINT_EVENTS
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: MASTER_STORE_ID
+  columns:
+  - EVENT_ID
+  - ISSUE_TYPE
+  - ITEM_NAME
+  - CUSTOMER_COMMENTS
+  - SOURCE_SYSTEM
+  - ORDER_ID
+  - COMPLAINT_RECEIVED_AT
+  - MASTER_STORE_ID
+- entity_type: Channel
+  name: Inventory batches
+  description: Latest inventory snapshot at this store (lazy).
+  source_table: STORE_INVENTORY_DAILY
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: store_id
+  columns:
+  - inventory_record_id
+  - snapshot_date
+  - batch_row_number
+  - available_quantity
+  - expiry_date
+  - batch_hash
+  - product_sku
+  - store_id
+- entity_type: Channel
+  name: Current campaigns
+  description: Zomato/Swiggy ad campaigns running this month at this store (lazy).
+    V_STORE_CAMPAIGN_CURRENT resolves RES_ID->store and re-scopes to "running now
+    / this month" on each render.
+  source_table: V_STORE_CAMPAIGN_CURRENT
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: MASTER_STORE_ID
+  columns:
+  - MASTER_STORE_ID
+  - CAMPAIGN_ID
+  - RES_ID
+  - PLATFORM
+  - PRODUCT_TYPE
+  - TARGETING
+  - SEGMENTS
+  - DATE
+  - AD_SPEND_RS
+  - AD_SALES_RS
+  - AD_ORDERS
+  - AD_IMPRESSIONS
+  - AD_CLICKS
+  - ROI
+  - ADS_M2O_PCT
+  - OVERALL_M2O_PCT
+  - ROAS
+  - CTR
+- entity_type: Channel
+  name: Sales
+  description: "Order-line sales for this store from the silver BASE table (no view)\
+    \ \u2014 queried via raw SQL fully-qualifying silver.BUSINESS_ANALYTICS. Anchor\
+    \ for the per-SKU sales widget."
+  source_table: silver.BUSINESS_ANALYTICS
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: STORE_ID
+  columns:
+  - STORE_ID
+  - SKU_ID
+  - ITEM_SOURCE_NAME
+  - QUANTITY
+  - TOTAL
+  - NET
+  - ORDER_DATE
+  - ORDER_STATE
+  - ONLINE_ORDER_ID
+- entity_type: Channel
+  name: Campaign history
+  description: "Zomato/Swiggy ad campaign performance for this store across ALL history,\
+    \ rolled up to one row per (campaign, calendar month) \u2014 no CURRENT_DATE()\
+    \ scoping, unlike \"Current campaigns\" above (lazy). Read by seasonal_campaign_planning.yaml's\
+    \ seasonal_campaign_history context key to evaluate past comparable-window performance\
+    \ for an upcoming event."
+  source_table: V_STORE_CAMPAIGN_HISTORY
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: MASTER_STORE_ID
+  columns:
+  - MASTER_STORE_ID
+  - CAMPAIGN_ID
+  - MONTH
+  - RES_ID
+  - PLATFORM
+  - PRODUCT_TYPE
+  - TARGETING
+  - SEGMENTS
+  - WINDOW_START
+  - WINDOW_END
+  - AD_SPEND_RS
+  - AD_SALES_RS
+  - AD_ORDERS
+  - AD_IMPRESSIONS
+  - AD_CLICKS
+  - ROI
+  - ADS_M2O_PCT
+  - OVERALL_M2O_PCT
+  - ROAS
+  - CTR
+- entity_type: Channel
+  name: Budget allocations
+  description: This store's marketing budget allocated per segment, by channel/month
+    (lazy).
+  source_table: V_SEGMENT_BUDGET
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: MASTER_STORE_ID
+  columns:
+  - SEGMENT_ID
+  - MASTER_STORE_ID
+  - STORE_NAME
+  - CHANNEL
+  - BUDGET_MONTH
+  - ALLOCATED_BUDGET_RS
+  - EXPECTED_REVENUE_RS
+- entity_type: Products
+  name: Product label facts
+  description: On-pack declarations + label artwork Drive folder link (IMAGES_LINK)
+    for this SKU (lazy, 1:1).
+  source_table: DIM_PRODUCT
+  connection: pim_bq
+  cardinality: '1:1'
+  join_keys:
+  - entity_attribute: id
+    table_column: SKU
+  columns:
+  - SKU
+  - DISPLAY_NAME
+  - VEG_NONVEG
+  - SIZE_LABEL
+  - SIZE_GM
+  - VERSION
+  - STATUS
+  - DESCRIPTION
+  - IMAGES_LINK
+- entity_type: Products
+  name: Inventory batches
+  description: Latest inventory snapshot for this product across stores (lazy).
+  source_table: STORE_INVENTORY_DAILY
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: product_sku
+  columns:
+  - inventory_record_id
+  - snapshot_date
+  - batch_row_number
+  - available_quantity
+  - expiry_date
+  - batch_hash
+  - product_sku
+  - store_id
+- entity_type: Products
+  name: Stock by store
+  description: Current stock / wastage flags per store for this product (lazy).
+  source_table: V_STOCKED_AT
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: SKU_ID
+  columns:
+  - SKU_ID
+  - MASTER_STORE_ID
+  - TOTAL_STOCK
+  - SAFE_STOCK
+  - EXPIRED_STOCK
+  - SOONEST_EXPIRY
+  - QTY_EXPIRING_WITHIN_RISK_DAYS
+  - WASTAGE_FLAG
+  - LOW_STOCK_FLAG
+  - SHELF_LIFE_DAYS
+- entity_type: Products
+  name: Forecast
+  description: Latest-run demand forecast (next 1-3 days) per store for this product,
+    from the gold BASE table. source_table is dataset-qualified (gold.) so the dataset-read
+    path (widgets + the demand_forecast gather) resolves it in gold, not the connection's
+    default bronze dataset.
+  source_table: gold.FORECAST_RESULTS_UPDATE
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: SKU_ID
+  columns:
+  - SKU_ID
+  - MASTER_STORE_ID
+  - FORECAST_DATE
+  - PREDICTED_SALES_QUANTITY
+  - DAYS_AHEAD
+  - IS_LATEST_FORECAST
+- entity_type: Channel
+  name: Forecast by store
+  description: Latest-run demand forecast per SKU for this store, from gold. Store-anchored
+    (join on MASTER_STORE_ID) so a gather can traverse Store -> forecast.
+  source_table: gold.FORECAST_RESULTS_UPDATE
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: MASTER_STORE_ID
+  columns:
+  - SKU_ID
+  - MASTER_STORE_ID
+  - FORECAST_DATE
+  - PREDICTED_SALES_QUANTITY
+  - DAYS_AHEAD
+  - IS_LATEST_FORECAST
+- entity_type: Products
+  name: Sales
+  description: "Order-line sales for this product from the silver BASE table (no view)\
+    \ \u2014 queried via raw SQL fully-qualifying silver.BUSINESS_ANALYTICS. Anchor\
+    \ for the qty-sold / revenue widgets."
+  source_table: silver.BUSINESS_ANALYTICS
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: SKU_ID
+  columns:
+  - SKU_ID
+  - STORE_ID
+  - QUANTITY
+  - TOTAL
+  - NET
+  - ORDER_DATE
+  - ORDER_STATE
+- entity_type: Products
+  name: Product cost & price
+  description: Static master cost/price/shelf-life for this product from V_PRODUCT_ENRICHED
+    (lazy, 1:1 on SKU).
+  source_table: V_PRODUCT_ENRICHED
+  connection: pim_bq
+  cardinality: '1:1'
+  join_keys:
+  - entity_attribute: id
+    table_column: SKU
+  columns:
+  - SKU
+  - DISPLAY_NAME
+  - MRP_INR
+  - TOTAL_COGS_INR
+  - SHELF_LIFE_DAYS
+- entity_type: Consumers
+  name: Budget allocations
+  description: Per-store marketing budget allocated to this segment, by channel/month
+    (lazy).
+  source_table: V_SEGMENT_BUDGET
+  connection: live_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: SEGMENT_ID
+  columns:
+  - SEGMENT_ID
+  - MASTER_STORE_ID
+  - STORE_NAME
+  - CHANNEL
+  - BUDGET_MONTH
+  - ALLOCATED_BUDGET_RS
+  - EXPECTED_REVENUE_RS
+- entity_type: Products
+  name: All Ideas
+  description: Ideas table for innovation triage
+  source_table: DIM_IDEA
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: IDEA_ID
+  columns:
+  - IDEA_ID
+  - NAME
+  - STAGE
+  - HYPOTHESIS
+  - THESIS_FIT
+  - TARGET_COGS_INR
+  - STAGE_ENTERED_AT
+- entity_type: Products
+  name: Brief scoring inputs
+  description: "Per-idea priority-scoring inputs for the active pipeline (V_IDEA_PRIORITY_INPUTS)\
+    \ \u2014 DAYS_IN_STAGE, STAGE_RANK, TARGET_COGS_INR vs the portfolio COGS envelope,\
+    \ and the COGS_FIT band. Active briefs only (STAGE not Rejected/Launch)."
+  source_table: V_IDEA_PRIORITY_INPUTS
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: IDEA_ID
+  columns:
+  - IDEA_ID
+  - NAME
+  - STAGE
+  - HYPOTHESIS
+  - THESIS_FIT
+  - TARGET_COGS_INR
+  - DAYS_IN_STAGE
+  - STAGE_RANK
+  - PORTFOLIO_MIN_COGS_INR
+  - PORTFOLIO_MAX_COGS_INR
+  - COGS_FIT
+- entity_type: Products
+  name: Portfolio products
+  description: Enriched product catalog
+  source_table: V_PRODUCT_ENRICHED
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: SKU
+  columns:
+  - SKU
+  - DISPLAY_NAME
+  - DESCRIPTION
+  - STATUS
+  - IS_ACTIVE
+  - CATEGORY
+- entity_type: Materials
+  name: Ingredient master
+  description: Every ingredient the company sources (DIM_INGREDIENT). Each one is
+    already used in at least one live SKU, so presence here means "we already buy
+    this". Carries no stock quantities. Read by idea_capture_triage's ingredient-availability
+    step.
+  source_table: DIM_INGREDIENT
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: INGREDIENT_ID
+  columns:
+  - INGREDIENT_ID
+  - INGREDIENT_NAME
+  - CATEGORY
+- entity_type: Products
+  name: Product family names
+  description: 'ONE ROW whose NM is every active product family, pipe-separated --
+    the closed vocabulary formulation_feedback_loop''s clustering step must pick from
+    when it infers a product from free review text. Aggregated into a single row on
+    purpose: a context_package fact that is a list of more than 4 rows is previewed
+    down to 4 before the step sees it, so 24 family rows would arrive as 4. Not entity-scoped
+    -- never rendered as a Product widget. CG pairs the same families with their entry-pack
+    COGS, so an approved reformulation brief can carry TARGET_COGS_INR. Families with
+    no costed active SKU are absent from CG.'
+  source_table: V_PRODUCT_FAMILY_NAMES
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: ID
+  columns:
+  - ID
+  - NM
+  - CG
+- entity_type: Products
+  name: Triage similarity candidates
+  description: "Pipeline ideas + live SKUs + per-category counts + competitor examples\
+    \ + an end-of-list sentinel, unioned into one candidate set behind a numerically-prefixed\
+    \ SRC discriminator. Read cross-type via dataset_search by idea_capture_triage's\
+    \ TWO matching steps, each filtering SRC to its own arms so each gets its own\
+    \ 9000-char step-input budget. FOUR PACKED COLUMNS: a column name is a JSON key\
+    \ on every row, and the previous ten-column shape measured 16904 chars against\
+    \ a 9000 cap. Per-grain fields are packed positionally into D \u2014 see sql/views.sql\
+    \ for the layout. Every column a step references, in `columns` or in `filters`,\
+    \ must be declared below or the read 400s. Not entity-scoped \u2014 never rendered\
+    \ as a Product widget."
+  source_table: V_TRIAGE_SIMILARITY_CANDIDATES
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: ID
+  columns:
+  - SRC
+  - ID
+  - NM
+  - D
+- entity_type: Products
+  name: Pipeline priority candidates
+  description: "Active briefs + per-category demand/compliance/channel reference +\
+    \ the cost envelope + the ingredient master, unioned into one narrow rowset behind\
+    \ a SRC discriminator, read cross-type via dataset_search by innovation_pipeline_prioritisation's\
+    \ scoring step so all ~38 briefs arrive un-truncated through a single fetch. Four\
+    \ columns only, and the reference grains are packed into DATA, because STEP INPUT\
+    \ DATA is capped at 9000 chars (see the view's header comment in sql/views.sql).\
+    \ Not entity-scoped \u2014 never rendered as a Product widget."
+  source_table: V_PIPELINE_PRIORITY_CANDIDATES
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: ID
+  columns:
+  - SRC
+  - ID
+  - NAME
+  - DATA
+- entity_type: Products
+  name: Category market signal
+  description: "Realised demand per product category (V_CATEGORY_MARKET_SIGNAL) \u2014\
+    \ units and revenue over the trailing 90 days vs the prior 90, growth %, forward\
+    \ forecast, active SKUs, plus competitor counts as a tiebreaker. The evidence\
+    \ behind the market-signal factor in innovation_pipeline_prioritisation. Category-grained,\
+    \ not entity-scoped."
+  source_table: V_CATEGORY_MARKET_SIGNAL
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: CATEGORY_NAME
+  columns:
+  - CATEGORY_NAME
+  - UNITS_90D
+  - NET_REVENUE_90D
+  - UNITS_PRIOR_90D
+  - GROWTH_PCT
+  - FORECAST_UNITS_NEXT
+  - ACTIVE_SKUS_IN_CATEGORY
+  - ACTIVE_COMPETITOR_PRODUCTS
+  - DISTINCT_COMPETITORS
+- entity_type: Materials
+  name: Current cost
+  description: Today's rate, normalised to INR/kg (litre quotes converted once, here),
+    with supplier, provenance and age in days. IS_COSTED is false for an ingredient
+    with no live price row. Cannot be served from DIM_INGREDIENT_PRICE directly, because
+    picking the current row needs EFFECTIVE_TO IS NULL and dataset filters have no
+    is_null operator.
+  source_table: V_INGREDIENT_CURRENT_COST
+  connection: pim_bq
+  cardinality: '1:1'
+  join_keys:
+  - entity_attribute: id
+    table_column: INGREDIENT_ID
+  columns:
+  - INGREDIENT_ID
+  - INGREDIENT_NAME
+  - SUPPLIER_NAME
+  - PRICE_INR
+  - PRICE_UOM
+  - PRICE_INR_PER_KG
+  - EFFECTIVE_FROM
+  - EFFECTIVE_TO
+  - PRICE_SOURCE
+  - IS_COSTED
+  - PRICE_AGE_DAYS
+- entity_type: Materials
+  name: Price history
+  description: Every quoted rate over time with its effective window and provenance.
+    The evidence behind "this is up 8% since Q1".
+  source_table: DIM_INGREDIENT_PRICE
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: INGREDIENT_ID
+  columns:
+  - PRICE_ID
+  - INGREDIENT_ID
+  - SUPPLIER_NAME
+  - PRICE_INR
+  - PRICE_UOM
+  - DENSITY_G_PER_ML
+  - EFFECTIVE_FROM
+  - EFFECTIVE_TO
+  - PRICE_SOURCE
+  - NOTE
+- entity_type: Products
+  name: Recipe versions
+  description: Every recipe version for this SKU with its live rolled-up COGS and
+    variance against the master TOTAL_COGS_INR in PRODUCT_PRICING. A non-zero variance
+    means the master figure has gone stale, which is a finding, not a defect.
+  source_table: V_RECIPE_COGS
+  connection: pim_bq
+  cardinality: 1:m
+  join_keys:
+  - entity_attribute: id
+    table_column: SKU
+  columns:
+  - RECIPE_ID
+  - SKU
+  - RECIPE_NAME
+  - VERSION_NO
+  - STATUS
+  - IS_CURRENT
+  - INGREDIENT_COST_INR
+  - PACKAGING_COST_INR
+  - LABOUR_OVERHEAD_INR
+  - RECIPE_COGS_INR
+  - MASTER_COGS_INR
+  - MASTER_VARIANCE_INR
+  - MASTER_VARIANCE_PCT
+  - YIELD_PCT
+  - IS_FULLY_COSTED
+  - TARGET_FIT
 widgets:
-  # --- Recipe page -------------------------------------------------------
-  - entity_type: Recipe
-    type: number
-    dataset: V_RECIPE_COGS
-    title: Live COGS (₹/pack)
-    position: 0
-    config: { aggregation: max, column: RECIPE_COGS_INR }
+- entity_type: Recipe
+  type: number
+  dataset: V_RECIPE_COGS
+  title: "Live COGS (\u20B9/pack)"
+  position: 0
+  config:
+    aggregation: max
+    column: RECIPE_COGS_INR
+- entity_type: Recipe
+  type: number
+  dataset: V_RECIPE_COGS
+  title: "Variance vs master COGS (\u20B9)"
+  position: 1
+  config:
+    aggregation: max
+    column: MASTER_VARIANCE_INR
+- entity_type: Recipe
+  type: table
+  dataset: V_RECIPE_LINE_COST
+  title: Cost by ingredient
+  position: 2
+  config:
+    columns:
+    - INGREDIENT_NAME
+    - ROLE
+    - QTY_NET_G
+    - PRICE_INR_PER_KG
+    - LINE_COST_INR
+    - COST_SHARE_PCT
+    order_by: LINE_COST_INR
+    order_dir: desc
+    limit: 50
+- entity_type: Store
+  type: number
+  dataset: CUSTOMER_REVIEW_EVENTS
+  title: Avg review rating
+  position: 0
+  config:
+    aggregation: avg
+    column: STAR_RATING
+- entity_type: Store
+  type: number
+  dataset: CUSTOMER_COMPLAINT_EVENTS
+  title: Complaints
+  position: 1
+  config:
+    aggregation: count
+    column: MASTER_STORE_ID
+- entity_type: Store
+  type: table
+  dataset: CUSTOMER_REVIEW_EVENTS
+  title: Recent reviews
+  position: 2
+  config:
+    columns:
+    - REVIEW_DATE
+    - STAR_RATING
+    - CUSTOMER_NAME
+    - REVIEW_TEXT
+    order_by: REVIEW_DATE
+    order_dir: desc
+    limit: 20
+- entity_type: Store
+  type: table
+  dataset: STORE_INVENTORY_DAILY
+  title: Inventory (latest snapshot)
+  position: 3
+  query: 'SELECT * FROM `bronze.STORE_INVENTORY_DAILY` WHERE store_id = {{entity_id}}
+    QUALIFY snapshot_date = MAX(snapshot_date) OVER ()
 
-  - entity_type: Recipe
-    type: number
-    dataset: V_RECIPE_COGS
-    title: Variance vs master COGS (₹)
-    position: 1
-    config: { aggregation: max, column: MASTER_VARIANCE_INR }
+    '
+- entity_type: Store
+  type: table
+  dataset: V_STORE_CAMPAIGN_CURRENT
+  title: Running campaigns (this month)
+  position: 4
+  config:
+    columns:
+    - CAMPAIGN_ID
+    - PRODUCT_TYPE
+    - SEGMENTS
+    - DATE
+    - AD_SPEND_RS
+    - AD_SALES_RS
+    - AD_ORDERS
+    - ROI
+    order_by: AD_SPEND_RS
+    order_dir: desc
+    limit: 50
+- entity_type: Store
+  type: table
+  dataset: silver.BUSINESS_ANALYTICS
+  title: Sales by SKU
+  position: 5
+  query: "SELECT SKU_ID, ANY_VALUE(ITEM_SOURCE_NAME) AS item_name,\n       SUM(QUANTITY)\
+    \ AS quantity, SUM(TOTAL) AS revenue\nFROM `gen-lang-client-0520145261.silver.BUSINESS_ANALYTICS`\
+    \ WHERE STORE_ID = {{entity_id}} AND ORDER_STATE <> 'Cancelled'\n  AND ORDER_DATE\
+    \ >= DATE_TRUNC(CURRENT_DATE(), MONTH)\nGROUP BY SKU_ID ORDER BY revenue DESC\n"
+- entity_type: Product
+  type: table
+  dataset: STORE_INVENTORY_DAILY
+  title: Available quantity by store
+  position: 0
+  query: "SELECT store_id, SUM(available_quantity) AS available_quantity FROM (\n\
+    \  SELECT store_id, available_quantity\n  FROM `bronze.STORE_INVENTORY_DAILY`\n\
+    \  WHERE product_sku = {{entity_id}}\n  QUALIFY snapshot_date = MAX(snapshot_date)\
+    \ OVER (PARTITION BY store_id)\n) GROUP BY store_id ORDER BY available_quantity\
+    \ DESC\n"
+- entity_type: Product
+  type: table
+  dataset: V_STOCKED_AT
+  title: Stock by store
+  position: 1
+  config:
+    columns:
+    - MASTER_STORE_ID
+    - TOTAL_STOCK
+    - EXPIRED_STOCK
+    - SOONEST_EXPIRY
+    - LOW_STOCK_FLAG
+    order_by: TOTAL_STOCK
+    order_dir: desc
+    limit: 50
+- entity_type: Product
+  type: table
+  dataset: gold.FORECAST_RESULTS_UPDATE
+  title: Forecast quantity by store (next 1-3 days)
+  position: 2
+  query: 'SELECT MASTER_STORE_ID, ROUND(SUM(PREDICTED_SALES_QUANTITY), 1) AS forecast_qty
+    FROM `gen-lang-client-0520145261.gold.FORECAST_RESULTS_UPDATE` WHERE SKU_ID =
+    {{entity_id}} AND IS_LATEST_FORECAST = TRUE AND DAYS_AHEAD BETWEEN 1 AND 3 GROUP
+    BY MASTER_STORE_ID ORDER BY forecast_qty DESC
 
-  - entity_type: Recipe
-    type: table
-    dataset: V_RECIPE_LINE_COST
-    title: Cost by ingredient
-    position: 2
-    config:
-      columns: [INGREDIENT_NAME, ROLE, QTY_NET_G, PRICE_INR_PER_KG, LINE_COST_INR, COST_SHARE_PCT]
-      order_by: LINE_COST_INR
-      order_dir: desc
-      limit: 50
+    '
+- entity_type: Product
+  type: number
+  dataset: silver.BUSINESS_ANALYTICS
+  title: Quantity sold (this month)
+  position: 3
+  query: "SELECT SUM(QUANTITY) AS VALUE FROM `gen-lang-client-0520145261.silver.BUSINESS_ANALYTICS`\
+    \ WHERE SKU_ID = {{entity_id}} AND ORDER_STATE <> 'Cancelled'\n  AND ORDER_DATE\
+    \ >= DATE_TRUNC(CURRENT_DATE(), MONTH)\n"
+- entity_type: Product
+  type: number
+  dataset: silver.BUSINESS_ANALYTICS
+  title: Revenue (overall)
+  position: 4
+  query: 'SELECT SUM(TOTAL) AS VALUE FROM `gen-lang-client-0520145261.silver.BUSINESS_ANALYTICS`
+    WHERE SKU_ID = {{entity_id}} AND ORDER_STATE <> ''Cancelled''
 
-  # --- Store page --------------------------------------------------------
-  - entity_type: Store
-    type: number
-    dataset: CUSTOMER_REVIEW_EVENTS
-    title: Avg review rating
-    position: 0
-    config: { aggregation: avg, column: STAR_RATING }
-
-  - entity_type: Store
-    type: number
-    dataset: CUSTOMER_COMPLAINT_EVENTS
-    title: Complaints
-    position: 1
-    config: { aggregation: count, column: MASTER_STORE_ID }
-
-  - entity_type: Store
-    type: table
-    dataset: CUSTOMER_REVIEW_EVENTS
-    title: Recent reviews
-    position: 2
-    config:
-      columns: [REVIEW_DATE, STAR_RATING, CUSTOMER_NAME, REVIEW_TEXT]
-      order_by: REVIEW_DATE
-      order_dir: desc
-      limit: 20
-
-  - entity_type: Store
-    type: table
-    dataset: STORE_INVENTORY_DAILY
-    title: Inventory (latest snapshot)
-    position: 3
-    query: >
-        SELECT * FROM `bronze.STORE_INVENTORY_DAILY`
-        WHERE store_id = {{entity_id}}
-        QUALIFY snapshot_date = MAX(snapshot_date) OVER ()
-
-
-  - entity_type: Store
-    type: table
-    dataset: V_STORE_CAMPAIGN_CURRENT
-    title: Running campaigns (this month)
-    position: 4
-    config:
-      columns: [CAMPAIGN_ID, PRODUCT_TYPE, SEGMENTS, DATE, AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, ROI]
-      order_by: AD_SPEND_RS
-      order_dir: desc
-      limit: 50
-
-  - entity_type: Store
-    type: table
-    dataset: silver.BUSINESS_ANALYTICS
-    title: Sales by SKU
-    position: 5
-    query: >
-      SELECT SKU_ID, ANY_VALUE(ITEM_SOURCE_NAME) AS item_name,
-             SUM(QUANTITY) AS quantity, SUM(TOTAL) AS revenue
-      FROM `gen-lang-client-0520145261.silver.BUSINESS_ANALYTICS`
-      WHERE STORE_ID = {{entity_id}} AND ORDER_STATE <> 'Cancelled'
-        AND ORDER_DATE >= DATE_TRUNC(CURRENT_DATE(), MONTH)
-      GROUP BY SKU_ID
-      ORDER BY revenue DESC
-
-  # --- Product page ------------------------------------------------------
-  - entity_type: Product
-    type: table
-    dataset: STORE_INVENTORY_DAILY
-    title: Available quantity by store
-    position: 0
-    query: >
-      SELECT store_id, SUM(available_quantity) AS available_quantity
-      FROM (
-        SELECT store_id, available_quantity
-        FROM `bronze.STORE_INVENTORY_DAILY`
-        WHERE product_sku = {{entity_id}}
-        QUALIFY snapshot_date = MAX(snapshot_date) OVER (PARTITION BY store_id)
-      )
-      GROUP BY store_id
-      ORDER BY available_quantity DESC
-
-  - entity_type: Product
-    type: table
-    dataset: V_STOCKED_AT
-    title: Stock by store
-    position: 1
-    config:
-      columns: [MASTER_STORE_ID, TOTAL_STOCK, EXPIRED_STOCK, SOONEST_EXPIRY, LOW_STOCK_FLAG]
-      order_by: TOTAL_STOCK
-      order_dir: desc
-      limit: 50
-
-  - entity_type: Product
-    type: table
-    dataset: gold.FORECAST_RESULTS_UPDATE
-    title: Forecast quantity by store (next 1-3 days)
-    position: 2
-    query: >
-      SELECT MASTER_STORE_ID, ROUND(SUM(PREDICTED_SALES_QUANTITY), 1) AS forecast_qty
-      FROM `gen-lang-client-0520145261.gold.FORECAST_RESULTS_UPDATE`
-      WHERE SKU_ID = {{entity_id}} AND IS_LATEST_FORECAST = TRUE AND DAYS_AHEAD BETWEEN 1 AND 3
-      GROUP BY MASTER_STORE_ID
-      ORDER BY forecast_qty DESC
-
-  - entity_type: Product
-    type: number
-    dataset: silver.BUSINESS_ANALYTICS
-    title: Quantity sold (this month)
-    position: 3
-    query: >
-      SELECT SUM(QUANTITY) AS VALUE
-      FROM `gen-lang-client-0520145261.silver.BUSINESS_ANALYTICS`
-      WHERE SKU_ID = {{entity_id}} AND ORDER_STATE <> 'Cancelled'
-        AND ORDER_DATE >= DATE_TRUNC(CURRENT_DATE(), MONTH)
-
-  - entity_type: Product
-    type: number
-    dataset: silver.BUSINESS_ANALYTICS
-    title: Revenue (overall)
-    position: 4
-    query: >
-      SELECT SUM(TOTAL) AS VALUE
-      FROM `gen-lang-client-0520145261.silver.BUSINESS_ANALYTICS`
-      WHERE SKU_ID = {{entity_id}} AND ORDER_STATE <> 'Cancelled'
-
-  - entity_type: Product
-    type: table
-    dataset: V_RECIPE_COGS
-    title: Recipe versions & live COGS
-    position: 5
-    config:
-      columns: [VERSION_NO, STATUS, IS_CURRENT, INGREDIENT_COST_INR, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR, RECIPE_COGS_INR, MASTER_VARIANCE_INR]
-      order_by: VERSION_NO
-      order_dir: desc
-      limit: 20
-
-  # --- CustomerSegment page ---------------------------------------------
-  - entity_type: CustomerSegment
-    type: table
-    dataset: V_SEGMENT_BUDGET
-    title: Budget by store
-    position: 0
-    config:
-      columns: [STORE_NAME, CHANNEL, BUDGET_MONTH, ALLOCATED_BUDGET_RS]
-      order_by: ALLOCATED_BUDGET_RS
-      order_dir: desc
-      limit: 50
+    '
+- entity_type: Product
+  type: table
+  dataset: V_RECIPE_COGS
+  title: Recipe versions & live COGS
+  position: 5
+  config:
+    columns:
+    - VERSION_NO
+    - STATUS
+    - IS_CURRENT
+    - INGREDIENT_COST_INR
+    - PACKAGING_COST_INR
+    - LABOUR_OVERHEAD_INR
+    - RECIPE_COGS_INR
+    - MASTER_VARIANCE_INR
+    order_by: VERSION_NO
+    order_dir: desc
+    limit: 20
+- entity_type: CustomerSegment
+  type: table
+  dataset: V_SEGMENT_BUDGET
+  title: Budget by store
+  position: 0
+  config:
+    columns:
+    - STORE_NAME
+    - CHANNEL
+    - BUDGET_MONTH
+    - ALLOCATED_BUDGET_RS
+    order_by: ALLOCATED_BUDGET_RS
+    order_dir: desc
+    limit: 50

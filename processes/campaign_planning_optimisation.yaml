@@ -2,17 +2,19 @@ version: 1
 processes:
 - id: campaign_planning_optimisation
   name: Campaign Planning & Optimisation
-  description: "Reads currently-running ad-campaign performance by campaign and by dark store, and evaluates EVERY campaign\
-    \ \u2014 not only the top performers \u2014 recommending one evidence-backed action per row: stop, reduce budget, needs\
-    \ investigation, or increase budget (carefully, when the evidence supports it), plus new-campaign opportunities (strategic\
-    \ expansion into an uncovered customer segment). After the reviewer confirms, the summary is emailed to the marketing\
-    \ team as the action to take.\n"
+  description: "Reads currently-running ad-campaign performance by campaign and by\
+    \ dark store, and evaluates EVERY campaign \u2014 not only the top performers\
+    \ \u2014 recommending one evidence-backed action per row: stop, reduce budget,\
+    \ needs investigation, or increase budget (carefully, when the evidence supports\
+    \ it), plus new-campaign opportunities (strategic expansion into an uncovered\
+    \ customer segment). After the reviewer confirms, the summary is emailed to the\
+    \ marketing team as the action to take.\n"
   domain: Marketing
   owner: marketing_team
   definition_type: text
   applies_to:
-  - entity: Store
-  - entity: Store
+  - entity: Channel
+  - entity: Channel
     where:
     - field: id
       op: ne
@@ -44,108 +46,156 @@ processes:
   - id: evaluate_campaigns
     name: Campaign Performance Evaluation & Action Recommendation
     type: agent
-    description: Evaluate every currently-running campaign, across every store, and recommend one evidence-backed action per
-      row.
-    instruction: "`campaign_comparison` is ALREADY assembled: each row is one (store, campaign) currently running this month,\
-      \ with AD_SPEND_RS, AD_SALES_RS, AD_ORDERS, ROI, ROAS, CTR, ADS_M2O_PCT (menu-to-order conversion driven by ads), and\
-      \ OVERALL_M2O_PCT (the store's overall conversion) pre-computed month-to-date, plus TARGETING and SEGMENTS describing\
-      \ who the campaign targets. Do NOT recompute ROI, ROAS, CTR, or either M2O_PCT \u2014 they are already correct per row.\
-      \ This is a live snapshot (this month, campaigns running now). It covers Zomato/Swiggy campaigns only (RAW_MARKETING_DATA);\
-      \ Meta/Google spend is not yet in the BigQuery warehouse \u2014 state this gap explicitly, don't present the numbers\
-      \ as full-funnel.\n`campaign_history` gives one row per (store, campaign, calendar MONTH) across all history (V_STORE_CAMPAIGN_HISTORY)\
-      \ \u2014 use it only for trend context, never to override the ROI ladder below. For each `campaign_comparison` row,\
-      \ look for the `campaign_history` row at the SAME store_name + CAMPAIGN_ID whose MONTH is the calendar month immediately\
-      \ before this one. If found, cite that row's ROI and AD_SPEND_RS alongside this row's own figures in `reason` as a month-over-month\
-      \ comparison (e.g. \"ROI 1.8 this month vs 1.3 last month\"). If no such row exists (new campaign, or no spend last\
-      \ month), state plainly there is no prior month to compare and rely on this row's own figures alone. This is a month-over-month\
-      \ comparison, not week-over-week \u2014 V_STORE_CAMPAIGN_HISTORY has no weekly grain, so never state or imply a weekly\
-      \ trend.\nDo not call any tool, skill, or connector. Evaluate EVERY row in `campaign_comparison` \u2014 every store\
-      \ that has campaign data, not only the strongest performers. The customer-acquisition SEGMENTS a campaign targets is\
-      \ the meaningful grouping here, not PRODUCT_TYPE (carry PRODUCT_TYPE on each row only as a reference field). SEGMENTS\
-      \ values are store-specific \u2014 never treat a SEGMENTS value at one store as equivalent to the same-named value at\
-      \ a different store; every comparison stays within one store_name.\nAssign exactly one `suggested_action` per row from\
-      \ this evidence-based ladder. Never assign an action without citing its evidence in `reason` \u2014 ROI alone is not\
-      \ evidence; cite ROI plus at least one of ROAS / AD_SPEND_RS / AD_SALES_RS / the ADS_M2O_PCT vs OVERALL_M2O_PCT comparison\
-      \ \u2014 AND, in the same `reason`, add one further sentence in plain business language explaining what that evidence\
-      \ means for this specific store and why it leads to this suggested_action (not just restating the numbers back). Every\
-      \ `reason` must be composed fresh from this row's own figures \u2014 never copy or lightly reword another row's reason,\
-      \ and never state a trend, prediction, or cause that isn't directly computable from this row's own columns:\n  0a. AD_SPEND_RS\
-      \ = 0: suggested_action = \"cannot_evaluate\",\n     category = \"no_spend\", reason states there is no spend to\n \
-      \    evaluate a return on yet. Skip every other rung for this row.\n  0b. AD_ORDERS < 5 (metadata.campaign_rules.not_enough_data.min_ad_orders):\n\
-      \     suggested_action = \"not_enough_data\", category = \"insufficient_sample\",\n     reason cites AD_ORDERS and AD_SPEND_RS\
-      \ and states plainly that\n     the sample is too small to draw a stop/reduce/increase\n     conclusion from yet \u2014\
-      \ do not force this row into the ROI\n     ladder below just because a number is available; a ROI\n     computed from\
-      \ a handful of orders is not evidence. Skip every\n     other rung for this row.\n  1. ROI = 0 (AD_SALES_RS = 0, i.e.\
-      \ real spend converted to zero\n     attributed sales \u2014 do NOT lump every ROI=0 row into the same\n     bucket\
-      \ as a merely-weak ROI=0.43 campaign; this is its own\n     rung specifically because it can mean true failure, timing\
-      \ lag\n     in attribution, or an ingestion gap, and the reason must name\n     which is most likely from this row's\
-      \ own AD_SPEND_RS/AD_ORDERS):\n     suggested_action = \"stop\"; category = \"critical_failure\" if\n     AD_SPEND_RS\
-      \ >= 200 (metadata.campaign_rules.critical_failure\n     .min_spend_rs \u2014 real money spent for zero return, urgent),\n\
-      \     else \"underperforming\" (small spend, zero return, still worth\n     stopping but not framed as urgent). reason\
-      \ cites AD_SPEND_RS\n     and AD_ORDERS, explains none of this spend is converting into\n     attributed sales, and\
-      \ \u2014 for critical_failure only \u2014 explicitly\n     recommends redirecting this budget to a new campaign in a\n\
-      \     currently-uncovered segment at this store (see\n     expansion_suggestions).\n  2. 0 < ROI < 0.75: suggested_action\
-      \ = \"stop\", category =\n     \"underperforming\", reason cites the ROI plus AD_SPEND_RS and\n     AD_SALES_RS, explains\
-      \ that this campaign is currently losing\n     money relative to spend, and recommends redirecting this\n     budget\
-      \ rather than continuing to fund an underperforming one.\n  3. 0.75 <= ROI < 1.0: suggested_action = \"reduce_budget\"\
-      ,\n     category = \"weak\", reason cites the ROI and \u2014 if ADS_M2O_PCT\n     is at least 5 percentage points below\
-      \ OVERALL_M2O_PCT \u2014 cites\n     both percentages and explains ads are converting materially\n     worse than the\
-      \ store's own average; otherwise states plainly\n     there's a modest loss without a clear conversion-gap cause and\n\
-      \     that spend should be trimmed while the cause is investigated.\n  4. 1.0 <= ROI < 1.5 (break-even \u2014 this band\
-      \ is NOT a \"stop\" or an\n     \"increase\", it's genuinely ambiguous with the evidence\n     available): suggested_action\
-      \ = \"maintain\", category =\n     \"breakeven\", reason cites the ROI and states plainly that\n     this is roughly\
-      \ break-even \u2014 no clear case yet to cut or grow\n     spend, so hold and keep monitoring rather than guess.\n \
-      \ 5. 1.5 <= ROI < 2.5 (average \u2014 the store has room to grow here,\n     this band is NOT to be skipped just because\
-      \ it isn't a\n     standout): suggested_action = \"increase_budget_cautious\",\n     category = \"good\", reason cites\
-      \ the ROI and the ADS_M2O_PCT vs\n     OVERALL_M2O_PCT comparison, explains that a positive return\n     combined with\
-      \ this conversion performance means the store can\n     likely absorb more spend before returns turn marginal, and\n\
-      \     explicitly frames this as a cautious/modest increase (never\n     phrase this as confidently as an excellent performer's).\n\
-      \  6. 2.5 <= ROI <= 10: suggested_action = \"increase_budget_confident\",\n     category = \"excellent\", reason cites\
-      \ the ROI, AD_SPEND_RS, and\n     the SEGMENTS this campaign targets, and explains that this is\n     proven demand\
-      \ at a real spend level worth capturing with more\n     budget rather than leaving capped.\n  7. ROI > 10: suggested_action\
-      \ = \"validate_outlier\", category =\n     \"outlier\", reason cites the ROI plus AD_SPEND_RS and\n     AD_ORDERS and\
-      \ states plainly that a ROI this high is most\n     often a small-spend or small-sample artifact (or an\n     attribution-timing\
-      \ quirk), so it needs a human look before\n     being trusted as a repeatable result \u2014 do NOT recommend\n     increasing\
-      \ budget or treat this row as a proof point for\n     expansion off this number alone.\nThe point of rungs 3-5 is that\
-      \ weak and average stores get a concrete, evidence-backed action too \u2014 this ladder does not exist only to reward\
-      \ already-strong campaigns.\nFor every row (rungs 1-7 only; rungs 0a/0b always get confidence \"LOW\", priority \"LOW\"\
-      , estimated_impact null), also set:\n  `confidence`: \"HIGH\" if AD_ORDERS >= 20 AND ROI is at least 0.3\n    away from\
-      \ the nearest ladder boundary (0.75, 1.0, 1.5, 2.5, or\n    10) \u2014 a decisive number backed by a real sample; \"\
-      LOW\" if\n    AD_ORDERS < 20 (thin sample, even though it cleared the\n    not_enough_data floor) OR ROI is within 0.1\
-      \ of a boundary\n    (could flip to the neighboring rung on a small data wobble) OR\n    suggested_action is \"validate_outlier\"\
-      \ (always LOW \u2014 that's the\n    point of the rung); \"MEDIUM\" otherwise.\n  `priority`: \"HIGH\" if AD_SPEND_RS\
-      \ >= 5000 (metadata.campaign_rules\n    .priority.high_spend_rs_gte) AND suggested_action is \"stop\" or\n    starts\
-      \ with \"increase_budget\" \u2014 real money is on the line;\n    \"LOW\" if AD_SPEND_RS < 1000 (.priority.low_spend_rs_lt)\
-      \ OR\n    suggested_action is \"maintain\" or \"validate_outlier\"; \"MEDIUM\"\n    otherwise.\n  `estimated_impact`:\
-      \ a short rupee estimate, always caveated as\n    approximate, never presented as a precise forecast \u2014\n    \"\
-      stop\": \"~\u20B9<AD_SPEND_RS>/month freed up if spend stops\n    entirely\"; \"reduce_budget\": \"~\u20B9<AD_SPEND_RS\
-      \ \xD7 campaign_rules\n    .reduce_budget.reduce_pct%>/month saved, assuming ROI holds\";\n    \"increase_budget_cautious\"\
-      : \"~\u20B9<AD_SPEND_RS \xD7 campaign_rules\n    .increase_budget_cautious.increase_pct%\n    \xD7 ROI>/month additional\
-      \ sales, assuming ROI holds at the\n    current level (returns typically diminish as spend grows)\";\n    \"increase_budget_confident\"\
-      : same formula using campaign_rules\n    .increase_budget_confident.increase_pct instead;\n    \"maintain\"/\"validate_outlier\"\
-      : null\n    (no directional call yet, so no number to attach).\n\nIf `campaign_comparison` is empty, return `campaign_action_suggestions:\
-      \ []`. Otherwise output `campaign_action_suggestions`: a JSON array, one object per row (never null, a string, or omitted\
-      \ \u2014 an empty run is `[]`, not omitted), with exactly these keys: store_name, CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM,\
-      \ SEGMENTS, ROI, ROAS, AD_SALES_RS, AD_SPEND_RS, AD_ORDERS, ADS_M2O_PCT, OVERALL_M2O_PCT, category, reason, suggested_action,\
-      \ confidence, priority, estimated_impact.\n"
+    description: Evaluate every currently-running campaign, across every store, and
+      recommend one evidence-backed action per row.
+    instruction: "`campaign_comparison` is ALREADY assembled: each row is one (store,\
+      \ campaign) currently running this month, with AD_SPEND_RS, AD_SALES_RS, AD_ORDERS,\
+      \ ROI, ROAS, CTR, ADS_M2O_PCT (menu-to-order conversion driven by ads), and\
+      \ OVERALL_M2O_PCT (the store's overall conversion) pre-computed month-to-date,\
+      \ plus TARGETING and SEGMENTS describing who the campaign targets. Do NOT recompute\
+      \ ROI, ROAS, CTR, or either M2O_PCT \u2014 they are already correct per row.\
+      \ This is a live snapshot (this month, campaigns running now). It covers Zomato/Swiggy\
+      \ campaigns only (RAW_MARKETING_DATA); Meta/Google spend is not yet in the BigQuery\
+      \ warehouse \u2014 state this gap explicitly, don't present the numbers as full-funnel.\n\
+      `campaign_history` gives one row per (store, campaign, calendar MONTH) across\
+      \ all history (V_STORE_CAMPAIGN_HISTORY) \u2014 use it only for trend context,\
+      \ never to override the ROI ladder below. For each `campaign_comparison` row,\
+      \ look for the `campaign_history` row at the SAME store_name + CAMPAIGN_ID whose\
+      \ MONTH is the calendar month immediately before this one. If found, cite that\
+      \ row's ROI and AD_SPEND_RS alongside this row's own figures in `reason` as\
+      \ a month-over-month comparison (e.g. \"ROI 1.8 this month vs 1.3 last month\"\
+      ). If no such row exists (new campaign, or no spend last month), state plainly\
+      \ there is no prior month to compare and rely on this row's own figures alone.\
+      \ This is a month-over-month comparison, not week-over-week \u2014 V_STORE_CAMPAIGN_HISTORY\
+      \ has no weekly grain, so never state or imply a weekly trend.\nDo not call\
+      \ any tool, skill, or connector. Evaluate EVERY row in `campaign_comparison`\
+      \ \u2014 every store that has campaign data, not only the strongest performers.\
+      \ The customer-acquisition SEGMENTS a campaign targets is the meaningful grouping\
+      \ here, not PRODUCT_TYPE (carry PRODUCT_TYPE on each row only as a reference\
+      \ field). SEGMENTS values are store-specific \u2014 never treat a SEGMENTS value\
+      \ at one store as equivalent to the same-named value at a different store; every\
+      \ comparison stays within one store_name.\nAssign exactly one `suggested_action`\
+      \ per row from this evidence-based ladder. Never assign an action without citing\
+      \ its evidence in `reason` \u2014 ROI alone is not evidence; cite ROI plus at\
+      \ least one of ROAS / AD_SPEND_RS / AD_SALES_RS / the ADS_M2O_PCT vs OVERALL_M2O_PCT\
+      \ comparison \u2014 AND, in the same `reason`, add one further sentence in plain\
+      \ business language explaining what that evidence means for this specific store\
+      \ and why it leads to this suggested_action (not just restating the numbers\
+      \ back). Every `reason` must be composed fresh from this row's own figures \u2014\
+      \ never copy or lightly reword another row's reason, and never state a trend,\
+      \ prediction, or cause that isn't directly computable from this row's own columns:\n\
+      \  0a. AD_SPEND_RS = 0: suggested_action = \"cannot_evaluate\",\n     category\
+      \ = \"no_spend\", reason states there is no spend to\n     evaluate a return\
+      \ on yet. Skip every other rung for this row.\n  0b. AD_ORDERS < 5 (metadata.campaign_rules.not_enough_data.min_ad_orders):\n\
+      \     suggested_action = \"not_enough_data\", category = \"insufficient_sample\"\
+      ,\n     reason cites AD_ORDERS and AD_SPEND_RS and states plainly that\n   \
+      \  the sample is too small to draw a stop/reduce/increase\n     conclusion from\
+      \ yet \u2014 do not force this row into the ROI\n     ladder below just because\
+      \ a number is available; a ROI\n     computed from a handful of orders is not\
+      \ evidence. Skip every\n     other rung for this row.\n  1. ROI = 0 (AD_SALES_RS\
+      \ = 0, i.e. real spend converted to zero\n     attributed sales \u2014 do NOT\
+      \ lump every ROI=0 row into the same\n     bucket as a merely-weak ROI=0.43\
+      \ campaign; this is its own\n     rung specifically because it can mean true\
+      \ failure, timing lag\n     in attribution, or an ingestion gap, and the reason\
+      \ must name\n     which is most likely from this row's own AD_SPEND_RS/AD_ORDERS):\n\
+      \     suggested_action = \"stop\"; category = \"critical_failure\" if\n    \
+      \ AD_SPEND_RS >= 200 (metadata.campaign_rules.critical_failure\n     .min_spend_rs\
+      \ \u2014 real money spent for zero return, urgent),\n     else \"underperforming\"\
+      \ (small spend, zero return, still worth\n     stopping but not framed as urgent).\
+      \ reason cites AD_SPEND_RS\n     and AD_ORDERS, explains none of this spend\
+      \ is converting into\n     attributed sales, and \u2014 for critical_failure\
+      \ only \u2014 explicitly\n     recommends redirecting this budget to a new campaign\
+      \ in a\n     currently-uncovered segment at this store (see\n     expansion_suggestions).\n\
+      \  2. 0 < ROI < 0.75: suggested_action = \"stop\", category =\n     \"underperforming\"\
+      , reason cites the ROI plus AD_SPEND_RS and\n     AD_SALES_RS, explains that\
+      \ this campaign is currently losing\n     money relative to spend, and recommends\
+      \ redirecting this\n     budget rather than continuing to fund an underperforming\
+      \ one.\n  3. 0.75 <= ROI < 1.0: suggested_action = \"reduce_budget\",\n    \
+      \ category = \"weak\", reason cites the ROI and \u2014 if ADS_M2O_PCT\n    \
+      \ is at least 5 percentage points below OVERALL_M2O_PCT \u2014 cites\n     both\
+      \ percentages and explains ads are converting materially\n     worse than the\
+      \ store's own average; otherwise states plainly\n     there's a modest loss\
+      \ without a clear conversion-gap cause and\n     that spend should be trimmed\
+      \ while the cause is investigated.\n  4. 1.0 <= ROI < 1.5 (break-even \u2014\
+      \ this band is NOT a \"stop\" or an\n     \"increase\", it's genuinely ambiguous\
+      \ with the evidence\n     available): suggested_action = \"maintain\", category\
+      \ =\n     \"breakeven\", reason cites the ROI and states plainly that\n    \
+      \ this is roughly break-even \u2014 no clear case yet to cut or grow\n     spend,\
+      \ so hold and keep monitoring rather than guess.\n  5. 1.5 <= ROI < 2.5 (average\
+      \ \u2014 the store has room to grow here,\n     this band is NOT to be skipped\
+      \ just because it isn't a\n     standout): suggested_action = \"increase_budget_cautious\"\
+      ,\n     category = \"good\", reason cites the ROI and the ADS_M2O_PCT vs\n \
+      \    OVERALL_M2O_PCT comparison, explains that a positive return\n     combined\
+      \ with this conversion performance means the store can\n     likely absorb more\
+      \ spend before returns turn marginal, and\n     explicitly frames this as a\
+      \ cautious/modest increase (never\n     phrase this as confidently as an excellent\
+      \ performer's).\n  6. 2.5 <= ROI <= 10: suggested_action = \"increase_budget_confident\"\
+      ,\n     category = \"excellent\", reason cites the ROI, AD_SPEND_RS, and\n \
+      \    the SEGMENTS this campaign targets, and explains that this is\n     proven\
+      \ demand at a real spend level worth capturing with more\n     budget rather\
+      \ than leaving capped.\n  7. ROI > 10: suggested_action = \"validate_outlier\"\
+      , category =\n     \"outlier\", reason cites the ROI plus AD_SPEND_RS and\n\
+      \     AD_ORDERS and states plainly that a ROI this high is most\n     often\
+      \ a small-spend or small-sample artifact (or an\n     attribution-timing quirk),\
+      \ so it needs a human look before\n     being trusted as a repeatable result\
+      \ \u2014 do NOT recommend\n     increasing budget or treat this row as a proof\
+      \ point for\n     expansion off this number alone.\nThe point of rungs 3-5 is\
+      \ that weak and average stores get a concrete, evidence-backed action too \u2014\
+      \ this ladder does not exist only to reward already-strong campaigns.\nFor every\
+      \ row (rungs 1-7 only; rungs 0a/0b always get confidence \"LOW\", priority \"\
+      LOW\", estimated_impact null), also set:\n  `confidence`: \"HIGH\" if AD_ORDERS\
+      \ >= 20 AND ROI is at least 0.3\n    away from the nearest ladder boundary (0.75,\
+      \ 1.0, 1.5, 2.5, or\n    10) \u2014 a decisive number backed by a real sample;\
+      \ \"LOW\" if\n    AD_ORDERS < 20 (thin sample, even though it cleared the\n\
+      \    not_enough_data floor) OR ROI is within 0.1 of a boundary\n    (could flip\
+      \ to the neighboring rung on a small data wobble) OR\n    suggested_action is\
+      \ \"validate_outlier\" (always LOW \u2014 that's the\n    point of the rung);\
+      \ \"MEDIUM\" otherwise.\n  `priority`: \"HIGH\" if AD_SPEND_RS >= 5000 (metadata.campaign_rules\n\
+      \    .priority.high_spend_rs_gte) AND suggested_action is \"stop\" or\n    starts\
+      \ with \"increase_budget\" \u2014 real money is on the line;\n    \"LOW\" if\
+      \ AD_SPEND_RS < 1000 (.priority.low_spend_rs_lt) OR\n    suggested_action is\
+      \ \"maintain\" or \"validate_outlier\"; \"MEDIUM\"\n    otherwise.\n  `estimated_impact`:\
+      \ a short rupee estimate, always caveated as\n    approximate, never presented\
+      \ as a precise forecast \u2014\n    \"stop\": \"~\u20B9<AD_SPEND_RS>/month freed\
+      \ up if spend stops\n    entirely\"; \"reduce_budget\": \"~\u20B9<AD_SPEND_RS\
+      \ \xD7 campaign_rules\n    .reduce_budget.reduce_pct%>/month saved, assuming\
+      \ ROI holds\";\n    \"increase_budget_cautious\": \"~\u20B9<AD_SPEND_RS \xD7\
+      \ campaign_rules\n    .increase_budget_cautious.increase_pct%\n    \xD7 ROI>/month\
+      \ additional sales, assuming ROI holds at the\n    current level (returns typically\
+      \ diminish as spend grows)\";\n    \"increase_budget_confident\": same formula\
+      \ using campaign_rules\n    .increase_budget_confident.increase_pct instead;\n\
+      \    \"maintain\"/\"validate_outlier\": null\n    (no directional call yet,\
+      \ so no number to attach).\n\nIf `campaign_comparison` is empty, return `campaign_action_suggestions:\
+      \ []`. Otherwise output `campaign_action_suggestions`: a JSON array, one object\
+      \ per row (never null, a string, or omitted \u2014 an empty run is `[]`, not\
+      \ omitted), with exactly these keys: store_name, CAMPAIGN_ID, PRODUCT_TYPE,\
+      \ PLATFORM, SEGMENTS, ROI, ROAS, AD_SALES_RS, AD_SPEND_RS, AD_ORDERS, ADS_M2O_PCT,\
+      \ OVERALL_M2O_PCT, category, reason, suggested_action, confidence, priority,\
+      \ estimated_impact.\n"
     produces:
     - campaign_action_suggestions
   - id: approve_actions
     name: Approve Campaign Actions
     type: decision
     after: evaluate_campaigns
-    description: Marketing manager approves or rejects the recommended actions across all evaluated campaigns.
-    instruction: "Review `campaign_action_suggestions` \u2014 every currently-running campaign's recommended action (cannot_evaluate,\
-      \ not_enough_data, stop, reduce_budget, maintain, increase_budget_cautious, increase_budget_confident, or validate_outlier),\
-      \ each with its evidence-backed reason. Recommend \"Apply Campaign Changes\" to carry all of these into the final action\
-      \ plan, \"Hold Changes\" to hold the whole batch back this run (e.g. a known seasonal dip that shouldn't trigger any\
-      \ changes yet).\n`campaign_action_suggestions` is already provided above \u2014 do NOT call collect_context or any other\
-      \ tool to search for or verify it. A tool search for this fact will find nothing (it is a process fact, not a graph\
-      \ entity) and an empty tool result does NOT mean the data is missing; judge only what's already given to you. Every\
-      \ row already carries its own cited evidence (ROI plus spend/sales/ conversion figures) in `reason` \u2014 never state\
-      \ that evidence, insight, or data is lacking or that action suggestions weren't gathered; that evidence is already present\
-      \ in every row above. Only recommend \"Hold Changes\" for a substantive reason (e.g. a known seasonal dip), never for\
-      \ a perceived absence of data.\n"
+    description: Marketing manager approves or rejects the recommended actions across
+      all evaluated campaigns.
+    instruction: "Review `campaign_action_suggestions` \u2014 every currently-running\
+      \ campaign's recommended action (cannot_evaluate, not_enough_data, stop, reduce_budget,\
+      \ maintain, increase_budget_cautious, increase_budget_confident, or validate_outlier),\
+      \ each with its evidence-backed reason. Recommend \"Apply Campaign Changes\"\
+      \ to carry all of these into the final action plan, \"Hold Changes\" to hold\
+      \ the whole batch back this run (e.g. a known seasonal dip that shouldn't trigger\
+      \ any changes yet).\n`campaign_action_suggestions` is already provided above\
+      \ \u2014 do NOT call collect_context or any other tool to search for or verify\
+      \ it. A tool search for this fact will find nothing (it is a process fact, not\
+      \ a graph entity) and an empty tool result does NOT mean the data is missing;\
+      \ judge only what's already given to you. Every row already carries its own\
+      \ cited evidence (ROI plus spend/sales/ conversion figures) in `reason` \u2014\
+      \ never state that evidence, insight, or data is lacking or that action suggestions\
+      \ weren't gathered; that evidence is already present in every row above. Only\
+      \ recommend \"Hold Changes\" for a substantive reason (e.g. a known seasonal\
+      \ dip), never for a perceived absence of data.\n"
     decision_options:
     - Apply Campaign Changes
     - Hold Changes
@@ -154,7 +204,8 @@ processes:
     - actions_decision
     key_data:
     - title: Campaign Action Recommendations
-      summary: "Every currently-running campaign, evaluated with an evidence-backed action \u2014 not just the top performers."
+      summary: "Every currently-running campaign, evaluated with an evidence-backed\
+        \ action \u2014 not just the top performers."
       views:
       - view: table
         from: campaign_action_suggestions
@@ -195,45 +246,65 @@ processes:
     name: Opportunity Discovery (New Campaigns)
     type: agent
     after: evaluate_campaigns
-    description: Identify customer-segment gaps at proven stores, and store/channel budget that's allocated but unspent.
-    instruction: "Campaign targeting here is decided by SEGMENTS (the customer segment a campaign targets), not PRODUCT_TYPE\
-      \ \u2014 PRODUCT_TYPE is carried in every row only as a reference to which running campaign the suggestion is modeled\
-      \ on. SEGMENTS values are store-specific \u2014 never match a SEGMENTS value between two different stores as if it were\
-      \ the same audience. Two SEGMENTS strings at the SAME store that differ only in wording or spacing (e.g. \"Young Professionals\
-      \ - Lunch\" vs \"Young Professionals / Office Lunch\") describe the same audience \u2014 normalize whitespace/ punctuation\
-      \ and compare case-insensitively before treating two values as distinct segments, so the same real gap is never proposed\
-      \ twice under two spellings.\nFind expansion candidates from TWO signals \u2014 emit at most one expansion row per (store,\
-      \ missing SEGMENTS value) even if both signals point to it:\n1. Proof-point gap: for every store with at least one row\
-      \ in `campaign_action_suggestions` where suggested_action = \"increase_budget_confident\" (ROI between 2.5 and 10 \u2014\
-      \ a genuine \"excellent\" result, never \"validate_outlier\": a ROI > 10 row is an unvalidated artifact, not proof of\
-      \ anything repeatable, and must NEVER be used as a proof point here) AND AD_SPEND_RS >= metadata.expansion_rules.min_proof_point_spend_rs\
-      \ (500) AND AD_ORDERS >= metadata.expansion_rules.min_proof_point_orders (20) \u2014 a high ROI from a tiny sample or\
-      \ trivial spend is not a proof point, e.g. ROI 6 from AD_SPEND_RS 50 / AD_ORDERS 3 does NOT qualify \u2014 check which\
-      \ SEGMENTS values that store has NO currently-running campaign for, against the full set of SEGMENTS values seen anywhere\
-      \ in `campaign_comparison`. For each missing SEGMENTS value, add ONE expansion suggestion: category = \"strategic_expansion\"\
-      , suggested_action = \"new_campaign:<missing SEGMENTS value>\", CAMPAIGN_ID = null, SEGMENTS = the missing segment itself\
-      \ (the gap being proposed), PRODUCT_TYPE and PLATFORM = the PRODUCT_TYPE and PLATFORM of the high-performing proof-point\
-      \ campaign (reference only, not the gap dimension), and ROI/AD_SALES_RS/AD_SPEND_RS/ADS_M2O_PCT/OVERALL_M2O_PCT copied\
-      \ from that proof-point campaign \u2014 never invent numbers. reason = one line naming the missing segment and the proof-point\
-      \ CAMPAIGN_ID/ROI it's modeled on (e.g. \"no running campaign targets the Value-Seekers segment at this store; Campaign\
-      \ 47 in that segment runs ROI 2.6\"). A store with no qualifying proof-point row, or one already running every SEGMENTS\
-      \ value, gets no row from this signal.\n2. Unspent budget: for every `segment_budget` row where ALLOCATED_BUDGET_RS\
-      \ > 0 but that store_name + CHANNEL has NO matching PLATFORM rows at all in `campaign_comparison` this BUDGET_MONTH,\
-      \ add ONE expansion row: category = \"strategic_expansion\", suggested_action = \"new_campaign:budget_allocated_unused\"\
-      , CAMPAIGN_ID = null, PRODUCT_TYPE = null, PLATFORM = the segment_budget CHANNEL, AD_SPEND_RS = 0, AD_SALES_RS = null,\
-      \ ADS_M2O_PCT = null, OVERALL_M2O_PCT = null, ROI = null (there's no campaign to measure \u2014 state the ALLOCATED_BUDGET_RS\
-      \ rupee amount in reason and in flagged_summary instead), reason = one line stating the allocated rupee amount and that\
-      \ zero campaigns are running against it this month.\nTreat rows with PRODUCT_TYPE = null as their own store-specific\
-      \ case (never a source or target for signal 1's gap-matching).\nEvery row also gets: `confidence` = \"MEDIUM\" for a\
-      \ signal-1 proof- point row that clears the sufficiency thresholds above (it's real evidence, but from one campaign,\
-      \ not a controlled test \u2014 never \"HIGH\"), or \"LOW\" for a signal-2 unspent-budget row (no performance evidence\
-      \ at all, just an unused allocation). `priority` = \"HIGH\" if ALLOCATED_BUDGET_RS (signal 2) or the proof-point's AD_SPEND_RS\
-      \ (signal 1) is >= metadata.campaign_rules.priority.high_spend_rs_gte, else \"MEDIUM\". `estimated_impact` = for signal\
-      \ 1, \"~\u20B9<proof-point AD_SALES_RS>/month if this segment performs similarly to the proof point (approximate \u2014\
-      \ new segment, unproven)\"; for signal 2, \"~\u20B9 <ALLOCATED_BUDGET_RS>/month already budgeted and currently unused\"\
-      .\nIf no store qualifies under either signal, return `expansion_suggestions: []`. Otherwise output `expansion_suggestions`:\
-      \ a JSON array with exactly these keys: store_name, CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM, SEGMENTS, ROI, AD_SALES_RS,\
-      \ AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT, category, reason, suggested_action, confidence, priority, estimated_impact.\n"
+    description: Identify customer-segment gaps at proven stores, and store/channel
+      budget that's allocated but unspent.
+    instruction: "Campaign targeting here is decided by SEGMENTS (the customer segment\
+      \ a campaign targets), not PRODUCT_TYPE \u2014 PRODUCT_TYPE is carried in every\
+      \ row only as a reference to which running campaign the suggestion is modeled\
+      \ on. SEGMENTS values are store-specific \u2014 never match a SEGMENTS value\
+      \ between two different stores as if it were the same audience. Two SEGMENTS\
+      \ strings at the SAME store that differ only in wording or spacing (e.g. \"\
+      Young Professionals - Lunch\" vs \"Young Professionals / Office Lunch\") describe\
+      \ the same audience \u2014 normalize whitespace/ punctuation and compare case-insensitively\
+      \ before treating two values as distinct segments, so the same real gap is never\
+      \ proposed twice under two spellings.\nFind expansion candidates from TWO signals\
+      \ \u2014 emit at most one expansion row per (store, missing SEGMENTS value)\
+      \ even if both signals point to it:\n1. Proof-point gap: for every store with\
+      \ at least one row in `campaign_action_suggestions` where suggested_action =\
+      \ \"increase_budget_confident\" (ROI between 2.5 and 10 \u2014 a genuine \"\
+      excellent\" result, never \"validate_outlier\": a ROI > 10 row is an unvalidated\
+      \ artifact, not proof of anything repeatable, and must NEVER be used as a proof\
+      \ point here) AND AD_SPEND_RS >= metadata.expansion_rules.min_proof_point_spend_rs\
+      \ (500) AND AD_ORDERS >= metadata.expansion_rules.min_proof_point_orders (20)\
+      \ \u2014 a high ROI from a tiny sample or trivial spend is not a proof point,\
+      \ e.g. ROI 6 from AD_SPEND_RS 50 / AD_ORDERS 3 does NOT qualify \u2014 check\
+      \ which SEGMENTS values that store has NO currently-running campaign for, against\
+      \ the full set of SEGMENTS values seen anywhere in `campaign_comparison`. For\
+      \ each missing SEGMENTS value, add ONE expansion suggestion: category = \"strategic_expansion\"\
+      , suggested_action = \"new_campaign:<missing SEGMENTS value>\", CAMPAIGN_ID\
+      \ = null, SEGMENTS = the missing segment itself (the gap being proposed), PRODUCT_TYPE\
+      \ and PLATFORM = the PRODUCT_TYPE and PLATFORM of the high-performing proof-point\
+      \ campaign (reference only, not the gap dimension), and ROI/AD_SALES_RS/AD_SPEND_RS/ADS_M2O_PCT/OVERALL_M2O_PCT\
+      \ copied from that proof-point campaign \u2014 never invent numbers. reason\
+      \ = one line naming the missing segment and the proof-point CAMPAIGN_ID/ROI\
+      \ it's modeled on (e.g. \"no running campaign targets the Value-Seekers segment\
+      \ at this store; Campaign 47 in that segment runs ROI 2.6\"). A store with no\
+      \ qualifying proof-point row, or one already running every SEGMENTS value, gets\
+      \ no row from this signal.\n2. Unspent budget: for every `segment_budget` row\
+      \ where ALLOCATED_BUDGET_RS > 0 but that store_name + CHANNEL has NO matching\
+      \ PLATFORM rows at all in `campaign_comparison` this BUDGET_MONTH, add ONE expansion\
+      \ row: category = \"strategic_expansion\", suggested_action = \"new_campaign:budget_allocated_unused\"\
+      , CAMPAIGN_ID = null, PRODUCT_TYPE = null, PLATFORM = the segment_budget CHANNEL,\
+      \ AD_SPEND_RS = 0, AD_SALES_RS = null, ADS_M2O_PCT = null, OVERALL_M2O_PCT =\
+      \ null, ROI = null (there's no campaign to measure \u2014 state the ALLOCATED_BUDGET_RS\
+      \ rupee amount in reason and in flagged_summary instead), reason = one line\
+      \ stating the allocated rupee amount and that zero campaigns are running against\
+      \ it this month.\nTreat rows with PRODUCT_TYPE = null as their own store-specific\
+      \ case (never a source or target for signal 1's gap-matching).\nEvery row also\
+      \ gets: `confidence` = \"MEDIUM\" for a signal-1 proof- point row that clears\
+      \ the sufficiency thresholds above (it's real evidence, but from one campaign,\
+      \ not a controlled test \u2014 never \"HIGH\"), or \"LOW\" for a signal-2 unspent-budget\
+      \ row (no performance evidence at all, just an unused allocation). `priority`\
+      \ = \"HIGH\" if ALLOCATED_BUDGET_RS (signal 2) or the proof-point's AD_SPEND_RS\
+      \ (signal 1) is >= metadata.campaign_rules.priority.high_spend_rs_gte, else\
+      \ \"MEDIUM\". `estimated_impact` = for signal 1, \"~\u20B9<proof-point AD_SALES_RS>/month\
+      \ if this segment performs similarly to the proof point (approximate \u2014\
+      \ new segment, unproven)\"; for signal 2, \"~\u20B9 <ALLOCATED_BUDGET_RS>/month\
+      \ already budgeted and currently unused\".\nIf no store qualifies under either\
+      \ signal, return `expansion_suggestions: []`. Otherwise output `expansion_suggestions`:\
+      \ a JSON array with exactly these keys: store_name, CAMPAIGN_ID, PRODUCT_TYPE,\
+      \ PLATFORM, SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT,\
+      \ category, reason, suggested_action, confidence, priority, estimated_impact.\n"
     produces:
     - expansion_suggestions
   - id: approve_expansion
@@ -242,12 +313,15 @@ processes:
     after: find_expansion_opportunities
     condition: '{{expansion_suggestions}} != []'
     description: Marketing manager approves or rejects the new-campaign suggestions.
-    instruction: "Review `expansion_suggestions` \u2014 proposed new campaigns, each modeled on a proven high-performing campaign\
-      \ or an already-funded but unused budget line. Recommend \"Launch New Campaigns\" to carry these into the final action\
-      \ plan, \"Skip Expansion\" to hold them back this run (e.g. product/menu isn't ready to launch yet).\n`expansion_suggestions`\
-      \ is already provided above \u2014 do NOT call collect_context or any other tool to search for or verify it. A tool\
-      \ search for this fact will find nothing (it is a process fact, not a graph entity) and an empty tool result does NOT\
-      \ mean the data is missing; judge only what's already given to you.\n"
+    instruction: "Review `expansion_suggestions` \u2014 proposed new campaigns, each\
+      \ modeled on a proven high-performing campaign or an already-funded but unused\
+      \ budget line. Recommend \"Launch New Campaigns\" to carry these into the final\
+      \ action plan, \"Skip Expansion\" to hold them back this run (e.g. product/menu\
+      \ isn't ready to launch yet).\n`expansion_suggestions` is already provided above\
+      \ \u2014 do NOT call collect_context or any other tool to search for or verify\
+      \ it. A tool search for this fact will find nothing (it is a process fact, not\
+      \ a graph entity) and an empty tool result does NOT mean the data is missing;\
+      \ judge only what's already given to you.\n"
     decision_options:
     - Launch New Campaigns
     - Skip Expansion
@@ -256,8 +330,8 @@ processes:
     - expansion_decision
     key_data:
     - title: Strategic Expansion Opportunities
-      summary: "Proposed new campaigns \u2014 segment gaps at proven stores and unspent allocated budget, with the reason\
-        \ behind each call."
+      summary: "Proposed new campaigns \u2014 segment gaps at proven stores and unspent\
+        \ allocated budget, with the reason behind each call."
       views:
       - view: table
         from: expansion_suggestions
@@ -281,37 +355,54 @@ processes:
     name: Recommendation Generation
     type: agent
     after: approve_expansion
-    description: Merge the approved campaign-action and expansion suggestions into one final action plan.
-    instruction: "`campaign_action_suggestions` is governed by `actions_decision` (the Approve Campaign Actions gate); `expansion_suggestions`\
-      \ is governed separately by `expansion_decision`. A decision fact is present only when there was something to review;\
-      \ when the underlying suggestion list was already empty the gate was skipped and its decision fact won't exist \u2014\
-      \ treat a missing decision as \"include\" (there's nothing to exclude anyway). Include `campaign_action_suggestions`\
-      \ in `flagged_campaigns` UNLESS `actions_decision` is exactly \"Hold Changes\"; include `expansion_suggestions` UNLESS\
-      \ `expansion_decision` is exactly \"Skip Expansion\".\nConcatenate the included sets \u2014 `campaign_action_suggestions`,\
-      \ then `expansion_suggestions` \u2014 into `flagged_campaigns`: a JSON array, each item already shaped with store_name,\
-      \ CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM, SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT, category,\
-      \ reason, suggested_action, confidence, priority, estimated_impact from the steps that produced them \u2014 every row\
-      \ already supplies its own `reason`, `priority`, and `estimated_impact`, so this is a straight carry-over, never invent\
-      \ or recompute any of them. Then sort the concatenated array by `priority` (HIGH first, then MEDIUM, then LOW), preserving\
-      \ the original relative order within each priority band \u2014 a reviewer scanning top-to-bottom should see the highest-money-at-risk/upside\
-      \ items first, not just campaign-action rows before expansion rows. If nothing is included, return `flagged_campaigns:\
-      \ []`. Never return null, a string, or omit the field.\n`flagged_summary`: plain business language grouped by suggested_action,\
-      \ naming the specific action, citing its reason, and \u2014 whenever `estimated_impact` is not null \u2014 appending\
-      \ it in parentheses (e.g. \"estimated ~\u20B94,200/month saved\") so the reader knows why it matters, e.g. \"Stop: Campaign\
-      \ 12 at Store X (zero sales on \u20B9300 spend \u2014 a critical failure, not just a weak result; redirect this budget\
-      \ to a new campaign in an uncovered segment at this store instead). Stop: Campaign 8 at Store Y (ROI 0.6 \u2014 losing\
-      \ money on spend). Reduce budget: Campaign 15 at Store T (ROI 0.9, converting materially worse than the store average\
-      \ \u2014 trim spend until conversion improves). Maintain: Campaign 21 at Store W (ROI 1.2 \u2014 roughly break-even,\
-      \ hold and keep monitoring rather than guess). Increase budget (cautiously): Campaign 33 at Store U (ROI 1.8, converting\
-      \ on par with the store average \u2014 room to absorb more spend before returns turn marginal). Increase budget (confidently):\
-      \ Campaign 47 at Store Z (ROI 2.6 on \u20B96,000 spend, targeting the Value-Seekers segment \u2014 proven demand worth\
-      \ capturing further). Validate before scaling: Campaign 52 at Store Q (ROI 14 on \u20B980 spend \u2014 likely a small-sample\
-      \ artifact, needs a human look before trusting it). New campaign: Store Z should launch a campaign for the Loyal-Regulars\
-      \ segment \u2014 no running campaign targets it, and Campaign 47 (same store, Value-Seekers segment) proves ROI 2.6\
-      \ is achievable there.\" If a set was rejected at its gate, note that plainly, e.g. \"Campaign action suggestions were\
-      \ reviewed and held back this run.\" If `flagged_campaigns` is empty overall, `flagged_summary` = \"No campaigns are\
-      \ currently running.\" if `campaign_comparison` was empty, else \"All suggestions were reviewed and held back this run.\"\
-      \ Describe actions only \u2014 do not paste the raw table or restate every metric already in `flagged_campaigns`.\n"
+    description: Merge the approved campaign-action and expansion suggestions into
+      one final action plan.
+    instruction: "`campaign_action_suggestions` is governed by `actions_decision`\
+      \ (the Approve Campaign Actions gate); `expansion_suggestions` is governed separately\
+      \ by `expansion_decision`. A decision fact is present only when there was something\
+      \ to review; when the underlying suggestion list was already empty the gate\
+      \ was skipped and its decision fact won't exist \u2014 treat a missing decision\
+      \ as \"include\" (there's nothing to exclude anyway). Include `campaign_action_suggestions`\
+      \ in `flagged_campaigns` UNLESS `actions_decision` is exactly \"Hold Changes\"\
+      ; include `expansion_suggestions` UNLESS `expansion_decision` is exactly \"\
+      Skip Expansion\".\nConcatenate the included sets \u2014 `campaign_action_suggestions`,\
+      \ then `expansion_suggestions` \u2014 into `flagged_campaigns`: a JSON array,\
+      \ each item already shaped with store_name, CAMPAIGN_ID, PRODUCT_TYPE, PLATFORM,\
+      \ SEGMENTS, ROI, AD_SALES_RS, AD_SPEND_RS, ADS_M2O_PCT, OVERALL_M2O_PCT, category,\
+      \ reason, suggested_action, confidence, priority, estimated_impact from the\
+      \ steps that produced them \u2014 every row already supplies its own `reason`,\
+      \ `priority`, and `estimated_impact`, so this is a straight carry-over, never\
+      \ invent or recompute any of them. Then sort the concatenated array by `priority`\
+      \ (HIGH first, then MEDIUM, then LOW), preserving the original relative order\
+      \ within each priority band \u2014 a reviewer scanning top-to-bottom should\
+      \ see the highest-money-at-risk/upside items first, not just campaign-action\
+      \ rows before expansion rows. If nothing is included, return `flagged_campaigns:\
+      \ []`. Never return null, a string, or omit the field.\n`flagged_summary`: plain\
+      \ business language grouped by suggested_action, naming the specific action,\
+      \ citing its reason, and \u2014 whenever `estimated_impact` is not null \u2014\
+      \ appending it in parentheses (e.g. \"estimated ~\u20B94,200/month saved\")\
+      \ so the reader knows why it matters, e.g. \"Stop: Campaign 12 at Store X (zero\
+      \ sales on \u20B9300 spend \u2014 a critical failure, not just a weak result;\
+      \ redirect this budget to a new campaign in an uncovered segment at this store\
+      \ instead). Stop: Campaign 8 at Store Y (ROI 0.6 \u2014 losing money on spend).\
+      \ Reduce budget: Campaign 15 at Store T (ROI 0.9, converting materially worse\
+      \ than the store average \u2014 trim spend until conversion improves). Maintain:\
+      \ Campaign 21 at Store W (ROI 1.2 \u2014 roughly break-even, hold and keep monitoring\
+      \ rather than guess). Increase budget (cautiously): Campaign 33 at Store U (ROI\
+      \ 1.8, converting on par with the store average \u2014 room to absorb more spend\
+      \ before returns turn marginal). Increase budget (confidently): Campaign 47\
+      \ at Store Z (ROI 2.6 on \u20B96,000 spend, targeting the Value-Seekers segment\
+      \ \u2014 proven demand worth capturing further). Validate before scaling: Campaign\
+      \ 52 at Store Q (ROI 14 on \u20B980 spend \u2014 likely a small-sample artifact,\
+      \ needs a human look before trusting it). New campaign: Store Z should launch\
+      \ a campaign for the Loyal-Regulars segment \u2014 no running campaign targets\
+      \ it, and Campaign 47 (same store, Value-Seekers segment) proves ROI 2.6 is\
+      \ achievable there.\" If a set was rejected at its gate, note that plainly,\
+      \ e.g. \"Campaign action suggestions were reviewed and held back this run.\"\
+      \ If `flagged_campaigns` is empty overall, `flagged_summary` = \"No campaigns\
+      \ are currently running.\" if `campaign_comparison` was empty, else \"All suggestions\
+      \ were reviewed and held back this run.\" Describe actions only \u2014 do not\
+      \ paste the raw table or restate every metric already in `flagged_campaigns`.\n"
     produces:
     - flagged_campaigns
     - flagged_summary
@@ -319,21 +410,29 @@ processes:
     name: Final Send Approval
     type: decision
     after: create_action_plan
-    description: Marketing manager confirms sending the consolidated action plan (or escalates if there was no data at all).
-    instruction: "Review flagged_summary and flagged_campaigns \u2014 the CONSOLIDATED plan from the two gates above (each\
-      \ already approved or rejected individually). This gate is about whether to SEND it, not re-litigate each set. Recommend\
-      \ \"Escalate (No Data)\" if `campaign_comparison` itself was empty this run (no campaigns currently running at all \u2014\
-      \ nothing to review), OR if every row's DATE in `campaign_comparison` is more than 2 days older than `scheduled_at`\
-      \ (when `scheduled_at` is present) \u2014 that gap means the underlying view hasn't refreshed and every recommendation\
-      \ above would be acting on stale data; state that explicitly rather than sending a plan built on it. An empty `flagged_campaigns`\
-      \ with a non-empty `campaign_comparison` is a different, normal case \u2014 every set was held back above \u2014 and\
-      \ is NOT a reason to escalate. In that case, and in every other case, recommend \"Send to Marketing Team\" to send the\
-      \ performance + optimisation summary to the marketing team, whether or not any campaigns were flagged this run. Only\
-      \ recommend \"Hold Report\" if flagged_summary itself looks wrong or incomplete (e.g. contradicts flagged_campaigns,\
-      \ or a category/suggested_action is missing or inconsistent) and shouldn't go out as-is.\n`flagged_summary` and `flagged_campaigns`\
-      \ are already provided above \u2014 do NOT call collect_context or any other tool to search for or verify them. A tool\
-      \ search for these facts will find nothing (they are process facts, not graph entities) and an empty tool result does\
-      \ NOT mean the data is missing; judge only what's already given to you.\n"
+    description: Marketing manager confirms sending the consolidated action plan (or
+      escalates if there was no data at all).
+    instruction: "Review flagged_summary and flagged_campaigns \u2014 the CONSOLIDATED\
+      \ plan from the two gates above (each already approved or rejected individually).\
+      \ This gate is about whether to SEND it, not re-litigate each set. Recommend\
+      \ \"Escalate (No Data)\" if `campaign_comparison` itself was empty this run\
+      \ (no campaigns currently running at all \u2014 nothing to review), OR if every\
+      \ row's DATE in `campaign_comparison` is more than 2 days older than `scheduled_at`\
+      \ (when `scheduled_at` is present) \u2014 that gap means the underlying view\
+      \ hasn't refreshed and every recommendation above would be acting on stale data;\
+      \ state that explicitly rather than sending a plan built on it. An empty `flagged_campaigns`\
+      \ with a non-empty `campaign_comparison` is a different, normal case \u2014\
+      \ every set was held back above \u2014 and is NOT a reason to escalate. In that\
+      \ case, and in every other case, recommend \"Send to Marketing Team\" to send\
+      \ the performance + optimisation summary to the marketing team, whether or not\
+      \ any campaigns were flagged this run. Only recommend \"Hold Report\" if flagged_summary\
+      \ itself looks wrong or incomplete (e.g. contradicts flagged_campaigns, or a\
+      \ category/suggested_action is missing or inconsistent) and shouldn't go out\
+      \ as-is.\n`flagged_summary` and `flagged_campaigns` are already provided above\
+      \ \u2014 do NOT call collect_context or any other tool to search for or verify\
+      \ them. A tool search for these facts will find nothing (they are process facts,\
+      \ not graph entities) and an empty tool result does NOT mean the data is missing;\
+      \ judge only what's already given to you.\n"
     decision_options:
     - Send to Marketing Team
     - Hold Report
@@ -343,8 +442,8 @@ processes:
     - report_decision
     key_data:
     - title: Flagged Campaigns
-      summary: "Every evaluated campaign's action, plus strategic-expansion suggestions, this month \u2014 with the reason\
-        \ behind each call."
+      summary: "Every evaluated campaign's action, plus strategic-expansion suggestions,\
+        \ this month \u2014 with the reason behind each call."
       views:
       - view: table
         from: flagged_campaigns
@@ -398,8 +497,8 @@ processes:
           to: rahul.ab@genzoic.com
           subject: "Campaign Recalibration Actions \u2014 Month-to-Date"
           title: "Campaign Planning & Optimisation \u2014 Action Plan"
-          intro: Campaign review completed across dark-store locations (Zomato/Swiggy only, Meta/Google pending warehouse),
-            month-to-date. {{flagged_summary}}
+          intro: Campaign review completed across dark-store locations (Zomato/Swiggy
+            only, Meta/Google pending warehouse), month-to-date. {{flagged_summary}}
           sections:
           - type: table
             caption: "Flagged campaigns \u2014 action, data, and reason"
@@ -420,7 +519,8 @@ processes:
             - confidence
             - estimated_impact
             records: '{{flagged_campaigns}}'
-          footer_note: Generated automatically by the Campaign Planning & Optimisation process.
+          footer_note: Generated automatically by the Campaign Planning & Optimisation
+            process.
   - id: hold_no_action
     name: Hold Without Sending
     type: notify
@@ -436,11 +536,13 @@ processes:
     type: notify
     after: review
     condition: '{{report_decision}} == "Escalate (No Data)"'
-    description: "No campaign performance data returned this run \u2014 escalate for review."
+    description: "No campaign performance data returned this run \u2014 escalate for\
+      \ review."
     action:
       type: simulated
       config:
-        note: "Campaign planning & optimisation escalated \u2014 no campaign performance data returned this run."
+        note: "Campaign planning & optimisation escalated \u2014 no campaign performance\
+          \ data returned this run."
   related_signals_events:
   - MKT_SearchVolumeSpike
   - MKT_SocialConversationSpike
@@ -584,8 +686,8 @@ processes:
         - ADS_M2O_PCT
         - OVERALL_M2O_PCT
     - title: Campaign Action Recommendations
-      summary: "Every currently-running campaign, evaluated with an evidence-backed action \u2014 with the reason behind each\
-        \ call."
+      summary: "Every currently-running campaign, evaluated with an evidence-backed\
+        \ action \u2014 with the reason behind each call."
       views:
       - view: table
         from: campaign_action_suggestions
@@ -608,8 +710,8 @@ processes:
         - priority
         - estimated_impact
     - title: Strategic Expansion Opportunities
-      summary: "Proposed new campaigns \u2014 segment gaps at proven stores and unspent allocated budget, with the reason\
-        \ behind each call."
+      summary: "Proposed new campaigns \u2014 segment gaps at proven stores and unspent\
+        \ allocated budget, with the reason behind each call."
       views:
       - view: table
         from: expansion_suggestions
@@ -630,8 +732,8 @@ processes:
         - priority
         - estimated_impact
     - title: Flagged Campaigns (Final Plan)
-      summary: "The consolidated action plan across all approved sets, by store and segment \u2014 with the reason behind\
-        \ each call."
+      summary: "The consolidated action plan across all approved sets, by store and\
+        \ segment \u2014 with the reason behind each call."
       views:
       - view: table
         from: flagged_campaigns

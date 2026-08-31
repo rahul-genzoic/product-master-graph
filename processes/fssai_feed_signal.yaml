@@ -2,15 +2,16 @@ version: 1
 processes:
 - id: fssai_feed_signal
   name: FSSAI Feed Signal
-  description: 'Reviews the regulatory changes surfaced by the FSSAI feed signal, maps them to the affected portfolio (SKUs,
-    claims, ingredients), and lets compliance decide whether to open a full impact analysis.
+  description: 'Reviews the regulatory changes surfaced by the FSSAI feed signal,
+    maps them to the affected portfolio (SKUs, claims, ingredients), and lets compliance
+    decide whether to open a full impact analysis.
 
     '
   domain: Compliance
   owner: compliance_team
   definition_type: text
   applies_to:
-  - entity: Regulation
+  - entity: QualityInspections
   triggers:
   - type: signal
     signal_key: fssai-feed
@@ -36,11 +37,14 @@ processes:
     name: Summarise Regulatory Changes
     type: agent
     description: Summarise the FSSAI changes the signal surfaced.
-    instruction: "`exposure_items` holds the regulatory changes this signal surfaced \u2014 each row has `customer` (the change\
-      \ title), `value` (what changed and what it affects) and `risk` (High/Medium). `change_events` carries the fuller records\
-      \ (source, effective_date, business_criticality, mandatory). Write a short `change_summary` \u2014 how many changes,\
-      \ which are mandatory or license-blocking, and their effective dates \u2014 and set `criticality_level` (high | medium\
-      \ | low): high when any change is mandatory / license-blocking. Do not restate every row.\n"
+    instruction: "`exposure_items` holds the regulatory changes this signal surfaced\
+      \ \u2014 each row has `customer` (the change title), `value` (what changed and\
+      \ what it affects) and `risk` (High/Medium). `change_events` carries the fuller\
+      \ records (source, effective_date, business_criticality, mandatory). Write a\
+      \ short `change_summary` \u2014 how many changes, which are mandatory or license-blocking,\
+      \ and their effective dates \u2014 and set `criticality_level` (high | medium\
+      \ | low): high when any change is mandatory / license-blocking. Do not restate\
+      \ every row.\n"
     produces:
     - change_summary
     - criticality_level
@@ -69,15 +73,20 @@ processes:
       - SHELF_LIFE_DAYS
       limit: 120
       as: product_portfolio
-    instruction: "`product_portfolio` is the SKU catalogue \u2014 each row has SKU and DISPLAY_NAME (the name encodes the\
-      \ product type, e.g. \"Dessert-Chocolate Cheesecake-500 gm\"). For the change(s) in `exposure_items` / `change_events`,\
-      \ pick the SKUs the change actually touches and output `impacted_items`: one row per affected SKU with {sku: SKU, product:\
-      \ DISPLAY_NAME, why: one line on why THIS SKU is caught by the change (cite the flavour / product type / claim that\
-      \ matches), exposure: high | medium | low}. Judge relevance from the product's name / flavour / description \u2014 e.g.\
-      \ an HFSS-thresholds change catches sweetened, fried, high-fat or high-salt snacks, desserts and beverages, especially\
-      \ any marketed to or eligible for children / schools; an allergen or colour change catches SKUs whose recipe or claims\
-      \ involve it. Only include SKUs that are genuinely affected (do NOT list the whole catalogue); if none clearly apply,\
-      \ return an empty list. Also give a one-line `impact_summary` \u2014 how many SKUs are affected and the most exposed.\n"
+    instruction: "`product_portfolio` is the SKU catalogue \u2014 each row has SKU\
+      \ and DISPLAY_NAME (the name encodes the product type, e.g. \"Dessert-Chocolate\
+      \ Cheesecake-500 gm\"). For the change(s) in `exposure_items` / `change_events`,\
+      \ pick the SKUs the change actually touches and output `impacted_items`: one\
+      \ row per affected SKU with {sku: SKU, product: DISPLAY_NAME, why: one line\
+      \ on why THIS SKU is caught by the change (cite the flavour / product type /\
+      \ claim that matches), exposure: high | medium | low}. Judge relevance from\
+      \ the product's name / flavour / description \u2014 e.g. an HFSS-thresholds\
+      \ change catches sweetened, fried, high-fat or high-salt snacks, desserts and\
+      \ beverages, especially any marketed to or eligible for children / schools;\
+      \ an allergen or colour change catches SKUs whose recipe or claims involve it.\
+      \ Only include SKUs that are genuinely affected (do NOT list the whole catalogue);\
+      \ if none clearly apply, return an empty list. Also give a one-line `impact_summary`\
+      \ \u2014 how many SKUs are affected and the most exposed.\n"
     produces:
     - impacted_items
     - impact_summary
@@ -95,10 +104,13 @@ processes:
     name: Review Regulatory Changes
     type: decision
     after: assess_portfolio_impact
-    description: Compliance reviews the changes and decides whether to open a full impact analysis.
-    instruction: 'Review the changes and the portfolio they touch. Choose "Open Impact Analysis" when one or more changes
-      materially affect the portfolio and warrant the full remediation workflow; choose "No Action" when nothing relevant
-      is affected. Recommend "Open Impact Analysis" whenever a mandatory / license-blocking change touches a live SKU.
+    description: Compliance reviews the changes and decides whether to open a full
+      impact analysis.
+    instruction: 'Review the changes and the portfolio they touch. Choose "Open Impact
+      Analysis" when one or more changes materially affect the portfolio and warrant
+      the full remediation workflow; choose "No Action" when nothing relevant is affected.
+      Recommend "Open Impact Analysis" whenever a mandatory / license-blocking change
+      touches a live SKU.
 
       '
     decision_options:
@@ -132,14 +144,16 @@ processes:
     type: notify
     after: review_regulatory_changes
     condition: '{{fssai_signal_decision}} == "Open Impact Analysis"'
-    description: Record that a full impact analysis was opened and route to the compliance owner.
+    description: Record that a full impact analysis was opened and route to the compliance
+      owner.
     produces:
     - impact_analysis_recorded
     action:
       type: simulated
       name: record_impact_analysis
       config:
-        summary: "FSSAI feed signal \u2014 impact analysis opened for the affected portfolio."
+        summary: "FSSAI feed signal \u2014 impact analysis opened for the affected\
+          \ portfolio."
         findings: '{{impacted_items}}'
   metadata:
     version: 4

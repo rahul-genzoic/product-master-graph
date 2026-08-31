@@ -2,15 +2,16 @@ version: 1
 processes:
 - id: competitive_pricing_signal
   name: Competitive Pricing Signal
-  description: 'Reviews the competitor price gaps surfaced by the competitive-pricing signal, judges materiality, and lets
-    the pricing team flag the exposed SKUs for a pricing review.
+  description: 'Reviews the competitor price gaps surfaced by the competitive-pricing
+    signal, judges materiality, and lets the pricing team flag the exposed SKUs for
+    a pricing review.
 
     '
   domain: Pricing
   owner: pricing_team
   definition_type: text
   applies_to:
-  - entity: Product
+  - entity: Products
   triggers:
   - type: signal
     signal_key: competitive-pricing
@@ -36,11 +37,13 @@ processes:
     name: Summarise Price Gaps
     type: agent
     description: Summarise the competitor price comparisons the signal surfaced.
-    instruction: "`exposure_items` holds the competitor price comparisons this signal surfaced \u2014 each row has `customer`\
-      \ (the SKU vs competitor matchup), `value` (own vs competitor price and the % gap) and `risk` (High/Medium). Write a\
-      \ short `price_gap_summary` \u2014 how many material gaps, which SKUs are most exposed, and the direction (priced above\
-      \ vs below competitors) \u2014 and set `exposure_level` (high | medium | low): high when any row is High risk. Do not\
-      \ restate every row; the table is shown alongside.\n"
+    instruction: "`exposure_items` holds the competitor price comparisons this signal\
+      \ surfaced \u2014 each row has `customer` (the SKU vs competitor matchup), `value`\
+      \ (own vs competitor price and the % gap) and `risk` (High/Medium). Write a\
+      \ short `price_gap_summary` \u2014 how many material gaps, which SKUs are most\
+      \ exposed, and the direction (priced above vs below competitors) \u2014 and\
+      \ set `exposure_level` (high | medium | low): high when any row is High risk.\
+      \ Do not restate every row; the table is shown alongside.\n"
     produces:
     - price_gap_summary
     - exposure_level
@@ -59,19 +62,22 @@ processes:
     type: agent
     after: summarise_price_gaps
     description: Recommend a move per exposed SKU.
-    instruction: "For each row in `exposure_items`, recommend a move: `reprice` (gap \u2265 15%, High risk), `review` (a smaller\
-      \ but real gap) or `hold` (immaterial). Output `pricing_actions`: one row per matchup with {sku: the `customer` label,\
-      \ gap: the `value`, risk, move, reason (one line)}. Do not invent rows beyond `exposure_items`; output an empty list\
-      \ only if `exposure_items` is empty.\n"
+    instruction: "For each row in `exposure_items`, recommend a move: `reprice` (gap\
+      \ \u2265 15%, High risk), `review` (a smaller but real gap) or `hold` (immaterial).\
+      \ Output `pricing_actions`: one row per matchup with {sku: the `customer` label,\
+      \ gap: the `value`, risk, move, reason (one line)}. Do not invent rows beyond\
+      \ `exposure_items`; output an empty list only if `exposure_items` is empty.\n"
     produces:
     - pricing_actions
   - id: review_price_gaps
     name: Review Price Gaps
     type: decision
     after: assess_pricing_exposure
-    description: Pricing team reviews the exposure and decides whether to flag for a pricing review.
-    instruction: 'Review the price gaps and the recommended moves. Choose "Flag for Pricing Review" when one or more SKUs
-      are materially mispriced against competitors (a High-risk gap); choose "No Action" when the gaps are immaterial. Recommend
+    description: Pricing team reviews the exposure and decides whether to flag for
+      a pricing review.
+    instruction: 'Review the price gaps and the recommended moves. Choose "Flag for
+      Pricing Review" when one or more SKUs are materially mispriced against competitors
+      (a High-risk gap); choose "No Action" when the gaps are immaterial. Recommend
       "Flag for Pricing Review" whenever a High-risk gap is present.
 
       '
@@ -108,7 +114,8 @@ processes:
     type: notify
     after: review_price_gaps
     condition: '{{pricing_decision}} == "Flag for Pricing Review"'
-    description: Record the SKUs flagged for a pricing review and route to the pricing owner.
+    description: Record the SKUs flagged for a pricing review and route to the pricing
+      owner.
     produces:
     - pricing_review_recorded
     action:
