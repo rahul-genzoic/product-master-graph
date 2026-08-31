@@ -1,269 +1,362 @@
 version: 1
-
 processes:
-  # Demand Forecast — per-store actioning. THE demand-forecast process (the one-shot
-  # demand_forecast_dispatch approve-gate has been removed).
-  #
-  # Walks the assembled per-(store, SKU) plan one STORE at a time — the demand
-  # planner approves or skips each store's actions individually (a `type: foreach`
-  # step, grouped by store), the approved actions fire immediately, and at the end
-  # a single report emails what was actioned vs held.
-  #
-  # Stepped/agentic mode (no metadata.steps_display_only): the EventAgent walks the
-  # steps. review_plan shows the complete plan and gates the whole run; action_rows
-  # is the per-row loop; dispatch_report sends the taken/held summary.
-  - id: demand_forecast
-    name: Demand Forecast
-    description: |
-      Assembles each dark store's per-(store, SKU) demand plan (transfer / liquidate
-      / supply-from-factory), then lets the demand planner action it ROW BY ROW:
-      approve a row to fire its action
-      now, or reject to skip it. When every row has been decided, a single report is
-      emailed listing what was actioned and what was held.
+- id: demand_forecast
+  name: Demand Forecast
+  description: "Assembles each dark store's per-(store, SKU) demand plan (transfer / liquidate\n/ supply-from-factory), then\
+    \ lets the demand planner action it ROW BY ROW:\napprove a row to fire its action\nnow, or reject to skip it. When every\
+    \ row has been decided, a single report is\nemailed listing what was actioned and what was held.\n\nFor the agent: `demand_plan`\
+    \ is ALREADY assembled and pre-scored \u2014 one row per\nat-risk (store, SKU) with `available_quantity`, `expiring_qty`,\
+    \ `forecast_units`\n(ceiled next-3-day demand), `nearest_store_name` (+ `distance_km`) and an\n`action` (`transfer` /\
+    \ `liquidate` / `supply_factory`). At the overview gate,\nsummarise it (how many of each action, most urgent); do NOT\
+    \ re-list every row.\n"
+  domain: SupplyChain
+  owner: demand_planning_team
+  definition_type: text
+  applies_to:
+  - entity: Store
+  - entity: Store
+    where:
+    - field: id
+      op: ne
+      value: __none__
+  triggers:
+  - type: event
+    event_type: demand_forecast
+  - type: manual
+    allowed_roles:
+    - DemandPlanner
+  inputs:
+  - name: store_id
+    type: reference
+    references: Store
+    required: false
+  - name: scheduled_at
+    type: datetime
+    required: false
+  outputs:
+  - name: rows_actioned
+    type: object
+  - name: rows_held
+    type: object
+  steps:
+  - id: review_plan
+    name: Review the demand plan
+    type: decision
+    description: Demand planner reviews the full plan and decides whether to action it row by row.
+    instruction: '`demand_plan` is the fully-assembled, pre-scored plan. Write a SHORT summary: how many SKUs to transfer
+      vs liquidate vs supply-from-factory, across how many stores, and the most urgent (smallest days_to_expiry). Recommend
+      "Action the Plan" to begin actioning the plan row by row; recommend REJECT to hold the whole plan. Do not paste the
+      table.
 
-      For the agent: `demand_plan` is ALREADY assembled and pre-scored — one row per
-      at-risk (store, SKU) with `available_quantity`, `expiring_qty`, `forecast_units`
-      (ceiled next-3-day demand), `nearest_store_name` (+ `distance_km`) and an
-      `action` (`transfer` / `liquidate` / `supply_factory`). At the overview gate,
-      summarise it (how many of each action, most urgent); do NOT re-list every row.
-    domain: SupplyChain
-    owner: demand_planning_team
-    definition_type: text
+      '
+    decision_options:
+    - Action the Plan
+    - REJECT
+    produces:
+    - plan_decision
+    key_data:
+    - title: "Demand plan \u2014 all rows"
+      summary: 'Per (store, SKU): action, on-hand, forecast, expiring qty and nearest store'
+      views:
+      - view: table
+        from: demand_plan
+        columns:
+        - store_name
+        - product_name
+        - action
+        - available_quantity
+        - forecast_units
+        - expiring_qty
+        - days_to_expiry
+        - nearest_store_name
+        - distance_km
+  - id: action_rows
+    name: Action each store
+    type: foreach
+    after: review_plan
+    for_each: demand_plan
+    group_by: store_id
+    description: For each store, review all its recommended actions and approve to take them all, or reject to hold the store.
+    instruction: '{{store_name}}: review all the recommended actions for this store in the table. Choose "Approve Actions"
+      to take ALL of them now, or Reject to hold this store''s actions.
 
-    applies_to:
-      - entity: Store
-      - entity: Store
-        where:
-          - { field: id, op: ne, value: __none__ }
-
-    triggers:
-      - { type: event, event_type: demand_forecast }
-      - { type: manual, allowed_roles: [DemandPlanner] }
-
-    inputs:
-      - { name: store_id, type: reference, references: Store, required: false }
-      - { name: scheduled_at, type: datetime, required: false }
-
-    outputs:
-      - { name: rows_actioned, type: object }
-      - { name: rows_held, type: object }
-
-    steps:
-      # 1) FIRST GATE — show the COMPLETE plan; gate the whole run.
-      - id: review_plan
-        name: Review the demand plan
-        type: decision
-        description: Demand planner reviews the full plan and decides whether to action it row by row.
-        instruction: >
-          `demand_plan` is the fully-assembled, pre-scored plan. Write a SHORT summary:
-          how many SKUs to transfer vs liquidate vs supply-from-factory, across how many
-          stores, and the most urgent (smallest days_to_expiry). Recommend "Action the
-          Plan" to begin actioning the plan row by row; recommend REJECT to hold the
-          whole plan. Do not paste the table.
-        decision_options: ["Action the Plan", "REJECT"]
-        produces:
-          - plan_decision
-        key_data:
-          - title: "Demand plan — all rows"
-            summary: "Per (store, SKU): action, on-hand, forecast, expiring qty and nearest store"
-            views:
-              - { view: table, from: demand_plan, columns: [store_name, product_name, action, available_quantity, forecast_units, expiring_qty, days_to_expiry, nearest_store_name, distance_km] }
-
-      # 2) PER-ROW LOOP — one approve/reject gate per (store, SKU). Approve fires the
-      #    row's action immediately; reject skips it. Accumulates into
-      #    rows_actioned / rows_held (named via `produces`).
-      - id: action_rows
-        name: Action each store
-        type: foreach
-        after: review_plan
-        for_each: demand_plan
-        group_by: store_id            # ONE gate per store (~15), not per (store, SKU) row
-        description: For each store, review all its recommended actions and approve to take them all, or reject to hold the store.
-        instruction: >
-          {{store_name}}: review all the recommended actions for this store in the table.
-          Choose "Approve Actions" to take ALL of them now, or Reject to hold this
-          store's actions.
-        decision_options: ["Approve Actions", "REJECT"]
-        produces:
-          - rows_actioned
-          - rows_held
-        key_data:
-          - title: "Actions for this store"
-            summary: "Every (SKU) action recommended at this store"
-            views:
-              - { view: table, from: foreach_rows, columns: [product_name, action, available_quantity, forecast_units, expiring_qty, days_to_expiry, nearest_store_name, distance_km] }
-        # Per-row action fired on APPROVE. Config is templated against the ROW, so
-        # bare {{store_name}} etc. resolve to that row's values. Uses `notify`
-        # (in-app) as a stand-in until a sales-channel/transfer connector is wired.
-        action:
-          type: notify
-          name: action_row
-          config:
-            type: notify
-            recipient: demand_planning_team
-            message: "{{action}} actioned for {{product_name}} at {{store_name}} (nearest {{nearest_store_name}}, {{distance_km}} km; {{expiring_qty}} expiring)."
-
-      # 3) FINAL REPORT — email what was actioned vs held via the Genzoic Email
-      #    Formatter skill (clean HTML tables + plain-text fallback, sent through
-      #    the org's SendGrid email connector). STEP action => BARE {{fact}}
-      #    templating (rows_actioned / rows_held from the foreach; a single-token
-      #    {{...}} preserves the native row-list the skill's `records` needs).
-      - id: dispatch_report
-        name: Email actions taken vs held
+      '
+    decision_options:
+    - Approve Actions
+    - REJECT
+    produces:
+    - rows_actioned
+    - rows_held
+    key_data:
+    - title: Actions for this store
+      summary: Every (SKU) action recommended at this store
+      views:
+      - view: table
+        from: foreach_rows
+        columns:
+        - product_name
+        - action
+        - available_quantity
+        - forecast_units
+        - expiring_qty
+        - days_to_expiry
+        - nearest_store_name
+        - distance_km
+    action:
+      type: notify
+      name: action_row
+      config:
         type: notify
-        after: action_rows
-        description: Email the demand owner the row-by-row outcome once every row is decided.
-        produces:
-          - report_done
-        action:
-          type: skill
-          name: email_actions_summary
-          config:
-            type: skill
-            skill: "genzoic-email-formatter"     # Skill.name (slug) — call_skill resolves by Skill.name (subprocess gets DB +
-                                                  # app imports because it starts with "Genzoic")
-            operation: send
-            args:
-              to: "uzairtajmat7@gmail.com"
-              subject: "Demand plan — actions taken vs held (row-by-row review)"
-              title: "Demand Plan — Actions Taken vs Held"
-              intro: >-
-                Row-by-row review of the demand plan is complete. The tables below list the
-                (store, SKU) rows actioned now (transfer / liquidate / supply-from-factory)
-                and those held / skipped this run.
-              sections:
-                - type: table
-                  caption: "Actioned rows — dispatched now"
-                  columns: [store_name, product_name, action, available_quantity, forecast_units, expiring_qty, days_to_expiry, nearest_store_name, distance_km]
-                  records: "{{rows_actioned}}"
-                - type: table
-                  caption: "Held / skipped rows — no action taken"
-                  columns: [store_name, product_name, action, available_quantity, forecast_units, expiring_qty, days_to_expiry, nearest_store_name, distance_km]
-                  records: "{{rows_held}}"
-              footer_note: "Generated automatically by the Demand Forecast process."
-
-    related_kpis: [ForecastAccuracy, WastageRisk]
-
-    related_signals_events: [OPS_FestivalEventDemandSignal, OPS_ExternalDemandTrend, OPS_InventoryBelowSafetyStock, OPS_ForecastVarianceAboveTolerance]   # reverse of master_data/signals_events.yaml related_processes for demand_forecast
-
-    metadata:
-      version: 3
-      effective_from: 2026-07-23
-      priority: 12
-      requires_human_approval: true
-      # NO steps_display_only -> process.steps populated -> stepped/foreach path.
-      # Portfolio sweep: assembles the plan across ALL stores and loops per store,
-      # so a bare manual/scheduled fire (no pivot entity) is valid — it discovers
-      # its own targets rather than pivoting on an input Store.
-      entity_optional: true
-
-      tools:
-        skills: []
-
-      # demand_plan assembly: forecast + inventory joined per (store, SKU), nearest
-      # transferable store via transfer_route, then an action bucket, plus a ceiled
-      # `forecast_units` for display.
-      context_package:
-        - key: demand_plan
-          required: true
-          gather:
-            collect:
-              - as: forecast
-                entity: Store
-                dataset: gold.FORECAST_RESULTS_UPDATE
-                columns: [SKU_ID, MASTER_STORE_ID, FORECAST_DATE, PREDICTED_SALES_QUANTITY, DAYS_AHEAD, IS_LATEST_FORECAST]
-                limit: 5000
-                reduce:
-                  rename: { SKU_ID: product_sku, MASTER_STORE_ID: store_id }
-                  rollup:
-                    group_by: [store_id, product_sku]
-                    filter_rows:
-                      compute:
-                        - { as: _days_out, days_until: FORECAST_DATE }
-                      where:
-                        - { field: IS_LATEST_FORECAST, op: eq, value: true }
-                        - { field: _days_out, op: gte, value: 1 }
-                        - { field: _days_out, op: lte, value: 3 }
-                    agg:
-                      - { as: forecast_3d, op: sum, col: PREDICTED_SALES_QUANTITY }
-
-              - as: inventory
-                entity: Store
-                dataset: STORE_INVENTORY_DAILY
-                columns: [store_id, product_sku, available_quantity, expiry_date, snapshot_date, batch_row_number]
-                order_by: snapshot_date
-                order_dir: desc
-                limit: 2000
-                reduce:
-                  latest_snapshot: { by: [store_id], "on": snapshot_date }
-                  rollup:
-                    group_by: [store_id, product_sku]
-                    filter_rows:
-                      compute:
-                        - { as: _dte, days_until: expiry_date }
-                        - as: _expiring_unit
-                          bucket:
-                            - { when: { field: _dte, op: lte, value: 3 }, value: { col: available_quantity } }
-                            - { else: 0 }
-                      where: [{ field: _dte, op: gte, value: 0 }]
-                    agg:
-                      - { as: available_quantity, op: sum, col: available_quantity }
-                      - { as: expiring_qty,       op: sum, col: _expiring_unit }
-                      - { as: soonest_expiry,     op: min, col: expiry_date }
-
-            join:
-              - { left: forecast, right: inventory, "on": [store_id, product_sku], how: outer }
-
-            links:
-              - from: store_id
-                from_type: Store
-                via: transfer_route
-                direction: out
-                pick: { by: distance_km, order: min }
-                bring: [distance_km]
-                bring_id: nearest_store_id
-
-          post:
-            fillna: { available_quantity: 0, forecast_3d: 0, expiring_qty: 0 }
-            compute:
-              - { as: days_to_expiry, days_until: soonest_expiry }
-              # Display forecast: ceil to a whole number, then floor at 1 (never 0)
-              # via a bucket — the gather has no floor/max op, so map <1 -> 1.
-              - { as: _fc_ceil, ceil: forecast_3d }
-              - as: forecast_units
-                bucket:
-                  - { when: { field: _fc_ceil, op: lt, value: 1 }, value: 1 }
-                  - { else: { col: _fc_ceil } }
-              - as: action
-                bucket:
-                  # Expiring today/tomorrow: a transfer can't arrive and sell in time,
-                  # so liquidate (mark down) to recover some value instead of shipping
-                  # it. Must come BEFORE the transfer branch, else transfer wins for
-                  # any row with a nearby store (which is ~every row).
-                  # ponytail: threshold is days_to_expiry <= 1 (the pasted spec's "0-1
-                  # days"); widen the value for a longer "transfer not feasible" window.
+        recipient: demand_planning_team
+        message: '{{action}} actioned for {{product_name}} at {{store_name}} (nearest {{nearest_store_name}}, {{distance_km}}
+          km; {{expiring_qty}} expiring).'
+  - id: dispatch_report
+    name: Email actions taken vs held
+    type: notify
+    after: action_rows
+    description: Email the demand owner the row-by-row outcome once every row is decided.
+    produces:
+    - report_done
+    action:
+      type: skill
+      name: email_actions_summary
+      config:
+        type: skill
+        skill: genzoic-email-formatter
+        operation: send
+        args:
+          to: uzairtajmat7@gmail.com
+          subject: "Demand plan \u2014 actions taken vs held (row-by-row review)"
+          title: "Demand Plan \u2014 Actions Taken vs Held"
+          intro: Row-by-row review of the demand plan is complete. The tables below list the (store, SKU) rows actioned now
+            (transfer / liquidate / supply-from-factory) and those held / skipped this run.
+          sections:
+          - type: table
+            caption: "Actioned rows \u2014 dispatched now"
+            columns:
+            - store_name
+            - product_name
+            - action
+            - available_quantity
+            - forecast_units
+            - expiring_qty
+            - days_to_expiry
+            - nearest_store_name
+            - distance_km
+            records: '{{rows_actioned}}'
+          - type: table
+            caption: "Held / skipped rows \u2014 no action taken"
+            columns:
+            - store_name
+            - product_name
+            - action
+            - available_quantity
+            - forecast_units
+            - expiring_qty
+            - days_to_expiry
+            - nearest_store_name
+            - distance_km
+            records: '{{rows_held}}'
+          footer_note: Generated automatically by the Demand Forecast process.
+  related_kpis:
+  - ForecastAccuracy
+  - WastageRisk
+  related_signals_events:
+  - MKT_FestivalSeasonalOpportunity
+  - MKT_CulturalSportingEvent
+  - FIN_MacroeconomicDemandChange
+  - OPS_WeatherAnomaly
+  - OPS_SevereWeatherWarning
+  - OPS_FestivalEventDemandSignal
+  - OPS_ExternalDemandTrend
+  - CMI_CategoryMarketGrowthShift
+  - OPS_InventoryBelowSafetyStock
+  - OPS_ForecastVarianceAboveTolerance
+  metadata:
+    version: 3
+    effective_from: 2026-07-23
+    priority: 12
+    requires_human_approval: true
+    entity_optional: true
+    tools:
+      skills: []
+    context_package:
+    - key: demand_plan
+      required: true
+      gather:
+        collect:
+        - as: forecast
+          entity: Store
+          dataset: gold.FORECAST_RESULTS_UPDATE
+          columns:
+          - SKU_ID
+          - MASTER_STORE_ID
+          - FORECAST_DATE
+          - PREDICTED_SALES_QUANTITY
+          - DAYS_AHEAD
+          - IS_LATEST_FORECAST
+          limit: 5000
+          reduce:
+            rename:
+              SKU_ID: product_sku
+              MASTER_STORE_ID: store_id
+            rollup:
+              group_by:
+              - store_id
+              - product_sku
+              filter_rows:
+                compute:
+                - as: _days_out
+                  days_until: FORECAST_DATE
+                where:
+                - field: IS_LATEST_FORECAST
+                  op: eq
+                  value: true
+                - field: _days_out
+                  op: gte
+                  value: 1
+                - field: _days_out
+                  op: lte
+                  value: 3
+              agg:
+              - as: forecast_3d
+                op: sum
+                col: PREDICTED_SALES_QUANTITY
+        - as: inventory
+          entity: Store
+          dataset: STORE_INVENTORY_DAILY
+          columns:
+          - store_id
+          - product_sku
+          - available_quantity
+          - expiry_date
+          - snapshot_date
+          - batch_row_number
+          order_by: snapshot_date
+          order_dir: desc
+          limit: 2000
+          reduce:
+            latest_snapshot:
+              by:
+              - store_id
+              'on': snapshot_date
+            rollup:
+              group_by:
+              - store_id
+              - product_sku
+              filter_rows:
+                compute:
+                - as: _dte
+                  days_until: expiry_date
+                - as: _expiring_unit
+                  bucket:
                   - when:
-                      all:
-                        - { field: expiring_qty, op: gt, value: 0 }
-                        - { field: days_to_expiry, op: lte, value: 1 }
-                    value: liquidate
-                  # Perishing, still time to move, and a nearby store exists -> transfer.
-                  - when:
-                      all:
-                        - { field: expiring_qty, op: gt, value: 0 }
-                        - { field: nearest_store_id, op: ne, value: null }
-                    value: transfer
-                  # Perishing but no nearby store to take it -> liquidate.
-                  - { when: { field: expiring_qty, op: gt, value: 0 }, value: liquidate }
-                  # Demand exceeds stock on hand -> replenish from factory.
-                  - { when: { field: available_quantity, op: lt, ref: forecast_3d }, value: supply_factory }
-                  - { else: hold }
-            where:
-              - { field: action, op: ne, value: hold }
-            drop: [forecast_3d, _fc_ceil]
-            sort_by: days_to_expiry
-            resolve:
-              - { field: store_id, type: Store, as: store_name }
-              - { field: product_sku, type: Product, as: product_name }
-              - { field: nearest_store_id, type: Store, as: nearest_store_name }
-        - { key: scheduled_at, source: event, required: false }
+                      field: _dte
+                      op: lte
+                      value: 3
+                    value:
+                      col: available_quantity
+                  - else: 0
+                where:
+                - field: _dte
+                  op: gte
+                  value: 0
+              agg:
+              - as: available_quantity
+                op: sum
+                col: available_quantity
+              - as: expiring_qty
+                op: sum
+                col: _expiring_unit
+              - as: soonest_expiry
+                op: min
+                col: expiry_date
+        join:
+        - left: forecast
+          right: inventory
+          'on':
+          - store_id
+          - product_sku
+          how: outer
+        links:
+        - from: store_id
+          from_type: Store
+          via: transfer_route
+          direction: out
+          pick:
+            by: distance_km
+            order: min
+          bring:
+          - distance_km
+          bring_id: nearest_store_id
+      post:
+        fillna:
+          available_quantity: 0
+          forecast_3d: 0
+          expiring_qty: 0
+        compute:
+        - as: days_to_expiry
+          days_until: soonest_expiry
+        - as: _fc_ceil
+          ceil: forecast_3d
+        - as: forecast_units
+          bucket:
+          - when:
+              field: _fc_ceil
+              op: lt
+              value: 1
+            value: 1
+          - else:
+              col: _fc_ceil
+        - as: action
+          bucket:
+          - when:
+              all:
+              - field: expiring_qty
+                op: gt
+                value: 0
+              - field: days_to_expiry
+                op: lte
+                value: 1
+            value: liquidate
+          - when:
+              all:
+              - field: expiring_qty
+                op: gt
+                value: 0
+              - field: nearest_store_id
+                op: ne
+                value: null
+            value: transfer
+          - when:
+              field: expiring_qty
+              op: gt
+              value: 0
+            value: liquidate
+          - when:
+              field: available_quantity
+              op: lt
+              ref: forecast_3d
+            value: supply_factory
+          - else: hold
+        where:
+        - field: action
+          op: ne
+          value: hold
+        drop:
+        - forecast_3d
+        - _fc_ceil
+        sort_by: days_to_expiry
+        resolve:
+        - field: store_id
+          type: Store
+          as: store_name
+        - field: product_sku
+          type: Product
+          as: product_name
+        - field: nearest_store_id
+          type: Store
+          as: nearest_store_name
+    - key: scheduled_at
+      source: event
+      required: false

@@ -1,151 +1,166 @@
 version: 1
-
 processes:
-  # Competitive Pricing (SIGNAL) — the process the ProcessOrchestrator runs when the
-  # `competitive-pricing` signal fires. The detector skill scans for price gaps and
-  # hands off a payload; this process organises that outcome (the exposure table), lets
-  # the pricing team review it, and flags the exposed SKUs. Renders on the event page.
-  #
-  # Marked for signals via metadata.kind: signal + metadata.signal_key. The signal→event
-  # bridge presets THIS process (by signal_key) and puts the detector payload on the
-  # event; the context_package pulls that payload's structured findings into facts.
-  - id: competitive_pricing_signal
-    name: Competitive Pricing Signal
-    description: >
-      Reviews the competitor price gaps surfaced by the competitive-pricing signal,
-      judges materiality, and lets the pricing team flag the exposed SKUs for a pricing
-      review.
-    domain: Pricing
-    owner: pricing_team
-    definition_type: text
+- id: competitive_pricing_signal
+  name: Competitive Pricing Signal
+  description: 'Reviews the competitor price gaps surfaced by the competitive-pricing signal, judges materiality, and lets
+    the pricing team flag the exposed SKUs for a pricing review.
 
-    applies_to:
-      - entity: Product
+    '
+  domain: Pricing
+  owner: pricing_team
+  definition_type: text
+  applies_to:
+  - entity: Product
+  triggers:
+  - type: signal
+    signal_key: competitive-pricing
+  - type: event
+    event_type: competitive-pricing
+  - type: manual
+    allowed_roles:
+    - PricingManager
+    - CategoryManager
+  inputs:
+  - name: product
+    type: reference
+    references: Product
+    required: false
+  outputs:
+  - name: pricing_decision
+    type: enum
+    values:
+    - Flag for Pricing Review
+    - No Action
+  steps:
+  - id: summarise_price_gaps
+    name: Summarise Price Gaps
+    type: agent
+    description: Summarise the competitor price comparisons the signal surfaced.
+    instruction: "`exposure_items` holds the competitor price comparisons this signal surfaced \u2014 each row has `customer`\
+      \ (the SKU vs competitor matchup), `value` (own vs competitor price and the % gap) and `risk` (High/Medium). Write a\
+      \ short `price_gap_summary` \u2014 how many material gaps, which SKUs are most exposed, and the direction (priced above\
+      \ vs below competitors) \u2014 and set `exposure_level` (high | medium | low): high when any row is High risk. Do not\
+      \ restate every row; the table is shown alongside.\n"
+    produces:
+    - price_gap_summary
+    - exposure_level
+    key_data:
+    - title: Competitor Price Gaps
+      summary: "Per (SKU \xD7 competitor) \u2014 own vs competitor price and the gap."
+      views:
+      - view: table
+        from: exposure_items
+        columns:
+        - customer
+        - value
+        - risk
+  - id: assess_pricing_exposure
+    name: Assess Pricing Exposure
+    type: agent
+    after: summarise_price_gaps
+    description: Recommend a move per exposed SKU.
+    instruction: "For each row in `exposure_items`, recommend a move: `reprice` (gap \u2265 15%, High risk), `review` (a smaller\
+      \ but real gap) or `hold` (immaterial). Output `pricing_actions`: one row per matchup with {sku: the `customer` label,\
+      \ gap: the `value`, risk, move, reason (one line)}. Do not invent rows beyond `exposure_items`; output an empty list\
+      \ only if `exposure_items` is empty.\n"
+    produces:
+    - pricing_actions
+  - id: review_price_gaps
+    name: Review Price Gaps
+    type: decision
+    after: assess_pricing_exposure
+    description: Pricing team reviews the exposure and decides whether to flag for a pricing review.
+    instruction: 'Review the price gaps and the recommended moves. Choose "Flag for Pricing Review" when one or more SKUs
+      are materially mispriced against competitors (a High-risk gap); choose "No Action" when the gaps are immaterial. Recommend
+      "Flag for Pricing Review" whenever a High-risk gap is present.
 
-    triggers:
-      - { type: signal, signal_key: competitive-pricing }
-      - { type: event, event_type: competitive-pricing }
-      - { type: manual, allowed_roles: [PricingManager, CategoryManager] }
-
-    inputs:
-      - { name: product, type: reference, references: Product, required: false }
-
-    outputs:
-      - { name: pricing_decision, type: enum, values: ["Flag for Pricing Review", "No Action"] }
-
-    steps:
-      # 1. Summarise the price-gap comparisons the signal carried (read from the payload).
-      - id: summarise_price_gaps
-        name: Summarise Price Gaps
-        type: agent
-        description: Summarise the competitor price comparisons the signal surfaced.
-        instruction: >
-          `exposure_items` holds the competitor price comparisons this signal surfaced —
-          each row has `customer` (the SKU vs competitor matchup), `value` (own vs
-          competitor price and the % gap) and `risk` (High/Medium). Write a short
-          `price_gap_summary` — how many material gaps, which SKUs are most exposed, and
-          the direction (priced above vs below competitors) — and set `exposure_level`
-          (high | medium | low): high when any row is High risk. Do not restate every
-          row; the table is shown alongside.
-        produces:
-          - price_gap_summary
-          - exposure_level
-        key_data:
-          - title: Competitor Price Gaps
-            summary: Per (SKU × competitor) — own vs competitor price and the gap.
-            views:
-              - view: table
-                from: exposure_items
-                columns: [customer, value, risk]
-
-      # 2. Recommend a move per exposed SKU.
-      - id: assess_pricing_exposure
-        name: Assess Pricing Exposure
-        type: agent
-        after: summarise_price_gaps
-        description: Recommend a move per exposed SKU.
-        instruction: >
-          For each row in `exposure_items`, recommend a move: `reprice` (gap ≥ 15%, High
-          risk), `review` (a smaller but real gap) or `hold` (immaterial). Output
-          `pricing_actions`: one row per matchup with {sku: the `customer` label, gap: the
-          `value`, risk, move, reason (one line)}. Do not invent rows beyond
-          `exposure_items`; output an empty list only if `exposure_items` is empty.
-        produces:
-          - pricing_actions
-
-      # 3. GATE — pricing team decides whether to flag for review.
-      - id: review_price_gaps
-        name: Review Price Gaps
-        type: decision
-        after: assess_pricing_exposure
-        description: Pricing team reviews the exposure and decides whether to flag for a pricing review.
-        instruction: >
-          Review the price gaps and the recommended moves. Choose "Flag for Pricing
-          Review" when one or more SKUs are materially mispriced against competitors (a
-          High-risk gap); choose "No Action" when the gaps are immaterial. Recommend
-          "Flag for Pricing Review" whenever a High-risk gap is present.
-        decision_options: ["Flag for Pricing Review", "No Action"]
-        recommends: exposure_level
-        rationale_from: price_gap_summary
-        produces:
-          - pricing_decision
-        key_data:
-          - title: Competitor Price Gaps
-            summary: The price comparisons this signal surfaced.
-            views:
-              - view: table
-                from: exposure_items
-                columns: [customer, value, risk]
-          - title: Recommended Pricing Actions
-            summary: The recommended move per exposed SKU.
-            views:
-              - view: table
-                from: pricing_actions
-                columns: [sku, gap, risk, move, reason]
-
-      # 4. Record the flagged SKUs for pricing review (simulated) — only when flagged.
-      - id: record_pricing_review
-        name: Record Pricing Review
-        type: notify
-        after: review_price_gaps
-        condition: '{{pricing_decision}} == "Flag for Pricing Review"'
-        description: Record the SKUs flagged for a pricing review and route to the pricing owner.
-        produces:
-          - pricing_review_recorded
-        action:
-          type: simulated
-          name: record_pricing_review
-          config:
-            summary: 'Competitive pricing signal — SKUs flagged for pricing review.'
-            findings: '{{pricing_actions}}'
-
-    metadata:
-      version: 2
-      priority: 10
-      # This process handles a detected SIGNAL (renders on the event page like an event).
-      kind: signal
-      signal_key: competitive-pricing
-      # A signal fire carries no guaranteed pivot entity, so a bare run is valid.
-      entity_optional: true
-      run_steps_before_gate: true
-
-      # Pull the detector payload's structured findings off the event into facts, so
-      # the steps can reason over them and the gate cards can show them. `source: event`
-      # reads the event's attributes (where the signal bridge put the payload).
-      context_package:
-        - { key: exposure_items, source: event }
-        - { key: comparison_groups, source: event }
-
-      # Process-level "Data used" card (inherited by any gate without its own).
-      key_data:
-        - title: Competitor Price Gaps
-          summary: The competitor price comparisons this signal surfaced.
-          views:
-            - view: table
-              from: exposure_items
-              columns: [customer, value, risk]
-
-      tools:
-        skills: []
-        connectors: []
-        allow_unlisted_skills: false
+      '
+    decision_options:
+    - Flag for Pricing Review
+    - No Action
+    recommends: exposure_level
+    rationale_from: price_gap_summary
+    produces:
+    - pricing_decision
+    key_data:
+    - title: Competitor Price Gaps
+      summary: The price comparisons this signal surfaced.
+      views:
+      - view: table
+        from: exposure_items
+        columns:
+        - customer
+        - value
+        - risk
+    - title: Recommended Pricing Actions
+      summary: The recommended move per exposed SKU.
+      views:
+      - view: table
+        from: pricing_actions
+        columns:
+        - sku
+        - gap
+        - risk
+        - move
+        - reason
+  - id: record_pricing_review
+    name: Record Pricing Review
+    type: notify
+    after: review_price_gaps
+    condition: '{{pricing_decision}} == "Flag for Pricing Review"'
+    description: Record the SKUs flagged for a pricing review and route to the pricing owner.
+    produces:
+    - pricing_review_recorded
+    action:
+      type: simulated
+      name: record_pricing_review
+      config:
+        summary: "Competitive pricing signal \u2014 SKUs flagged for pricing review."
+        findings: '{{pricing_actions}}'
+  metadata:
+    version: 2
+    priority: 10
+    kind: signal
+    signal_key: competitive-pricing
+    entity_optional: true
+    run_steps_before_gate: true
+    context_package:
+    - key: exposure_items
+      source: event
+    - key: comparison_groups
+      source: event
+    key_data:
+    - title: Competitor Price Gaps
+      summary: The competitor price comparisons this signal surfaced.
+      views:
+      - view: table
+        from: exposure_items
+        columns:
+        - customer
+        - value
+        - risk
+    tools:
+      skills: []
+      connectors: []
+      allow_unlisted_skills: false
+  related_signals_events:
+  - NPD_CompetitorProductLaunch
+  - NPD_CompetitorPackInnovation
+  - MKT_CompetitorCampaignLaunch
+  - SALES_CompetitorNewListing
+  - SALES_CompetitorListingRemoval
+  - SALES_CompetitorSearchRankingChange
+  - SALES_CompetitorOutOfStock
+  - SALES_CompetitorAssortmentChange
+  - FIN_CompetitorPriceChange
+  - FIN_CompetitorPromotionLaunch
+  - FIN_CompetitorPackSizeChange
+  - FIN_CompetitorBundleOffer
+  - FIN_CategoryPricingMovement
+  - FIN_RetailerDiscountMovement
+  - CMI_CompetitorProductLaunch
+  - CMI_CompetitorPriceChange
+  - CMI_CompetitorPromotion
+  - CMI_CompetitorClaimChange
+  - CMI_CompetitorChannelExpansion
+  - CMI_NewChallengerBrandEmerging

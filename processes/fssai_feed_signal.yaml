@@ -1,184 +1,188 @@
 version: 1
-
 processes:
-  # FSSAI Feed (SIGNAL) — the process the ProcessOrchestrator runs when the `fssai-feed`
-  # signal fires. The detector skill scrapes fssai.gov.in and hands off a payload; this
-  # process organises that outcome (the change table), maps it to the affected portfolio,
-  # and lets compliance decide whether to open a full impact analysis. Renders on the
-  # event page.
-  #
-  # Marked for signals via metadata.kind: signal + metadata.signal_key. The signal→event
-  # bridge presets THIS process (by signal_key) and puts the detector payload on the
-  # event; the context_package pulls that payload's structured findings into facts.
-  - id: fssai_feed_signal
-    name: FSSAI Feed Signal
-    description: >
-      Reviews the regulatory changes surfaced by the FSSAI feed signal, maps them to the
-      affected portfolio (SKUs, claims, ingredients), and lets compliance decide whether
-      to open a full impact analysis.
-    domain: Compliance
-    owner: compliance_team
-    definition_type: text
+- id: fssai_feed_signal
+  name: FSSAI Feed Signal
+  description: 'Reviews the regulatory changes surfaced by the FSSAI feed signal, maps them to the affected portfolio (SKUs,
+    claims, ingredients), and lets compliance decide whether to open a full impact analysis.
 
-    applies_to:
-      - entity: Regulation
+    '
+  domain: Compliance
+  owner: compliance_team
+  definition_type: text
+  applies_to:
+  - entity: Regulation
+  triggers:
+  - type: signal
+    signal_key: fssai-feed
+  - type: event
+    event_type: fssai-feed
+  - type: manual
+    allowed_roles:
+    - ComplianceLead
+    - RegulatoryAffairs
+  inputs:
+  - name: regulation
+    type: reference
+    references: Regulation
+    required: false
+  outputs:
+  - name: fssai_signal_decision
+    type: enum
+    values:
+    - Open Impact Analysis
+    - No Action
+  steps:
+  - id: summarise_regulatory_changes
+    name: Summarise Regulatory Changes
+    type: agent
+    description: Summarise the FSSAI changes the signal surfaced.
+    instruction: "`exposure_items` holds the regulatory changes this signal surfaced \u2014 each row has `customer` (the change\
+      \ title), `value` (what changed and what it affects) and `risk` (High/Medium). `change_events` carries the fuller records\
+      \ (source, effective_date, business_criticality, mandatory). Write a short `change_summary` \u2014 how many changes,\
+      \ which are mandatory or license-blocking, and their effective dates \u2014 and set `criticality_level` (high | medium\
+      \ | low): high when any change is mandatory / license-blocking. Do not restate every row.\n"
+    produces:
+    - change_summary
+    - criticality_level
+    key_data:
+    - title: FSSAI Regulatory Changes
+      summary: The changes surfaced this scan, with what each affects.
+      views:
+      - view: table
+        from: exposure_items
+        columns:
+        - customer
+        - value
+        - risk
+  - id: assess_portfolio_impact
+    name: Assess Impacted Products
+    type: agent
+    after: summarise_regulatory_changes
+    description: Identify which SKUs in the portfolio the change actually affects.
+    fetch:
+      entity_type: Product
+      source_table: V_PRODUCT_ENRICHED
+      columns:
+      - SKU
+      - DISPLAY_NAME
+      - MRP_INR
+      - SHELF_LIFE_DAYS
+      limit: 120
+      as: product_portfolio
+    instruction: "`product_portfolio` is the SKU catalogue \u2014 each row has SKU and DISPLAY_NAME (the name encodes the\
+      \ product type, e.g. \"Dessert-Chocolate Cheesecake-500 gm\"). For the change(s) in `exposure_items` / `change_events`,\
+      \ pick the SKUs the change actually touches and output `impacted_items`: one row per affected SKU with {sku: SKU, product:\
+      \ DISPLAY_NAME, why: one line on why THIS SKU is caught by the change (cite the flavour / product type / claim that\
+      \ matches), exposure: high | medium | low}. Judge relevance from the product's name / flavour / description \u2014 e.g.\
+      \ an HFSS-thresholds change catches sweetened, fried, high-fat or high-salt snacks, desserts and beverages, especially\
+      \ any marketed to or eligible for children / schools; an allergen or colour change catches SKUs whose recipe or claims\
+      \ involve it. Only include SKUs that are genuinely affected (do NOT list the whole catalogue); if none clearly apply,\
+      \ return an empty list. Also give a one-line `impact_summary` \u2014 how many SKUs are affected and the most exposed.\n"
+    produces:
+    - impacted_items
+    - impact_summary
+    key_data:
+    - title: Impacted Products
+      summary: SKUs the regulatory change affects.
+      views:
+      - view: table
+        from: impacted_items
+        columns:
+        - product
+        - why
+        - exposure
+  - id: review_regulatory_changes
+    name: Review Regulatory Changes
+    type: decision
+    after: assess_portfolio_impact
+    description: Compliance reviews the changes and decides whether to open a full impact analysis.
+    instruction: 'Review the changes and the portfolio they touch. Choose "Open Impact Analysis" when one or more changes
+      materially affect the portfolio and warrant the full remediation workflow; choose "No Action" when nothing relevant
+      is affected. Recommend "Open Impact Analysis" whenever a mandatory / license-blocking change touches a live SKU.
 
-    triggers:
-      - { type: signal, signal_key: fssai-feed }
-      - { type: event, event_type: fssai-feed }
-      - { type: manual, allowed_roles: [ComplianceLead, RegulatoryAffairs] }
-
-    inputs:
-      - { name: regulation, type: reference, references: Regulation, required: false }
-
-    outputs:
-      - { name: fssai_signal_decision, type: enum, values: ["Open Impact Analysis", "No Action"] }
-
-    steps:
-      # 1. Summarise the regulatory changes the signal carried (read from the payload).
-      - id: summarise_regulatory_changes
-        name: Summarise Regulatory Changes
-        type: agent
-        description: Summarise the FSSAI changes the signal surfaced.
-        instruction: >
-          `exposure_items` holds the regulatory changes this signal surfaced — each row
-          has `customer` (the change title), `value` (what changed and what it affects)
-          and `risk` (High/Medium). `change_events` carries the fuller records (source,
-          effective_date, business_criticality, mandatory). Write a short
-          `change_summary` — how many changes, which are mandatory or license-blocking,
-          and their effective dates — and set `criticality_level` (high | medium | low):
-          high when any change is mandatory / license-blocking. Do not restate every row.
-        produces:
-          - change_summary
-          - criticality_level
-        key_data:
-          - title: FSSAI Regulatory Changes
-            summary: The changes surfaced this scan, with what each affects.
-            views:
-              - view: table
-                from: exposure_items
-                columns: [customer, value, risk]
-
-      # 2. Map the changes to the affected products — the concrete SKUs to care about.
-      #    The SKU pool is pulled as THIS step's own `fetch` (so the agent sees the
-      #    whole catalogue un-truncated, not the 4-row preview a shared fact gets).
-      - id: assess_portfolio_impact
-        name: Assess Impacted Products
-        type: agent
-        after: summarise_regulatory_changes
-        description: Identify which SKUs in the portfolio the change actually affects.
-        # Only the columns this tenant's V_PRODUCT_ENRICHED link actually exposes —
-        # FLAVOUR / VEG_NONVEG live on the graph node, not the dataset link.
-        # DISPLAY_NAME already encodes the product type (e.g. "Dessert-…").
-        fetch:
-          entity_type: Product
-          source_table: V_PRODUCT_ENRICHED
-          columns: [SKU, DISPLAY_NAME, MRP_INR, SHELF_LIFE_DAYS]
-          limit: 120
-          as: product_portfolio
-        instruction: >
-          `product_portfolio` is the SKU catalogue — each row has SKU and DISPLAY_NAME
-          (the name encodes the product type, e.g. "Dessert-Chocolate Cheesecake-500 gm").
-          For the change(s) in `exposure_items` / `change_events`, pick the SKUs the change
-          actually touches and output
-          `impacted_items`: one row per affected SKU with {sku: SKU, product: DISPLAY_NAME,
-          why: one line on why THIS SKU is caught by the change (cite the flavour / product
-          type / claim that matches), exposure: high | medium | low}. Judge relevance from
-          the product's name / flavour / description — e.g. an HFSS-thresholds change
-          catches sweetened, fried, high-fat or high-salt snacks, desserts and beverages,
-          especially any marketed to or eligible for children / schools; an allergen or
-          colour change catches SKUs whose recipe or claims involve it. Only include SKUs
-          that are genuinely affected (do NOT list the whole catalogue); if none clearly
-          apply, return an empty list. Also give a one-line `impact_summary` — how many
-          SKUs are affected and the most exposed.
-        produces:
-          - impacted_items
-          - impact_summary
-        key_data:
-          - title: Impacted Products
-            summary: SKUs the regulatory change affects.
-            views:
-              - view: table
-                from: impacted_items
-                columns: [product, why, exposure]
-
-      # 3. GATE — compliance decides whether to open a full impact analysis.
-      - id: review_regulatory_changes
-        name: Review Regulatory Changes
-        type: decision
-        after: assess_portfolio_impact
-        description: Compliance reviews the changes and decides whether to open a full impact analysis.
-        instruction: >
-          Review the changes and the portfolio they touch. Choose "Open Impact Analysis"
-          when one or more changes materially affect the portfolio and warrant the full
-          remediation workflow; choose "No Action" when nothing relevant is affected.
-          Recommend "Open Impact Analysis" whenever a mandatory / license-blocking change
-          touches a live SKU.
-        decision_options: ["Open Impact Analysis", "No Action"]
-        recommends: criticality_level
-        rationale_from: impact_summary
-        produces:
-          - fssai_signal_decision
-        key_data:
-          - title: Impacted Products
-            summary: The SKUs this regulatory change affects — what to care about.
-            views:
-              - view: table
-                from: impacted_items
-                columns: [product, why, exposure]
-          - title: FSSAI Regulatory Changes
-            summary: The changes surfaced this scan.
-            views:
-              - view: table
-                from: exposure_items
-                columns: [customer, value, risk]
-
-      # 4. Record the decision to open impact analysis (simulated) — only when opened.
-      - id: record_impact_analysis
-        name: Record Impact Analysis
-        type: notify
-        after: review_regulatory_changes
-        condition: '{{fssai_signal_decision}} == "Open Impact Analysis"'
-        description: Record that a full impact analysis was opened and route to the compliance owner.
-        produces:
-          - impact_analysis_recorded
-        action:
-          type: simulated
-          name: record_impact_analysis
-          config:
-            summary: 'FSSAI feed signal — impact analysis opened for the affected portfolio.'
-            findings: '{{impacted_items}}'
-
-    metadata:
-      version: 4
-      priority: 10
-      kind: signal
-      signal_key: fssai-feed
-      entity_optional: true
-      run_steps_before_gate: true
-
-      # Pull the detector payload's structured findings off the event into facts.
-      # The SKU catalogue is pulled per-step (assess_portfolio_impact.fetch) so the
-      # agent sees it whole. `run_steps_before_gate` runs that fetch before the gate.
-      context_package:
-        - { key: exposure_items, source: event }
-        - { key: change_events, source: event }
-
-      key_data:
-        - title: Impacted Products
-          summary: The SKUs this regulatory change affects.
-          views:
-            - view: table
-              from: impacted_items
-              columns: [product, why, exposure]
-        - title: FSSAI Regulatory Changes
-          summary: The regulatory changes this signal surfaced.
-          views:
-            - view: table
-              from: exposure_items
-              columns: [customer, value, risk]
-
-      tools:
-        skills: []
-        connectors: []
-        allow_unlisted_skills: false
+      '
+    decision_options:
+    - Open Impact Analysis
+    - No Action
+    recommends: criticality_level
+    rationale_from: impact_summary
+    produces:
+    - fssai_signal_decision
+    key_data:
+    - title: Impacted Products
+      summary: "The SKUs this regulatory change affects \u2014 what to care about."
+      views:
+      - view: table
+        from: impacted_items
+        columns:
+        - product
+        - why
+        - exposure
+    - title: FSSAI Regulatory Changes
+      summary: The changes surfaced this scan.
+      views:
+      - view: table
+        from: exposure_items
+        columns:
+        - customer
+        - value
+        - risk
+  - id: record_impact_analysis
+    name: Record Impact Analysis
+    type: notify
+    after: review_regulatory_changes
+    condition: '{{fssai_signal_decision}} == "Open Impact Analysis"'
+    description: Record that a full impact analysis was opened and route to the compliance owner.
+    produces:
+    - impact_analysis_recorded
+    action:
+      type: simulated
+      name: record_impact_analysis
+      config:
+        summary: "FSSAI feed signal \u2014 impact analysis opened for the affected portfolio."
+        findings: '{{impacted_items}}'
+  metadata:
+    version: 4
+    priority: 10
+    kind: signal
+    signal_key: fssai-feed
+    entity_optional: true
+    run_steps_before_gate: true
+    context_package:
+    - key: exposure_items
+      source: event
+    - key: change_events
+      source: event
+    key_data:
+    - title: Impacted Products
+      summary: The SKUs this regulatory change affects.
+      views:
+      - view: table
+        from: impacted_items
+        columns:
+        - product
+        - why
+        - exposure
+    - title: FSSAI Regulatory Changes
+      summary: The regulatory changes this signal surfaced.
+      views:
+      - view: table
+        from: exposure_items
+        columns:
+        - customer
+        - value
+        - risk
+    tools:
+      skills: []
+      connectors: []
+      allow_unlisted_skills: false
+  related_signals_events:
+  - COMP_FSSAIRegulationPublished
+  - COMP_DraftRegulationPublished
+  - COMP_IngredientAdditiveRuleChange
+  - COMP_ClaimsRuleChange
+  - COMP_LabellingRuleChange
+  - COMP_PackagingRegulationChange
+  - COMP_LegalMetrologyChange
+  - COMP_EPREnvironmentalRegulationChange
+  - QA_RegulatorFoodSafetyAlert

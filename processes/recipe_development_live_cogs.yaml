@@ -1,868 +1,717 @@
 version: 1
-
 processes:
-  - id: recipe_development_live_cogs
-    name: Recipe Development with Live COGS
-    description: |
-      Formulates ONE recipe version against its idea brief, costed at today's ingredient rates,
-      for as many rounds as the formulator wants. Each round reads the version's live COGS
-      roll-up, the four thesis checks, the diff against the version it forked from, and where
-      the money sits line by line.
-
-      THE LOOP. "Tell what to do instead" at the gate is the iteration. Typing a change there
-      ("swap Almond Meal for Sunflower Seed Powder", "cut sugar by 15%") re-enters
-      reformulate_on_feedback, which re-prices the change at today's rates, checks it against
-      the brief's claim and brand bans, and comes back to the gate with new numbers. Repeat as
-      often as needed: v1 -> v2 -> v3. Only APPROVE ends it, and only APPROVE writes -- the
-      final version is forked into DIM_RECIPE with PARENT_RECIPE_ID set, its lines written to
-      MAP_RECIPE_INGREDIENT, and the brief advanced to Development in DIM_IDEA. REJECT holds
-      the version with nothing written.
-
-      Every round recomputes from the ORIGINAL version's BOM plus the whole feedback history,
-      never from the round before it. Intermediate rounds are never warehouse rows, so a
-      three-round run leaves the chain reading v1 -> v3, with the rounds themselves in the
-      run's iteration ledger.
-
-      Nothing costed is stored — V_RECIPE_COGS recomputes ingredients + packaging + overhead on
-      every read, so a rate change moves these numbers with nothing re-materialised.
-    domain: Innovation
-    owner: npd_team
-
-    applies_to:
-      - entity: Recipe
-
-    triggers:
-      - { type: manual, allowed_roles: [npd_team, Admin] }
-      # {"recipe_id": "..."} or {"recipeId": "..."} -- either spelling, but the trigger's
-      # field_mapping must declare it or the key is dropped and the run sweeps instead.
-      - { type: event, event_type: recipe_development_live_cogs }
-      - { type: schedule, cron: "0 9 * * 2" }        # Tuesdays 09:00 UTC
-
-    inputs:
-      # A *_id key becomes an ENTITY REF, not an attribute: that is what scopes the run. The
-      # `recipe` half of this name must keep matching resolve_targets.role and the promote
-      # action's {{entity_refs.recipe}}. Blank is the sweep.
-      - { name: recipe_id, type: reference, references: Recipe, required: false }
-      - { name: scheduled_at, type: datetime, required: false }
-
-    # Every fact the loop carries is declared here. A REVISE directive's fact_updates are
-    # applied ONLY to keys that already exist, so an undeclared fact can never be corrected
-    # from the reviewer's text.
-    outputs:
-      - { name: cogs_summary, type: string }
-      - { name: driver_summary, type: string }
-      - { name: version_note, type: string }
-      - { name: focus_idea_id, type: string }
-      - { name: focus_sku, type: string }
-      - { name: baseline_recipe_id, type: string }
-      - { name: iteration_no, type: string }
-      - { name: proposed_change, type: string }
-      - { name: claim_verdict, type: string }
-      # ONE OBJECT keyed by BUSINESS LABELS, rendered as a one-row table at the gate. All the money
-      # in one fact so the headline card cannot read INSIDE off the untouched baseline while the
-      # ledger under it reports a projection that moved. Replaces the projected_cogs_inr /
-      # cost_delta_inr / projected_mass_note scalars -- no action reads any of them. Labels as keys
-      # is the trade: the reviewer gets real headers, but a key the model spells differently
-      # resolves to nothing and renders an EMPTY CELL with no error. Hence ASCII "INR", not a
-      # currency glyph, and hence the instruction pinning the spelling.
-      - { name: cost_projection, type: string }
-      # A LIST OF OBJECTS keyed by business labels, rendered with `view: table`. Markdown was tried
-      # and renders as literal pipe text: the key_data path has no GFM table support. Structured
-      # rows are the only thing that becomes a real table -- which re-imposes byte-exact keys, so
-      # these say INR rather than a currency glyph, same as cost_projection.
-      # It ACCUMULATES: a baseline row, then ONE ROW PER feedback_history ENTRY at Round k+1. Built
-      # by enumeration, never by counting to the round number -- an earlier draft said rows were
-      # "rebuilt identically" and the agent duplicated one ask down the whole table, silently
-      # dropping the second thing the reviewer asked for. Sound only because rule 2 re-derives every
-      # round from the v1 baseline each pass, so an earlier row is rebuilt rather than remembered.
-      - { name: change_impact, type: string }
-      - { name: iteration_ledger, type: string }
-      # The applied/withdrawn split, as COMMA-JOINED ROUND NUMBERS ("2, 4") rather than lists --
-      # a few bytes each, so they arrive at the gate WHOLE. That is the whole point of them:
-      # every fact is shortened before the gate reads it, and change_impact / iteration_ledger
-      # are long enough to be sliced mid-table, which is why the gate is told not to read them.
-      # These two carry the same answer -- what is actually in the recipe -- in a form the gate
-      # can quote. A reviewer withdrawing a change needs the gate to say so next to APPROVE.
-      - { name: applied_rounds, type: string }
-      - { name: withdrawn_rounds, type: string }
-      - { name: reformulation_rationale, type: string }
-      - { name: proposed_recipe_id, type: string }
-      - { name: proposed_lines, type: string }
-      - { name: final_recipe_id, type: string }
-      - { name: final_recipe_name, type: string }
-      - { name: fork_parent_id, type: string }
-      - { name: trial_note, type: string }
-      - { name: lines_written, type: string }
-      - { name: lines_skipped, type: string }
-      - { name: batch_size_g, type: number }
-      - { name: packaging_cost_inr, type: number }
-      - { name: labour_overhead_inr, type: number }
-      - { name: target_cogs_inr, type: number }
-
-    steps:
-      - id: read_live_cogs
-        name: Read Live COGS and Thesis Checks
-        type: agent
-        description: >
-          Reads the live COGS roll-up and the four SQL-evaluated thesis checks for the version
-          under review.
-        # A fetch cannot be narrowed to one recipe (not entity-scoped, filter values never
-        # templated), so ST bounds it and the instruction picks the one version out. Re-measure
-        # with the query in the V_RECIPE_WORKBENCH header before widening this.
-        fetch:
-          entity_type: Recipe
-          source_table: V_RECIPE_WORKBENCH
-          columns: [SRC, ID, NM, D, ST]
-          filters:
-            combinator: AND
-            conditions:
-              - { column: ST,  op: in, value: ['Draft', 'InTrial'] }
-              - { column: SRC, op: in, value: ['1_HDR', '4_THESIS', '9_END'] }
-          # SRC asc puts 9_END last, so the sentinel is the first row a tail cut destroys.
-          order_by: SRC
-          order_dir: asc
-          limit: 200
-          required: true
-          as: recipe_versions
-        produces: [cogs_summary, focus_idea_id, focus_sku, baseline_recipe_id]
-        instruction: >
-          The fact `focus_recipe` names the one recipe version this run is about. Read its
-          RECIPE_ID and report on that recipe only — other ids appear in `recipe_versions` because
-          that read cannot be scoped to one recipe, so ignore every one of them.
-
-          FIRST, check the scope. If `focus_recipe` is absent, empty, or holds MORE THAN ONE row,
-          this run could not tell which recipe it is about. Set `cogs_summary` to exactly
-          SCOPE_UNRESOLVED, set the other three facts to null, and stop. Never pick a row
-          yourself and never fall back to the first one — a confident review of the wrong recipe
-          is worse than no review.
-
-          Each row of `recipe_versions` belongs to one recipe version. SRC says what it is, ID is
-          the recipe id, NM the name, ST the status, D the pipe-packed fields:
-
-          1_HDR — one per version. D = version|status|batch_g|ingredient_inr|packaging_inr|overhead_inr|total_inr|target_inr|fit|costed. NM is the recipe name.
-
-          4_THESIS — four per version. NM is the rule, D = verdict|evidence.
-
-          9_END — one per version, NM = END_OF_WORKBENCH.
-
-          The 4_THESIS verdicts are evaluated in SQL. Quote them as given; never recompute one.
-
-          Set `cogs_summary` to one line for that version:
-
-          <id> (<name>) | v<version> | <status> | INR <total_inr> vs target <target_inr> | <fit> | <the rules whose verdict is not PASS/INSIDE, with their evidence, else "all checks pass">
-
-          If it has no 9_END row its data was cut short — write "TRUNCATED" instead of the
-          fields you did not receive.
-
-          Set `baseline_recipe_id` to `focus_recipe`'s RECIPE_ID. This is the version every
-          later round measures against, so it must never change during the run.
-
-          Set `focus_idea_id` to `focus_recipe`'s IDEA_ID and `focus_sku` to its SKU, each copied
-          digit for digit. Where one is empty or absent set it to null — never the string "NONE",
-          which is a valid key and would write a junk row.
-
-      - id: find_cost_drivers
-        name: Find the Cost Drivers
-        type: agent
-        after: read_live_cogs
-        description: >
-          Reads the version's dearest lines and its parent's, to say where the money sits and
-          what changed.
-        # Separate from the step above because all the SRC arms in one fetch overflow the
-        # 9000-char step input cap. Do not merge them.
-        fetch:
-          entity_type: Recipe
-          source_table: V_RECIPE_WORKBENCH
-          columns: [SRC, ID, NM, D, ST]
-          filters:
-            combinator: AND
-            conditions:
-              - { column: ST,  op: in, value: ['Draft', 'InTrial'] }
-              - { column: SRC, op: in, value: ['2_LINE', '3_BASE', '9_END'] }
-          order_by: SRC
-          order_dir: asc
-          limit: 200
-          required: true
-          as: priced_lines
-        produces: [driver_summary, version_note]
-        instruction: >
-          Work only on the RECIPE_ID in the fact `focus_recipe`. Rows in `priced_lines` under any
-          other id belong to versions this run is not about — ignore them.
-
-          If `cogs_summary` reads SCOPE_UNRESOLVED, or `focus_recipe` is absent or holds more than
-          one row, set both `driver_summary` and `version_note` to exactly SCOPE_UNRESOLVED and
-          stop. Do not pick a recipe yourself.
-
-          `priced_lines` holds, per version: its THREE DEAREST priced lines and its parent's
-          three dearest. Not the whole BOM — a short list is the design, never a cut.
-
-          2_LINE — this version. NM = ingredient, D = role|net_g|loss_pct|inr_per_kg|line_inr|share_pct. share_pct is that line's share of the WHOLE recipe, so three lines can sum to well under 100.
-
-          3_BASE — the PARENT version's three dearest, listed under the CHILD's id. D = role|net_g|line_inr. Absent for a version with no parent.
-
-          9_END — that version's end marker.
-
-          The fact `cogs_summary` carries this version's header and thesis verdicts.
-
-          Set `driver_summary` to two or three sentences: where the money sits (its dearest
-          2_LINE row as "<ingredient> INR <line_inr>, <share_pct>% of the recipe"), which of the
-          dearest lines moved against 3_BASE and by how many grams, else "no parent", and which
-          thesis rules failed, else "all checks pass".
-
-          Set `version_note` to under 20 words on whether it is ready for trial. This is written
-          to the recipe row itself, so write it as a formulator's note, not as a report.
-
-          Copy every number from the data digit for digit; never compute or round one. If the
-          version has no 9_END row, say so in `version_note` and write "TRUNCATED" for the
-          dearest line.
-
-      - id: reformulate_on_feedback
-        name: Re-formulate on Reviewer Feedback
-        type: agent
-        after: find_cost_drivers
-        description: >
-          Applies the changes the reviewer asked for, prices them at today's rates, checks them
-          against the brief's claim and brand bans, and projects the new COGS.
-        # THE LOOP LIVES HERE. A REVISE at the gate re-enters this step, so its first sentence
-        # must say so: the directive that picks the re-entry point sees only ~160 chars of it.
-        #
-        # THIS FETCH IS NOT OPTIONAL, and it must stay a fetch. A step's own fetch result is the
-        # ONLY input the engine hands over un-truncated: it goes in STEP INPUT DATA, sliced at 9000.
-        # Every OTHER fact is shrunk to max(200, 4000/count) chars EACH -- about 200 here -- so the
-        # same data arriving on the `focus_recipe` context key was cut after ~200 chars and this step
-        # saw no LINES, no CANDS and no END_MARK. It correctly reported TRUNCATED and did nothing.
-        # A context key can never be a step input: only `fetch`/`skill` `as` keys are.
-        #
-        # SIZED, AND FULL. Measured 8349 of 9000 over the 5 Draft/InTrial recipes, 1669 each --
-        # so there is room for FIVE, which is exactly how many exist. A SIXTH Draft or InTrial
-        # recipe overflows this (6 x 1669 = 10014), the 9000 slice cuts mid-row, and whichever
-        # recipe sorts LAST by RECIPE_ID loses its data. END_MARK is the only detector, and it is
-        # what caught this class of bug the first time. Before drafting more recipes or adding a
-        # column here, re-measure: the fetch's JSON length over the rows this filter returns must
-        # stay under 9000. If it will not fit, drop a column from THIS list -- never widen the
-        # filter, and never move data back onto a context key, where it is capped at ~200.
-        # BANS is deliberately absent -- it cost 1250 chars and CANDS already carries
-        # VIOLATES:<rule> per candidate, so verdicts are unaffected and only the claim WORDING is
-        # lost from a VETO explanation. BANS stays on the view and on focus_recipe.
-        fetch:
-          entity_type: Recipe
-          source_table: V_RECIPE_FORMULATION_CONTEXT
-          columns: [RECIPE_ID, RECIPE_NAME, RECIPE_COGS_INR, TARGET_COGS_INR, BATCH_SIZE_G, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR, LINES, N_CAND, CANDS, END_MARK]
-          filters:
-            combinator: AND
-            conditions:
-              - { column: STATUS, op: in, value: ['Draft', 'InTrial'] }
-          order_by: RECIPE_ID
-          order_dir: asc
-          limit: 20
-          required: true
-          as: formulation_context
-        produces:
-          - iteration_no
-          - proposed_change
-          - claim_verdict
-          - cost_projection
-          - change_impact
-          - proposed_recipe_id
-          - proposed_lines
-          - final_recipe_id
-          - final_recipe_name
-          - fork_parent_id
-          - iteration_ledger
-          - applied_rounds
-          - withdrawn_rounds
-          - reformulation_rationale
-          - trial_note
-          # Carried onto the fork row by the promote action: a new RECIPE_ID inherits nothing,
-          # and a NULL BATCH_SIZE_G would fail its own mass_closes check.
-          - batch_size_g
-          - packaging_cost_inr
-          - labour_overhead_inr
-          - target_cogs_inr
-        instruction: >
-          RE-ENTER THIS STEP whenever the reviewer asks for an ingredient swap, a ratio change or
-          a re-costing: it re-formulates from their feedback and re-prices at today's rates.
-
-          Work from `formulation_context`. It holds one row per Draft or InTrial recipe because that
-          read cannot be scoped to one — take the row whose RECIPE_ID equals `focus_recipe`'s and
-          ignore every other. That row is the ORIGINAL version and the only baseline.
-
-          LINES is its whole BOM, each
-          ing_id~name~role~net_g~loss~inr_per_kg~line_inr~bans-it-already-breaks-or-ok. CANDS is
-          today's priced swap candidates, each ing_id~name~role~inr_per_kg~ALLOWED-or-VIOLATES:rule,
-          grouped by role: the two cheapest in EVERY role, so a cross-role swap prices like any
-          other. N_CAND is how many candidates exist in total and is far larger than the number
-          listed. RECIPE_NAME says what the product IS, which rule 6's advice turns on.
-
-          A candidate's own VIOLATES:<rule> is the whole ban signal here — name that rule when you
-          refuse one. `focus_recipe` carries only this version's identity and status.
-
-          Every ingredient id you write is COPIED from LINES or CANDS. Never construct one: an id
-          that matches nothing produces a line the warehouse cannot price.
-
-          If `cogs_summary` reads SCOPE_UNRESOLVED, or that row is missing from
-          `formulation_context`, or its END_MARK is not "END", set every fact below to
-          SCOPE_UNRESOLVED or TRUNCATED respectively, `proposed_recipe_id` to NONE, stop. Judge this
-          on the row you selected, never on `focus_recipe`, which carries no END_MARK.
-
-          1. `iteration_no` = 1 + the entries in `feedback_history`. Read that whole list in
-          order; never `reviewer_feedback`, which holds only the newest and is dropped on approval.
-
-          2. Replay every entry against LINES in order, starting from those lines each time this
-          runs: a re-derivation from the original, never an edit of the round before. EXCEPT any
-          round rule 3a says the reviewer withdrew — that entry is SKIPPED, exactly as if it had
-          never been asked. Decide the withdrawals BEFORE you start replaying, or this rule's
-          "every entry" and rule 3a's exception will contradict each other and the withdrawn
-          change will end up in the recipe anyway.
-
-          3. Price from the data. A swap takes its inr_per_kg from CANDS. Quantities come in four
-          forms, and every one of them ends in the same gross calculation. A fifth form asks for an
-          EARLIER round to be taken back out, and is handled in rule 3a instead:
-
-          SET an exact weight ("set the almond flour to 100 g") — that line's net_g becomes 100.
-
-          SCALE by a proportion ("cut the sugar by 15%") — that line's net_g times 0.85.
-
-          ADD a new ingredient at a weight ("add 20 g cocoa powder") — a NEW line at that net_g,
-          its id and inr_per_kg from CANDS. A new line's loss is 0 unless the reviewer gives one:
-          the data holds no loss for an ingredient not yet on a recipe, and borrowing another
-          line's would be invention. Say so in that line's NOTES, because it makes the line's cost
-          a floor rather than an estimate.
-
-          SET TO ZERO ("set the elaichi to 0 g", "drop the elaichi") — the line leaves the recipe.
-
-          Then gross = net_g / (1 - loss/100) for every line, and cost is charged on gross, never
-          on net. Gross is never written anywhere: the warehouse derives it from the net and loss
-          you do write.
-
-          3a. WITHDRAW an earlier round. The reviewer can say so in two ways, and BOTH mean exactly
-          the same thing:
-
-          IN WORDS ("drop the gram flour swap", "undo round 2", "put the almond flour back",
-          "forget the millet") — identify which earlier `feedback_history` entry they mean, by its
-          round number or by the ingredient it named.
-
-          BY REJECTING THE ROW — `row_verdict_history` holds the reviewer's per-row ✗ and ✓ from the
-          gate's tables, each entry reading `<fact>|<column>|<row>=reject` or `=approve`, as in
-          `iteration_ledger|Round|2=reject`. An entry ending `=reject` on a `change_impact` or
-          `iteration_ledger` row withdraws THAT ROUND — the column is `Round`, so the last part
-          before the `=` IS the round number. An entry ending `=approve` confirms the round and
-          changes nothing.
-          Read this list on EVERY pass: it is the standing record of what the reviewer has ticked,
-          not just this round's clicks, and a round it rejects stays withdrawn.
-
-          Either way the reviewer is taking back a REQUEST, not making a new one, so DO NOT APPLY
-          IT, on this pass or any later pass. Rule 2
-          already replays every entry from LINES afresh each time this runs, so withdrawing is simply
-          leaving that entry out of the replay; never try to reverse a change on top of the round
-          before, and never reach for the pre-change quantity, because LINES already holds it.
-
-          `withdrawn_rounds` = those round numbers from BOTH routes, comma-joined, oldest first
-          ("2" or "2, 4"). A PLAIN STRING, never a JSON list — the gate quotes it to the reviewer.
-
-          `applied_rounds` AND `withdrawn_rounds` ARE DISJOINT. A round is in exactly one of them,
-          never both. If you find yourself about to list the same round twice, the withdrawal has
-          not been carried through the replay in rule 2 — go back and skip that entry. Every fact
-          below must agree with the split: a withdrawn round contributes NO LINE to
-          `proposed_lines`, reads "Withdrawn" in both tables, leaves the projection as if it had
-          never been asked, and takes no part in rule 6's worst-Applied-row bound. One round
-          reading "withdrawn" in one fact and "applied" in another is the single worst outcome
-          here — it tells the reviewer their instruction landed when it did not.
-          CARRY FORWARD every number already in `withdrawn_rounds`: a withdrawal is permanent, and a
-          round dropped from that string comes back into the recipe on the next pass.
-          `applied_rounds` = the rounds that DID land, comma-joined, the same way. Rounds refused by
-          rule 4 or 5 belong in neither: nothing was applied and nothing was withdrawn. With no
-          feedback yet both are the empty string.
-
-          Withdrawal is NOT "SET TO ZERO". Setting a line to 0 g is a new change the reviewer is
-          making now, and its round stays Applied; withdrawing removes an earlier ask so that the
-          recipe reads as though it had never been made. Where the words could mean either — "drop
-          the elaichi" when no round ever added elaichi — it is a SET TO ZERO on a baseline line.
-
-          4. Ingredient not in CANDS: change nothing and set `proposed_change` to "UNPRICED:
-          <name> is not among the <N_CAND> priced candidates listed — nearest <role> are <the two
-          cheapest CANDS rows in that role>", `proposed_recipe_id` to NONE. Never assume a rate,
-          and never say the ingredient is absent from the catalog: only some of the N_CAND
-          candidates are listed, so what you can see does not tell you that.
-
-          5. Candidate reading VIOLATES: refuse it. `claim_verdict` = "VETO:<rule> — <what the rule
-          forbids and why this breaks it>", the projection stays at the last clear round, and
-          `proposed_recipe_id` is NONE. Otherwise `claim_verdict` is CLEAR, or "CLEAR (inherited:
-          <rules>)" where a LINES row ends in a rule name.
-
-          SAVINGS ARE POSITIVE WHEN MONEY IS SAVED, negative when the recipe gets dearer. That is
-          baseline minus projected, and it holds in rules 6 and 7 alike.
-
-          6. `cost_projection` = ONE object, business labels as its keys, every value a pre-rounded
-          string. Emit the keys IN THIS ORDER — the two verdicts first, because a later reader may
-          see only the beginning of this object:
-
-          {"Target Fit Band": UNKNOWN with no target, else INSIDE when projected <= target + 0.005,
-          else MARGINAL when projected <= target * 1.05, else OVER,
-          "Batch Mass Check": re-derived after EVERY quantity change — the projected net mass
-          against BATCH_SIZE_G and whether it closes within 1%, AND NOTHING MORE, as in
-          "yes - 149.5 g vs 150 g" or "no - 170.0 g vs 150 g (+13.3%)". What would close a breach
-          belongs in `reformulation_rationale`, not in this field,
-          "Formulation Advice": whether the change is right for THIS PRODUCT, which is a different
-          question from what it costs — "Sound", "Caution" or "Not advised", then a dash and at most
-          14 words of reason drawn from RECIPE_NAME and the brief. Judge what the product IS: an
-          Almond Katli whose almond base becomes gram flour is a different sweet, so that reads "Not
-          advised — almond is the defining base of Almond Katli; gram flour makes it another sweet".
-          The money columns already say whether it got cheaper, so never answer with the saving.
-          This judges the version as it NOW STANDS, where rule 7's AI Suggestion judges one change
-          each, so it can be NO BETTER THAN THE WORST Applied row: if any of them reads "Not
-          advised" this cannot read "Sound". A WITHDRAWN round is not an Applied row and takes no
-          part in that bound — it is no longer in the recipe, so an objection to it must disappear
-          the moment it is withdrawn. Left in, it would hold this field at "Not advised" over a
-          change that is gone, and because the gate refuses to approve on this field the version
-          could never be approved at all. The gate refuses to approve on this field, so the two
-          contradicting each other would approve a change the table advises against. SAY WHICH ROUND
-          you are objecting to whenever the worst Applied change came from an EARLIER round, as in
-          "Not advised (Round 2) — almond defines Almond Katli; gram flour alters identity". An
-          objection carried forward from round 2 sits beside cards showing round 3, and unlabelled it
-          reads as a card that failed to refresh rather than a fault that still stands. No prefix
-          when the worst change is this round's own, and none when nothing is objectionable,
-          "Live COGS (INR)": RECIPE_COGS_INR,
-          "Projected COGS (INR)": the projected line costs + PACKAGING_COST_INR + LABOUR_OVERHEAD_INR,
-          "Total Savings (INR)": live minus projected,
-          "Target COGS (INR)": TARGET_COGS_INR}
-
-          Spell every key exactly as written: a key spelt differently renders an empty cell at the
-          gate and reports nothing.
-
-          7. `change_impact` = a LIST OF OBJECTS, one per row, which the gate renders as a table.
-          Build the rows by ENUMERATION. Never build them by counting up to the round number.
-
-          The FIRST row is always the baseline: {"Round": "1", "Change Requested": "Initial
-          baseline", "Component Role": "", "Quantity (g)": "", "Live Rate (INR/kg)": "",
-          "Previous Cost (INR)": "", "New Cost (INR)": "", "Line Savings (INR)": "0.00",
-          "Status": "Baseline", "AI Suggestion": "—"}.
-
-          THEN one row for EACH entry of `feedback_history`, in the order given. The entry at
-          position k is Round k+1, so the first thing ever asked for is Round 2 and never Round 1.
-          Where a single entry asked for two changes, give it two rows sharing its Round.
-
-          EACH ROW DESCRIBES ONLY ITS OWN ENTRY. Read that entry's words and no other entry's.
-          Never carry an ingredient, quantity, rate or cost sideways from another row: two different
-          asks must read as two visibly different rows, and repeating one ask down the table is the
-          exact failure this rule exists to prevent. The row count therefore FOLLOWS from the
-          entries — three rows at Round 3 because there is a baseline and two asks, not because the
-          round number happens to be three.
-
-          Keep at most 8 rows, dropping the oldest asks and always keeping the baseline.
-
-          Every row carries these keys, spelt exactly as written, with INR and never a currency
-          glyph — a key spelt differently renders an EMPTY COLUMN and reports nothing:
-
-          "Round", "Change Requested", "Component Role", "Quantity (g)", "Live Rate (INR/kg)",
-          "Previous Cost (INR)", "New Cost (INR)", "Line Savings (INR)", "Status", "AI Suggestion".
-
-          Change Requested reads "Almond flour -> Gram flour", or "Almond flour 120.5 g -> 100 g"
-          where only the quantity moved, or "+ 20 g Millet flakes" for an addition. Component Role
-          is the incoming ingredient's role, written "Base -> Inclusion" where it differs from the
-          role it replaced. Quantity (g) is that line's net_g after the change — the added weight
-          on an addition. Live Rate is the incoming ingredient's rate from CANDS, or the line's own
-          from LINES where only the quantity moved. Previous Cost and New Cost are that line's cost
-          before and after; on a refused ask they are equal and Line Savings is "0.00".
-
-          Status is ONE WORD, nothing else — no rates, no rule names, no prose. Exactly one of:
-          "Applied", "Vetoed", "Unpriced", "Withdrawn", "Baseline". It is there to be read down the
-          column at a glance, so anything longer defeats it.
-
-          A withdrawn round KEEPS ITS ROW, reading "Withdrawn". Deleting the row would leave the
-          reviewer no record that they ever asked, and no way to see that the ask was honoured. Its
-          Previous Cost and New Cost are equal and Line Savings is "0.00", because nothing changed
-          in the recipe.
-
-          AI Suggestion is the prose, and what it says depends on that row's Status:
-
-          Applied — whether the change is right for THIS PRODUCT, graded "Sound", "Caution" or "Not
-          advised", then a dash and at most 12 words. This is rule 6's Formulation Advice judgement
-          applied to ONE change: "Not advised — almond is the defining base of Almond Katli", or
-          "Sound — spice level unchanged".
-
-          Vetoed — what the rule forbids and the way out: "Breaks no_added_sugar — suggest
-          Non-caloric Blend (₹394/kg)".
-
-          Unpriced — the alternative that can be priced: "Not among the listed candidates — suggest
-          Gram flour (₹68/kg)".
-
-          Withdrawn — that the reviewer took it back, and nothing more: "Withdrawn at your request —
-          the recipe reads as though this was never asked". Never re-argue the change here, for or
-          against: whether it was a good idea stopped mattering when it was withdrawn.
-
-          Baseline — an em dash and nothing more.
-
-          Any suggested ingredient is the CHEAPEST ALLOWED CANDS ROW IN THE SAME ROLE, name and rate
-          copied from CANDS exactly. Never suggest a candidate from another role: that changes what
-          the product is, which is the reviewer's call, not yours. Where that role holds no ALLOWED
-          candidate, say "no compliant alternative in <role>" rather than reaching for one.
-
-          JUDGE EACH ROW ON ITS OWN CHANGE, as if no later round existed. This table is rebuilt from
-          scratch every pass, so a row's AI Suggestion is recomputed — not remembered — and it must
-          come out the same each time. A reviewer who scrolls back to round 2 at round 5 has to find
-          the same judgement that was there at round 2. Never let a row's text depend on what another
-          row says.
-
-          A WITHDRAWAL IS THE ONE EXCEPTION, and only to Status. A round named in
-          `withdrawn_rounds` reads "Withdrawn" however it read before, because a later round took it
-          back — that is a fact about the recipe, not a re-judgement of the change. Every other row
-          is judged exactly as this rule says.
-
-          THE ROW COUNT STILL FOLLOWS `feedback_history`, with no exception: the round that DID the
-          withdrawing keeps its own row like any other entry, reading "Withdrawn" with Change
-          Requested naming what it took back, as in "Withdrew Round 4 — Gram flour swap". So a
-          withdrawal shows twice, once as the ask and once on the round it undid, and both say
-          Withdrawn. That is the intended reading, and it is far safer than dropping a row: one row
-          per entry is the rule that stopped this table repeating a single ask down every line.
-
-          With no feedback yet, the list holds the baseline row and nothing else.
-
-          8. No feedback yet, or NONE from rule 4 or 5: `proposed_change` is NONE,
-          `fork_parent_id` is the empty string, `final_recipe_id` is `baseline_recipe_id`,
-          `final_recipe_name` is the current RECIPE_NAME, and `cost_projection` carries the
-          baseline's own figures with "Total Savings (INR)" "0.00".
-
-          9. Change accepted: `proposed_change` names it in one line; `proposed_recipe_id` and
-          `final_recipe_id` are `baseline_recipe_id` with its trailing -v<n> replaced by
-          -v<iteration_no>; `fork_parent_id` is `baseline_recipe_id`; `final_recipe_name` is the
-          baseline name versioned the same way.
-
-          10. `proposed_lines` = the whole projected BOM, one object per line, renumbered from 01 in
-          the order they appear so an added line gets the next index and a removed one leaves no gap:
-          {"RECIPE_LINE_ID": "RCPL-<final_recipe_id>-<01, 02, ...>", "RECIPE_ID":
-          <final_recipe_id>, "INGREDIENT_ID": <copied from that ingredient's LINES or CANDS row,
-          never constructed>, "ROLE", "QTY_NET_G", "QTY_AUTHORED": <same>, "UOM": "g", "LOSS_PCT",
-          "NOTES": <what changed on this line, or null>}. No gross column: the warehouse derives
-          gross from the net and loss here. A line set to 0 g is simply absent. Empty list when
-          `proposed_recipe_id` is NONE. On a swap the line takes the INCOMING ingredient's role, and
-          where that differs from the role it replaced NOTES must say so: it changes what the recipe
-          is made of, which the reviewer needs told.
-
-          11. `iteration_ledger` = a LIST OF OBJECTS, one per round, rendered as a table, keys spelt
-          exactly: "Round", "Asked", "Outcome", "Projected COGS (INR)", "Target Fit Band". Number the
-          rounds EXACTLY as rule 7 does, or the two tables will contradict each other: Round 1 is the
-          baseline, its Asked "Initial baseline" and Outcome "Baseline", then one row per
-          `feedback_history` entry at Round k+1. Newest round first, at most 8 rows. Asked is a short
-          paraphrase — the reviewer's own words render beside this from `feedback_history`, so never
-          pad it out to quote them. Outcome uses rule 7's Status vocabulary and nothing else —
-          "Applied", "Vetoed", "Unpriced", "Withdrawn" or "Baseline" — so the same round reads the
-          same in both tables. A round rule 3a withdrew reads "Withdrawn" here too, in both the row
-          that asked for it and the row that took it back, exactly as rule 7 has it.
-
-          `reformulation_rationale` = two or three sentences of ADVICE, not arithmetic. The tables
-          already carry every number, so do not restate them. Say what the change does to the
-          recipe, name the trade-off it creates, and give ONE concrete next step the reviewer could
-          ask for. Where "Batch Mass Check" does not close, THIS is where the remedy goes: name how
-          many grams are out and which line is large enough to give them up, without applying it —
-          never rebalance a line the reviewer did not ask about. A dearer line worth attacking next,
-          or a compliant alternative to a refused ask, serve the same purpose. This and "Formulation
-          Advice" are the only two facts where your judgement belongs, and they must agree with each
-          other; rates and verdicts stay copied. `trial_note` = under 20 words as a formulator's
-          note; it is written to the recipe row.
-
-          12. Copy BATCH_SIZE_G, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR and TARGET_COGS_INR into
-          `batch_size_g`, `packaging_cost_inr`, `labour_overhead_inr` and `target_cogs_inr` as
-          bare numbers: a fork inherits nothing.
-
-          Copy every rate and quantity digit for digit. Compute only rule 6's figures, taking its
-          fit band from the thresholds given there and nowhere else. Claim verdicts come from CANDS
-          and BANS — never form one yourself.
-        # This step's cards are built AFTER its own outputs land in the facts bag, so they render
-        # populated on the first pass. Deliberately NOT the gate's cards: this one answers "what
-        # did this round just do", the gate answers "should this ship" and owns the round history.
-        # Authoring the same spec on both steps is the duplication to avoid -- and YAML anchors,
-        # which would share one, appear nowhere else in processes/, so they stay unproven here.
-        key_data:
-          - title: "What this round changed"
-            summary: "The ingredients this round acted on, their live rate per kg, and the line-level cost effect"
-            views:
-              - { view: table, from: change_impact, columns: ["Round", "Change Requested", "Component Role", "Quantity (g)", "Live Rate (INR/kg)", "Previous Cost (INR)", "New Cost (INR)", "Line Savings (INR)", "Status", "AI Suggestion"] }
-              - { view: markdown, from: proposed_change }
-          - title: "Where it leaves the COGS"
-            summary: "This round's projection against the baseline and the target"
-            views:
-              # Reading order for the reviewer -- money first, then the verdicts, then the advice.
-              # Independent of the order rule 6 emits the keys in, which serves a truncated reader.
-              - { view: table, from: cost_projection, columns: ["Live COGS (INR)", "Projected COGS (INR)", "Total Savings (INR)", "Target COGS (INR)", "Target Fit Band", "Batch Mass Check", "Formulation Advice"] }
-              - { view: markdown, from: reformulation_rationale }
-
-      - id: approve_version
-        name: Approve This Version for Trial
-        type: human
-        after: reformulate_on_feedback
-        # Must stay the LAST GATE: metadata.actions fire only once the run reaches COMPLETED.
-        description: >
-          The loop's gate. Approving forks this version to InTrial in DIM_RECIPE and its brief to
-          Development in DIM_IDEA; asking for a change instead re-runs the re-formulation;
-          rejecting holds it with nothing written.
-        instruction: >
-          Recommend APPROVE or REJECT for the version named in `focus_recipe`, as it stands after
-          `iteration_no` rounds of formulation.
-
-          Read `claim_verdict`, `cogs_summary`, `driver_summary`, `applied_rounds`,
-          `withdrawn_rounds` and `feedback_history` — they are short enough to arrive whole.
-          `feedback_history` is the reviewer's own words for each round in order: answer what it
-          actually asked for.
-
-          NAME WHICH ROUNDS ARE IN AND WHICH ARE OUT, from `applied_rounds` and `withdrawn_rounds`,
-          as in "Rounds 2 and 4 are in; round 3 was withdrawn". Approving writes exactly the rounds
-          in `applied_rounds` and nothing else, so this is the reviewer's last chance to check that
-          set against what they meant — and the only reliable one, because the two tables below
-          reach you as fragments while these two facts arrive whole.
-
-          `cost_projection` arrives verdicts-first, so trust its "Target Fit Band", "Batch Mass
-          Check" and "Formulation Advice" and do not go looking for its later figures.
-
-          `change_impact`, `iteration_ledger`, `formulation_context`, `recipe_versions` and
-          `priced_lines` reach you as FRAGMENTS — every fact is shortened before you see it, and
-          these are the long ones. All of them render in full for the reviewer in the cards beside
-          this recommendation, so never read, quote, total or second-guess them. A number you half
-          read is worse than one you leave to the card.
-
-          Your verdict must follow EVERYTHING the recommendation says. APPROVE only when ALL of
-          these hold: `claim_verdict` is CLEAR; `cost_projection`'s "Target Fit Band" is INSIDE or
-          MARGINAL; its "Batch Mass Check" closes; its "Formulation Advice" does not begin "Not
-          advised"; and no thesis rule failed.
-
-          REJECT when ANY ONE of them fails, and say which: a VETO (name the rule and that the
-          substitution was not applied); a band reading OVER; a batch that no longer closes; advice
-          reading "Not advised" — a cheaper, compliant version that stops being the product it is
-          meant to be is a REJECT, and the advice is the reason to give; a failed thesis rule; or
-          any fact reading TRUNCATED or SCOPE_UNRESOLVED. Never recommend APPROVE while telling the
-          reviewer the change is not advised.
-
-          Close by telling the reviewer that describing a change under "Tell what to do instead"
-          re-prices it and returns here, and that APPROVE ends the loop and writes.
-
-          Say plainly, in that same closing line, that there are TWO ways to take a change back and
-          they do the same thing: rejecting its row with the ✗ in the table, or describing it under
-          "Tell what to do instead" — as in "drop the gram flour swap". Either way the next pass
-          re-prices without it. A reviewer who has just ticked ✗ needs telling that it registered,
-          because the round stays in the table reading Withdrawn rather than disappearing.
-
-          Cite the id, PROJECTED_COGS_INR against TARGET_COGS_INR, and the fit band. State no
-          number that is not in the facts above.
-        decision_options: [APPROVE, REJECT]
-        # REVISE is not listed on purpose: the UI always offers it, and it is the loop.
-        rationale_from: reformulation_rationale
-        # The money columns sit on `cost_projection`, NOT on `focus_recipe`. focus_recipe is the
-        # frozen baseline every round replays from, so its RECIPE_COGS_INR / TARGET_FIT cannot
-        # move -- headlining them is what made this card read "INSIDE" at the top while the ledger
-        # under it reported a projection that had moved. It keeps only its identity columns.
-        key_data:
-          - title: "Live COGS vs this round's projection"
-            summary: "What the version costs today, what this round projects it to, and whether it still fits target"
-            views:
-              # Reading order for the reviewer -- money first, then the verdicts, then the advice.
-              # Independent of the order rule 6 emits the keys in, which serves a truncated reader.
-              - { view: table, from: cost_projection, columns: ["Live COGS (INR)", "Projected COGS (INR)", "Total Savings (INR)", "Target COGS (INR)", "Target Fit Band", "Batch Mass Check", "Formulation Advice"] }
-              - { view: table, from: focus_recipe, columns: [RECIPE_ID, RECIPE_NAME, VERSION_NO, STATUS, IS_FULLY_COSTED] }
-              - { view: markdown, from: cogs_summary }
-          # `view: table` with `columns:`, NOT markdown. A markdown table renders as literal pipe
-          # text here: the key_data path has no GFM table support, and a table written without a
-          # |---|---| delimiter row would not be valid markdown anyway. Structured rows are what
-          # the renderer turns into an actual table -- at the cost of the keys below having to
-          # match rule 7's spelling byte for byte, or the column comes out blank.
-          - title: "Ingredients asked for, and what they cost"
-            summary: "Every ingredient named across the rounds, its live rate per kg, and what it did to that line"
-            views:
-              - { view: table, from: change_impact, columns: ["Round", "Change Requested", "Component Role", "Quantity (g)", "Live Rate (INR/kg)", "Previous Cost (INR)", "New Cost (INR)", "Line Savings (INR)", "Status", "AI Suggestion"] }
-              - { view: markdown, from: claim_verdict }
-          # `feedback_history` is engine-owned, not declared in `outputs:` -- the runner appends
-          # each REVISE comment to it verbatim, so these bullets are the reviewer's own words with
-          # no LLM in the path. Paired with the ledger on purpose: the table's Asked column is the
-          # paraphrase, these are the source. If they ever disagree, these win.
-          - title: "Rounds so far, and what was asked"
-            summary: "The round-by-round history, and under it the reviewer's own words for each round"
-            views:
-              - { view: table, from: iteration_ledger, columns: ["Round", "Asked", "Outcome", "Projected COGS (INR)", "Target Fit Band"] }
-              - { view: markdown, from: feedback_history }
-
-      - id: write_final_bom
-        name: Confirm the Approved BOM
-        type: foreach
-        after: approve_version
-        for_each: proposed_lines
-        # group_by collapses this to ONE confirmation for the whole BOM, and the action then
-        # fires per line inside it -- a foreach is the only multi-row write there is.
-        # Skipped when the reviewer approved the version unchanged, hence the NONE sentinel:
-        # condition eval is fail-open, and an empty proposed_lines makes running it a no-op.
-        group_by: RECIPE_ID
-        condition: '{{proposed_recipe_id}} != "NONE"'
-        # A confirmation, not a second decision: the version was already approved at the gate.
-        # REJECT at that gate is terminal and cancels the run, so nothing reaches here unless
-        # the reviewer approved. A REJECT on a foreach row, though, skips the row WITHOUT
-        # cancelling -- so rejecting here after approving there would let the header write with
-        # no lines behind it. Only APPROVE is offered for that reason. The UI still renders
-        # Reject, and if it is used the fork lands uncosted and its mass_closes thesis check
-        # FAILS on the next read, which is the rail that makes it visible rather than silent.
-        instruction: >
-          {{RECIPE_ID}} was approved. Confirm to write its {{ROLE}} line — {{QTY_NET_G}} g of
-          ingredient {{INGREDIENT_ID}} at {{LOSS_PCT}}% loss — and every other line of this
-          version, to MAP_RECIPE_INGREDIENT.
-        decision_options: [APPROVE]
-        produces: [lines_written, lines_skipped]
-        key_data:
-          - title: "The approved version's BOM"
-            views:
-              - { view: table, from: foreach_rows, columns: [RECIPE_LINE_ID, INGREDIENT_ID, ROLE, QTY_NET_G, LOSS_PCT, NOTES] }
-        action:
-          type: context_graph
-          name: write_recipe_line
-          config:
-            type: dataset_upsert
-            source_table: MAP_RECIPE_INGREDIENT
-            dataset: ctx_upside_master_data
-            key_column: RECIPE_LINE_ID
-            # LINE_SEQ (INT64) and IS_OPTIONAL (BOOL) are unwritable -- the handler binds STRING
-            # and NUMERIC only. Neither is read by V_RECIPE_LINE_COST or V_RECIPE_COGS.
-            numeric_columns: [QTY_NET_G, QTY_AUTHORED, LOSS_PCT]
-            row:
-              RECIPE_LINE_ID: "{{RECIPE_LINE_ID}}"
-              RECIPE_ID:      "{{RECIPE_ID}}"
-              INGREDIENT_ID:  "{{INGREDIENT_ID}}"
-              ROLE:           "{{ROLE}}"
-              QTY_NET_G:      "{{QTY_NET_G}}"
-              QTY_AUTHORED:   "{{QTY_AUTHORED}}"
-              UOM:            "{{UOM}}"
-              LOSS_PCT:       "{{LOSS_PCT}}"
-              NOTES:          "{{NOTES}}"
-
-    related_kpis: [MarginPct]   # must exist in master_data/kpis.yaml (unknown = fatal at apply)
-
-    metadata:
-      version: 3
-      effective_from: 2026-08-24
-      priority: 2
-      requires_human_approval: true
-      # Required by the loop: without it a pre-gate step only prefetches, and
-      # reformulate_on_feedback would never run its produces pass before the gate.
-      run_steps_before_gate: true
-      # Fires each action below exactly once -- what lets one gate do both writes.
-      run_actions_on_decision: true
-
-      # A bare fire spawns one child run per matching Recipe node; an explicit recipe_id skips
-      # this. Filters on NODE properties only, which is why `status` works here.
-      resolve_targets:
-        entity: Recipe
-        role: recipe
-        where:
-          - { field: status, op: in, value: [Draft, InTrial] }
-        limit: 50
-
-      tools:
-        skills: []
-        connectors: []
-        allow_unlisted_skills: false
-
-      context_package:
-        - { key: scheduled_at, source: event, required: false }
-
-        # The scope carrier every step names. ONE row, so it is not previewed away like a longer
-        # list. `entity`, not `entity_type`: the singular form reads only the run's own entity.
-        #
-        # `where` is a DELIBERATE NO-MATCH SENTINEL, not a filter. It is read only when the
-        # recipe fails to resolve as a graph node -- a recipe seeded since the last projection --
-        # and that branch otherwise enumerates EVERY Recipe and reads one row each, which silently
-        # scoped a run to 47 recipes. No status equals this literal, so the branch yields nothing
-        # and the steps see the key missing instead of the whole table. The resolved path never
-        # reads `where`. Removing this restores the silent-wrong-recipe bug.
-        - key: focus_recipe
-          required: true
-          gather:
-            base:
-              entity: Recipe
-              # V_RECIPE_FORMULATION_CONTEXT, not V_RECIPE_COGS: same header columns plus the
-              # BOM, the priced swap candidates and the brief's bans, packed onto the same one
-              # row. One key, so the loop costs one query per round, as it did before.
-              dataset: V_RECIPE_FORMULATION_CONTEXT
-              # IDENTITY AND STATUS ONLY. The packed columns (LINES, CANDS, BANS, N_CAND) are NOT
-              # here: this fact is shrunk to ~200 chars before any step reads it, so they were cut
-              # every time and no card displayed them. reformulate_on_feedback takes them through
-              # its own `fetch` instead, which is the only un-truncated channel there is.
-              # Column ORDER is load-bearing for the same reason -- identity first, so the ~200
-              # chars that do survive are the fields a step actually needs. Cards are unaffected
-              # either way: they render this fact in full, uncompacted.
-              # IDEA_ID and SKU sit early ON PURPOSE: read_live_cogs copies them into
-              # focus_idea_id / focus_sku, and the promote action keys on them. At 369 chars this
-              # fact is still sliced at later steps, so anything a step MUST read belongs in the
-              # first ~200. AUTHOR and PARENT_RECIPE_ID are last because nothing reads them.
-              columns: [RECIPE_ID, RECIPE_NAME, IDEA_ID, SKU, VERSION_NO, STATUS, TARGET_FIT, IS_FULLY_COSTED, RECIPE_COGS_INR, TARGET_COGS_INR, PARENT_RECIPE_ID, AUTHOR]
-              limit: 1
-              where:
-                - { field: status, op: eq, value: __scope_unresolved__ }
-          post:
-            resolve:
-              - { field: IDEA_ID, type: Idea, as: IDEA_NAME }
-
-      actions:
-        - name: fork_and_promote_final_version
-          decision: APPROVE
-          connector: context_graph
-          config:
-            type: dataset_upsert
-            entity_type: Recipe
-            source_table: DIM_RECIPE
-            dataset: ctx_upside_master_data
-            key_column: RECIPE_ID
-            # NOT {{entity_refs.recipe}}: that is always the ORIGINAL version, so after a round
-            # of formulation it would promote the wrong one. `final_recipe_id` is the version
-            # actually approved -- the fork's id if anything changed, the original's if not, and
-            # it is set on EVERY round precisely because a blank key here is a hard fail.
-            #
-            # Both cases, one action. Forked: this INSERTs the new version, its lines already
-            # written by write_final_bom, so it is never a header without a BOM. Unchanged:
-            # final_recipe_id IS the original and fork_parent_id is empty -- empty becomes NULL
-            # and every non-key column is COALESCE(new, existing), so its own parent, name and
-            # costs carry forward and only STATUS and NOTES move.
-            #
-            # No generate_key_if_blank: a minted id would INSERT a header with no lines and error
-            # recipe_mass_closes. VERSION_NO / IS_CURRENT / CREATED_AT are unwritable -- the
-            # handler binds STRING and NUMERIC only, so the MERGE rejects INT64 / BOOL /
-            # TIMESTAMP. V_RECIPE_COGS reads VERSION_NO off the id suffix for exactly this.
-            numeric_columns: [BATCH_SIZE_G, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR, TARGET_COGS_INR]
-            row:
-              RECIPE_ID:           "{{facts.final_recipe_id}}"
-              PARENT_RECIPE_ID:    "{{facts.fork_parent_id}}"
-              RECIPE_NAME:         "{{facts.final_recipe_name}}"
-              SKU:                 "{{facts.focus_sku}}"
-              IDEA_ID:             "{{facts.focus_idea_id}}"
-              STATUS:              InTrial
-              BATCH_SIZE_G:        "{{facts.batch_size_g}}"
-              PACKAGING_COST_INR:  "{{facts.packaging_cost_inr}}"
-              LABOUR_OVERHEAD_INR: "{{facts.labour_overhead_inr}}"
-              TARGET_COGS_INR:     "{{facts.target_cogs_inr}}"
-              NOTES:               "{{facts.trial_note}}"
-
-        - name: advance_idea_to_development
-          decision: APPROVE
-          connector: context_graph
-          config:
-            type: dataset_upsert
-            entity_type: Product
-            source_table: DIM_IDEA
-            dataset: ctx_upside_master_data
-            key_column: IDEA_ID
-            # Two columns only: STAGE is the one the MERGE always overwrites (and stamps
-            # STAGE_ENTERED_AT); every other is COALESCE(new, existing), so NAME / HYPOTHESIS /
-            # TARGET_COGS_INR carry forward. A SKU-attached recipe has no IDEA_ID and an action
-            # takes no condition, so this fires anyway -- hence null, never "NONE", in step 1.
-            row:
-              IDEA_ID: "{{facts.focus_idea_id}}"
-              STAGE: Development
-
-        - name: report_outcome
-          decision: APPROVE
-          connector: notify
-          config:
-            type: notify
-            recipient: npd_team
-            message: "{{facts.final_recipe_id}} moved to InTrial in DIM_RECIPE after {{facts.iteration_no}} formulation round(s), and its brief to Development in DIM_IDEA."
-
-        - name: log_version_held
-          decision: REJECT
-          connector: simulated
-          config:
-            type: simulated
-            note: "Version held — left as it was in DIM_RECIPE, and its brief's stage unchanged."
+- id: recipe_development_live_cogs
+  name: Recipe Development with Live COGS
+  description: "Formulates ONE recipe version against its idea brief, costed at today's ingredient rates,\nfor as many rounds\
+    \ as the formulator wants. Each round reads the version's live COGS\nroll-up, the four thesis checks, the diff against\
+    \ the version it forked from, and where\nthe money sits line by line.\n\nTHE LOOP. \"Tell what to do instead\" at the\
+    \ gate is the iteration. Typing a change there\n(\"swap Almond Meal for Sunflower Seed Powder\", \"cut sugar by 15%\"\
+    ) re-enters\nreformulate_on_feedback, which re-prices the change at today's rates, checks it against\nthe brief's claim\
+    \ and brand bans, and comes back to the gate with new numbers. Repeat as\noften as needed: v1 -> v2 -> v3. Only APPROVE\
+    \ ends it, and only APPROVE writes -- the\nfinal version is forked into DIM_RECIPE with PARENT_RECIPE_ID set, its lines\
+    \ written to\nMAP_RECIPE_INGREDIENT, and the brief advanced to Development in DIM_IDEA. REJECT holds\nthe version with\
+    \ nothing written.\n\nEvery round recomputes from the ORIGINAL version's BOM plus the whole feedback history,\nnever from\
+    \ the round before it. Intermediate rounds are never warehouse rows, so a\nthree-round run leaves the chain reading v1\
+    \ -> v3, with the rounds themselves in the\nrun's iteration ledger.\n\nNothing costed is stored \u2014 V_RECIPE_COGS recomputes\
+    \ ingredients + packaging + overhead on\nevery read, so a rate change moves these numbers with nothing re-materialised.\n"
+  domain: Innovation
+  owner: npd_team
+  applies_to:
+  - entity: Recipe
+  triggers:
+  - type: manual
+    allowed_roles:
+    - npd_team
+    - Admin
+  - type: event
+    event_type: recipe_development_live_cogs
+  - type: schedule
+    cron: 0 9 * * 2
+  inputs:
+  - name: recipe_id
+    type: reference
+    references: Recipe
+    required: false
+  - name: scheduled_at
+    type: datetime
+    required: false
+  outputs:
+  - name: cogs_summary
+    type: string
+  - name: driver_summary
+    type: string
+  - name: version_note
+    type: string
+  - name: focus_idea_id
+    type: string
+  - name: focus_sku
+    type: string
+  - name: baseline_recipe_id
+    type: string
+  - name: iteration_no
+    type: string
+  - name: proposed_change
+    type: string
+  - name: claim_verdict
+    type: string
+  - name: cost_projection
+    type: string
+  - name: change_impact
+    type: string
+  - name: iteration_ledger
+    type: string
+  - name: applied_rounds
+    type: string
+  - name: withdrawn_rounds
+    type: string
+  - name: reformulation_rationale
+    type: string
+  - name: proposed_recipe_id
+    type: string
+  - name: proposed_lines
+    type: string
+  - name: final_recipe_id
+    type: string
+  - name: final_recipe_name
+    type: string
+  - name: fork_parent_id
+    type: string
+  - name: trial_note
+    type: string
+  - name: lines_written
+    type: string
+  - name: lines_skipped
+    type: string
+  - name: batch_size_g
+    type: number
+  - name: packaging_cost_inr
+    type: number
+  - name: labour_overhead_inr
+    type: number
+  - name: target_cogs_inr
+    type: number
+  steps:
+  - id: read_live_cogs
+    name: Read Live COGS and Thesis Checks
+    type: agent
+    description: 'Reads the live COGS roll-up and the four SQL-evaluated thesis checks for the version under review.
+
+      '
+    fetch:
+      entity_type: Recipe
+      source_table: V_RECIPE_WORKBENCH
+      columns:
+      - SRC
+      - ID
+      - NM
+      - D
+      - ST
+      filters:
+        combinator: AND
+        conditions:
+        - column: ST
+          op: in
+          value:
+          - Draft
+          - InTrial
+        - column: SRC
+          op: in
+          value:
+          - 1_HDR
+          - 4_THESIS
+          - 9_END
+      order_by: SRC
+      order_dir: asc
+      limit: 200
+      required: true
+      as: recipe_versions
+    produces:
+    - cogs_summary
+    - focus_idea_id
+    - focus_sku
+    - baseline_recipe_id
+    instruction: "The fact `focus_recipe` names the one recipe version this run is about. Read its RECIPE_ID and report on\
+      \ that recipe only \u2014 other ids appear in `recipe_versions` because that read cannot be scoped to one recipe, so\
+      \ ignore every one of them.\nFIRST, check the scope. If `focus_recipe` is absent, empty, or holds MORE THAN ONE row,\
+      \ this run could not tell which recipe it is about. Set `cogs_summary` to exactly SCOPE_UNRESOLVED, set the other three\
+      \ facts to null, and stop. Never pick a row yourself and never fall back to the first one \u2014 a confident review\
+      \ of the wrong recipe is worse than no review.\nEach row of `recipe_versions` belongs to one recipe version. SRC says\
+      \ what it is, ID is the recipe id, NM the name, ST the status, D the pipe-packed fields:\n1_HDR \u2014 one per version.\
+      \ D = version|status|batch_g|ingredient_inr|packaging_inr|overhead_inr|total_inr|target_inr|fit|costed. NM is the recipe\
+      \ name.\n4_THESIS \u2014 four per version. NM is the rule, D = verdict|evidence.\n9_END \u2014 one per version, NM =\
+      \ END_OF_WORKBENCH.\nThe 4_THESIS verdicts are evaluated in SQL. Quote them as given; never recompute one.\nSet `cogs_summary`\
+      \ to one line for that version:\n<id> (<name>) | v<version> | <status> | INR <total_inr> vs target <target_inr> | <fit>\
+      \ | <the rules whose verdict is not PASS/INSIDE, with their evidence, else \"all checks pass\">\nIf it has no 9_END\
+      \ row its data was cut short \u2014 write \"TRUNCATED\" instead of the fields you did not receive.\nSet `baseline_recipe_id`\
+      \ to `focus_recipe`'s RECIPE_ID. This is the version every later round measures against, so it must never change during\
+      \ the run.\nSet `focus_idea_id` to `focus_recipe`'s IDEA_ID and `focus_sku` to its SKU, each copied digit for digit.\
+      \ Where one is empty or absent set it to null \u2014 never the string \"NONE\", which is a valid key and would write\
+      \ a junk row.\n"
+  - id: find_cost_drivers
+    name: Find the Cost Drivers
+    type: agent
+    after: read_live_cogs
+    description: 'Reads the version''s dearest lines and its parent''s, to say where the money sits and what changed.
+
+      '
+    fetch:
+      entity_type: Recipe
+      source_table: V_RECIPE_WORKBENCH
+      columns:
+      - SRC
+      - ID
+      - NM
+      - D
+      - ST
+      filters:
+        combinator: AND
+        conditions:
+        - column: ST
+          op: in
+          value:
+          - Draft
+          - InTrial
+        - column: SRC
+          op: in
+          value:
+          - 2_LINE
+          - 3_BASE
+          - 9_END
+      order_by: SRC
+      order_dir: asc
+      limit: 200
+      required: true
+      as: priced_lines
+    produces:
+    - driver_summary
+    - version_note
+    instruction: "Work only on the RECIPE_ID in the fact `focus_recipe`. Rows in `priced_lines` under any other id belong\
+      \ to versions this run is not about \u2014 ignore them.\nIf `cogs_summary` reads SCOPE_UNRESOLVED, or `focus_recipe`\
+      \ is absent or holds more than one row, set both `driver_summary` and `version_note` to exactly SCOPE_UNRESOLVED and\
+      \ stop. Do not pick a recipe yourself.\n`priced_lines` holds, per version: its THREE DEAREST priced lines and its parent's\
+      \ three dearest. Not the whole BOM \u2014 a short list is the design, never a cut.\n2_LINE \u2014 this version. NM =\
+      \ ingredient, D = role|net_g|loss_pct|inr_per_kg|line_inr|share_pct. share_pct is that line's share of the WHOLE recipe,\
+      \ so three lines can sum to well under 100.\n3_BASE \u2014 the PARENT version's three dearest, listed under the CHILD's\
+      \ id. D = role|net_g|line_inr. Absent for a version with no parent.\n9_END \u2014 that version's end marker.\nThe fact\
+      \ `cogs_summary` carries this version's header and thesis verdicts.\nSet `driver_summary` to two or three sentences:\
+      \ where the money sits (its dearest 2_LINE row as \"<ingredient> INR <line_inr>, <share_pct>% of the recipe\"), which\
+      \ of the dearest lines moved against 3_BASE and by how many grams, else \"no parent\", and which thesis rules failed,\
+      \ else \"all checks pass\".\nSet `version_note` to under 20 words on whether it is ready for trial. This is written\
+      \ to the recipe row itself, so write it as a formulator's note, not as a report.\nCopy every number from the data digit\
+      \ for digit; never compute or round one. If the version has no 9_END row, say so in `version_note` and write \"TRUNCATED\"\
+      \ for the dearest line.\n"
+  - id: reformulate_on_feedback
+    name: Re-formulate on Reviewer Feedback
+    type: agent
+    after: find_cost_drivers
+    description: 'Applies the changes the reviewer asked for, prices them at today''s rates, checks them against the brief''s
+      claim and brand bans, and projects the new COGS.
+
+      '
+    fetch:
+      entity_type: Recipe
+      source_table: V_RECIPE_FORMULATION_CONTEXT
+      columns:
+      - RECIPE_ID
+      - RECIPE_NAME
+      - RECIPE_COGS_INR
+      - TARGET_COGS_INR
+      - BATCH_SIZE_G
+      - PACKAGING_COST_INR
+      - LABOUR_OVERHEAD_INR
+      - LINES
+      - N_CAND
+      - CANDS
+      - END_MARK
+      filters:
+        combinator: AND
+        conditions:
+        - column: STATUS
+          op: in
+          value:
+          - Draft
+          - InTrial
+      order_by: RECIPE_ID
+      order_dir: asc
+      limit: 20
+      required: true
+      as: formulation_context
+    produces:
+    - iteration_no
+    - proposed_change
+    - claim_verdict
+    - cost_projection
+    - change_impact
+    - proposed_recipe_id
+    - proposed_lines
+    - final_recipe_id
+    - final_recipe_name
+    - fork_parent_id
+    - iteration_ledger
+    - applied_rounds
+    - withdrawn_rounds
+    - reformulation_rationale
+    - trial_note
+    - batch_size_g
+    - packaging_cost_inr
+    - labour_overhead_inr
+    - target_cogs_inr
+    instruction: "RE-ENTER THIS STEP whenever the reviewer asks for an ingredient swap, a ratio change or a re-costing: it\
+      \ re-formulates from their feedback and re-prices at today's rates.\nWork from `formulation_context`. It holds one row\
+      \ per Draft or InTrial recipe because that read cannot be scoped to one \u2014 take the row whose RECIPE_ID equals `focus_recipe`'s\
+      \ and ignore every other. That row is the ORIGINAL version and the only baseline.\nLINES is its whole BOM, each ing_id~name~role~net_g~loss~inr_per_kg~line_inr~bans-it-already-breaks-or-ok.\
+      \ CANDS is today's priced swap candidates, each ing_id~name~role~inr_per_kg~ALLOWED-or-VIOLATES:rule, grouped by role:\
+      \ the two cheapest in EVERY role, so a cross-role swap prices like any other. N_CAND is how many candidates exist in\
+      \ total and is far larger than the number listed. RECIPE_NAME says what the product IS, which rule 6's advice turns\
+      \ on.\nA candidate's own VIOLATES:<rule> is the whole ban signal here \u2014 name that rule when you refuse one. `focus_recipe`\
+      \ carries only this version's identity and status.\nEvery ingredient id you write is COPIED from LINES or CANDS. Never\
+      \ construct one: an id that matches nothing produces a line the warehouse cannot price.\nIf `cogs_summary` reads SCOPE_UNRESOLVED,\
+      \ or that row is missing from `formulation_context`, or its END_MARK is not \"END\", set every fact below to SCOPE_UNRESOLVED\
+      \ or TRUNCATED respectively, `proposed_recipe_id` to NONE, stop. Judge this on the row you selected, never on `focus_recipe`,\
+      \ which carries no END_MARK.\n1. `iteration_no` = 1 + the entries in `feedback_history`. Read that whole list in order;\
+      \ never `reviewer_feedback`, which holds only the newest and is dropped on approval.\n2. Replay every entry against\
+      \ LINES in order, starting from those lines each time this runs: a re-derivation from the original, never an edit of\
+      \ the round before. EXCEPT any round rule 3a says the reviewer withdrew \u2014 that entry is SKIPPED, exactly as if\
+      \ it had never been asked. Decide the withdrawals BEFORE you start replaying, or this rule's \"every entry\" and rule\
+      \ 3a's exception will contradict each other and the withdrawn change will end up in the recipe anyway.\n3. Price from\
+      \ the data. A swap takes its inr_per_kg from CANDS. Quantities come in four forms, and every one of them ends in the\
+      \ same gross calculation. A fifth form asks for an EARLIER round to be taken back out, and is handled in rule 3a instead:\n\
+      SET an exact weight (\"set the almond flour to 100 g\") \u2014 that line's net_g becomes 100.\nSCALE by a proportion\
+      \ (\"cut the sugar by 15%\") \u2014 that line's net_g times 0.85.\nADD a new ingredient at a weight (\"add 20 g cocoa\
+      \ powder\") \u2014 a NEW line at that net_g, its id and inr_per_kg from CANDS. A new line's loss is 0 unless the reviewer\
+      \ gives one: the data holds no loss for an ingredient not yet on a recipe, and borrowing another line's would be invention.\
+      \ Say so in that line's NOTES, because it makes the line's cost a floor rather than an estimate.\nSET TO ZERO (\"set\
+      \ the elaichi to 0 g\", \"drop the elaichi\") \u2014 the line leaves the recipe.\nThen gross = net_g / (1 - loss/100)\
+      \ for every line, and cost is charged on gross, never on net. Gross is never written anywhere: the warehouse derives\
+      \ it from the net and loss you do write.\n3a. WITHDRAW an earlier round. The reviewer can say so in two ways, and BOTH\
+      \ mean exactly the same thing:\nIN WORDS (\"drop the gram flour swap\", \"undo round 2\", \"put the almond flour back\"\
+      , \"forget the millet\") \u2014 identify which earlier `feedback_history` entry they mean, by its round number or by\
+      \ the ingredient it named.\nBY REJECTING THE ROW \u2014 `row_verdict_history` holds the reviewer's per-row \u2717 and\
+      \ \u2713 from the gate's tables, each entry reading `<fact>|<column>|<row>=reject` or `=approve`, as in `iteration_ledger|Round|2=reject`.\
+      \ An entry ending `=reject` on a `change_impact` or `iteration_ledger` row withdraws THAT ROUND \u2014 the column is\
+      \ `Round`, so the last part before the `=` IS the round number. An entry ending `=approve` confirms the round and changes\
+      \ nothing. Read this list on EVERY pass: it is the standing record of what the reviewer has ticked, not just this round's\
+      \ clicks, and a round it rejects stays withdrawn.\nEither way the reviewer is taking back a REQUEST, not making a new\
+      \ one, so DO NOT APPLY IT, on this pass or any later pass. Rule 2 already replays every entry from LINES afresh each\
+      \ time this runs, so withdrawing is simply leaving that entry out of the replay; never try to reverse a change on top\
+      \ of the round before, and never reach for the pre-change quantity, because LINES already holds it.\n`withdrawn_rounds`\
+      \ = those round numbers from BOTH routes, comma-joined, oldest first (\"2\" or \"2, 4\"). A PLAIN STRING, never a JSON\
+      \ list \u2014 the gate quotes it to the reviewer.\n`applied_rounds` AND `withdrawn_rounds` ARE DISJOINT. A round is\
+      \ in exactly one of them, never both. If you find yourself about to list the same round twice, the withdrawal has not\
+      \ been carried through the replay in rule 2 \u2014 go back and skip that entry. Every fact below must agree with the\
+      \ split: a withdrawn round contributes NO LINE to `proposed_lines`, reads \"Withdrawn\" in both tables, leaves the projection\
+      \ as if it had never been asked, and takes no part in rule 6's worst-Applied-row bound. One round reading \"withdrawn\"\
+      \ in one fact and \"applied\" in another is the single worst outcome here \u2014 it tells the reviewer their instruction\
+      \ landed when it did not. CARRY FORWARD every number already in `withdrawn_rounds`: a withdrawal is permanent, and a\
+      \ round dropped from that string comes back into the recipe on the next pass. `applied_rounds` = the rounds that DID\
+      \ land, comma-joined, the same way. Rounds refused by rule 4 or 5 belong in neither: nothing was applied and nothing\
+      \ was withdrawn. With no feedback yet both are the empty string.\nWithdrawal is NOT \"SET TO ZERO\". Setting a line\
+      \ to 0 g is a new change the reviewer is making now, and its round stays Applied; withdrawing removes an earlier ask\
+      \ so that the recipe reads as though it had never been made. Where the words could mean either \u2014 \"drop the elaichi\"\
+      \ when no round ever added elaichi \u2014 it is a SET TO ZERO on a baseline line.\n4. Ingredient not in CANDS: change\
+      \ nothing and set `proposed_change` to \"UNPRICED: <name> is not among the <N_CAND> priced candidates listed \u2014\
+      \ nearest <role> are <the two cheapest CANDS rows in that role>\", `proposed_recipe_id` to NONE. Never assume a rate,\
+      \ and never say the ingredient is absent from the catalog: only some of the N_CAND candidates are listed, so what you\
+      \ can see does not tell you that.\n5. Candidate reading VIOLATES: refuse it. `claim_verdict` = \"VETO:<rule> \u2014\
+      \ <what the rule forbids and why this breaks it>\", the projection stays at the last clear round, and `proposed_recipe_id`\
+      \ is NONE. Otherwise `claim_verdict` is CLEAR, or \"CLEAR (inherited: <rules>)\" where a LINES row ends in a rule name.\n\
+      SAVINGS ARE POSITIVE WHEN MONEY IS SAVED, negative when the recipe gets dearer. That is baseline minus projected, and\
+      \ it holds in rules 6 and 7 alike.\n6. `cost_projection` = ONE object, business labels as its keys, every value a pre-rounded\
+      \ string. Emit the keys IN THIS ORDER \u2014 the two verdicts first, because a later reader may see only the beginning\
+      \ of this object:\n{\"Target Fit Band\": UNKNOWN with no target, else INSIDE when projected <= target + 0.005, else\
+      \ MARGINAL when projected <= target * 1.05, else OVER, \"Batch Mass Check\": re-derived after EVERY quantity change\
+      \ \u2014 the projected net mass against BATCH_SIZE_G and whether it closes within 1%, AND NOTHING MORE, as in \"yes\
+      \ - 149.5 g vs 150 g\" or \"no - 170.0 g vs 150 g (+13.3%)\". What would close a breach belongs in `reformulation_rationale`,\
+      \ not in this field, \"Formulation Advice\": whether the change is right for THIS PRODUCT, which is a different question\
+      \ from what it costs \u2014 \"Sound\", \"Caution\" or \"Not advised\", then a dash and at most 14 words of reason drawn\
+      \ from RECIPE_NAME and the brief. Judge what the product IS: an Almond Katli whose almond base becomes gram flour is\
+      \ a different sweet, so that reads \"Not advised \u2014 almond is the defining base of Almond Katli; gram flour makes\
+      \ it another sweet\". The money columns already say whether it got cheaper, so never answer with the saving. This judges\
+      \ the version as it NOW STANDS, where rule 7's AI Suggestion judges one change each, so it can be NO BETTER THAN THE\
+      \ WORST Applied row: if any of them reads \"Not advised\" this cannot read \"Sound\". A WITHDRAWN round is not an Applied\
+      \ row and takes no part in that bound \u2014 it is no longer in the recipe, so an objection to it must disappear the\
+      \ moment it is withdrawn. Left in, it would hold this field at \"Not advised\" over a change that is gone, and because\
+      \ the gate refuses to approve on this field the version could never be approved at all. The gate refuses to approve\
+      \ on this field, so the two contradicting each other would approve a change the table advises against. SAY WHICH ROUND\
+      \ you are objecting to whenever the worst Applied change came from an EARLIER round, as in \"Not advised (Round 2) \u2014\
+      \ almond defines Almond Katli; gram flour alters identity\". An objection carried forward from round 2 sits beside cards\
+      \ showing round 3, and unlabelled it reads as a card that failed to refresh rather than a fault that still stands. No\
+      \ prefix when the worst change is this round's own, and none when nothing is objectionable, \"Live COGS (INR)\": RECIPE_COGS_INR,\
+      \ \"Projected COGS (INR)\": the projected line costs + PACKAGING_COST_INR + LABOUR_OVERHEAD_INR, \"Total Savings (INR)\"\
+      : live minus projected, \"Target COGS (INR)\": TARGET_COGS_INR}\nSpell every key exactly as written: a key spelt differently\
+      \ renders an empty cell at the gate and reports nothing.\n7. `change_impact` = a LIST OF OBJECTS, one per row, which\
+      \ the gate renders as a table. Build the rows by ENUMERATION. Never build them by counting up to the round number.\n\
+      The FIRST row is always the baseline: {\"Round\": \"1\", \"Change Requested\": \"Initial baseline\", \"Component Role\"\
+      : \"\", \"Quantity (g)\": \"\", \"Live Rate (INR/kg)\": \"\", \"Previous Cost (INR)\": \"\", \"New Cost (INR)\": \"\"\
+      , \"Line Savings (INR)\": \"0.00\", \"Status\": \"Baseline\", \"AI Suggestion\": \"\u2014\"}.\nTHEN one row for EACH\
+      \ entry of `feedback_history`, in the order given. The entry at position k is Round k+1, so the first thing ever asked\
+      \ for is Round 2 and never Round 1. Where a single entry asked for two changes, give it two rows sharing its Round.\n\
+      EACH ROW DESCRIBES ONLY ITS OWN ENTRY. Read that entry's words and no other entry's. Never carry an ingredient, quantity,\
+      \ rate or cost sideways from another row: two different asks must read as two visibly different rows, and repeating\
+      \ one ask down the table is the exact failure this rule exists to prevent. The row count therefore FOLLOWS from the\
+      \ entries \u2014 three rows at Round 3 because there is a baseline and two asks, not because the round number happens\
+      \ to be three.\nKeep at most 8 rows, dropping the oldest asks and always keeping the baseline.\nEvery row carries these\
+      \ keys, spelt exactly as written, with INR and never a currency glyph \u2014 a key spelt differently renders an EMPTY\
+      \ COLUMN and reports nothing:\n\"Round\", \"Change Requested\", \"Component Role\", \"Quantity (g)\", \"Live Rate (INR/kg)\"\
+      , \"Previous Cost (INR)\", \"New Cost (INR)\", \"Line Savings (INR)\", \"Status\", \"AI Suggestion\".\nChange Requested\
+      \ reads \"Almond flour -> Gram flour\", or \"Almond flour 120.5 g -> 100 g\" where only the quantity moved, or \"+ 20\
+      \ g Millet flakes\" for an addition. Component Role is the incoming ingredient's role, written \"Base -> Inclusion\"\
+      \ where it differs from the role it replaced. Quantity (g) is that line's net_g after the change \u2014 the added weight\
+      \ on an addition. Live Rate is the incoming ingredient's rate from CANDS, or the line's own from LINES where only the\
+      \ quantity moved. Previous Cost and New Cost are that line's cost before and after; on a refused ask they are equal\
+      \ and Line Savings is \"0.00\".\nStatus is ONE WORD, nothing else \u2014 no rates, no rule names, no prose. Exactly\
+      \ one of: \"Applied\", \"Vetoed\", \"Unpriced\", \"Withdrawn\", \"Baseline\". It is there to be read down the column\
+      \ at a glance, so anything longer defeats it.\nA withdrawn round KEEPS ITS ROW, reading \"Withdrawn\". Deleting the\
+      \ row would leave the reviewer no record that they ever asked, and no way to see that the ask was honoured. Its Previous\
+      \ Cost and New Cost are equal and Line Savings is \"0.00\", because nothing changed in the recipe.\nAI Suggestion is\
+      \ the prose, and what it says depends on that row's Status:\nApplied \u2014 whether the change is right for THIS PRODUCT,\
+      \ graded \"Sound\", \"Caution\" or \"Not advised\", then a dash and at most 12 words. This is rule 6's Formulation Advice\
+      \ judgement applied to ONE change: \"Not advised \u2014 almond is the defining base of Almond Katli\", or \"Sound \u2014\
+      \ spice level unchanged\".\nVetoed \u2014 what the rule forbids and the way out: \"Breaks no_added_sugar \u2014 suggest\
+      \ Non-caloric Blend (\u20B9394/kg)\".\nUnpriced \u2014 the alternative that can be priced: \"Not among the listed candidates\
+      \ \u2014 suggest Gram flour (\u20B968/kg)\".\nWithdrawn \u2014 that the reviewer took it back, and nothing more: \"\
+      Withdrawn at your request \u2014 the recipe reads as though this was never asked\". Never re-argue the change here,\
+      \ for or against: whether it was a good idea stopped mattering when it was withdrawn.\nBaseline \u2014 an em dash and\
+      \ nothing more.\nAny suggested ingredient is the CHEAPEST ALLOWED CANDS ROW IN THE SAME ROLE, name and rate copied from\
+      \ CANDS exactly. Never suggest a candidate from another role: that changes what the product is, which is the reviewer's\
+      \ call, not yours. Where that role holds no ALLOWED candidate, say \"no compliant alternative in <role>\" rather than\
+      \ reaching for one.\nJUDGE EACH ROW ON ITS OWN CHANGE, as if no later round existed. This table is rebuilt from scratch\
+      \ every pass, so a row's AI Suggestion is recomputed \u2014 not remembered \u2014 and it must come out the same each\
+      \ time. A reviewer who scrolls back to round 2 at round 5 has to find the same judgement that was there at round 2.\
+      \ Never let a row's text depend on what another row says.\nA WITHDRAWAL IS THE ONE EXCEPTION, and only to Status. A\
+      \ round named in `withdrawn_rounds` reads \"Withdrawn\" however it read before, because a later round took it back \u2014\
+      \ that is a fact about the recipe, not a re-judgement of the change. Every other row is judged exactly as this rule\
+      \ says.\nTHE ROW COUNT STILL FOLLOWS `feedback_history`, with no exception: the round that DID the withdrawing keeps\
+      \ its own row like any other entry, reading \"Withdrawn\" with Change Requested naming what it took back, as in \"Withdrew\
+      \ Round 4 \u2014 Gram flour swap\". So a withdrawal shows twice, once as the ask and once on the round it undid, and\
+      \ both say Withdrawn. That is the intended reading, and it is far safer than dropping a row: one row per entry is the\
+      \ rule that stopped this table repeating a single ask down every line.\nWith no feedback yet, the list holds the baseline\
+      \ row and nothing else.\n8. No feedback yet, or NONE from rule 4 or 5: `proposed_change` is NONE, `fork_parent_id` is\
+      \ the empty string, `final_recipe_id` is `baseline_recipe_id`, `final_recipe_name` is the current RECIPE_NAME, and `cost_projection`\
+      \ carries the baseline's own figures with \"Total Savings (INR)\" \"0.00\".\n9. Change accepted: `proposed_change` names\
+      \ it in one line; `proposed_recipe_id` and `final_recipe_id` are `baseline_recipe_id` with its trailing -v<n> replaced\
+      \ by -v<iteration_no>; `fork_parent_id` is `baseline_recipe_id`; `final_recipe_name` is the baseline name versioned\
+      \ the same way.\n10. `proposed_lines` = the whole projected BOM, one object per line, renumbered from 01 in the order\
+      \ they appear so an added line gets the next index and a removed one leaves no gap: {\"RECIPE_LINE_ID\": \"RCPL-<final_recipe_id>-<01,\
+      \ 02, ...>\", \"RECIPE_ID\": <final_recipe_id>, \"INGREDIENT_ID\": <copied from that ingredient's LINES or CANDS row,\
+      \ never constructed>, \"ROLE\", \"QTY_NET_G\", \"QTY_AUTHORED\": <same>, \"UOM\": \"g\", \"LOSS_PCT\", \"NOTES\": <what\
+      \ changed on this line, or null>}. No gross column: the warehouse derives gross from the net and loss here. A line set\
+      \ to 0 g is simply absent. Empty list when `proposed_recipe_id` is NONE. On a swap the line takes the INCOMING ingredient's\
+      \ role, and where that differs from the role it replaced NOTES must say so: it changes what the recipe is made of, which\
+      \ the reviewer needs told.\n11. `iteration_ledger` = a LIST OF OBJECTS, one per round, rendered as a table, keys spelt\
+      \ exactly: \"Round\", \"Asked\", \"Outcome\", \"Projected COGS (INR)\", \"Target Fit Band\". Number the rounds EXACTLY\
+      \ as rule 7 does, or the two tables will contradict each other: Round 1 is the baseline, its Asked \"Initial baseline\"\
+      \ and Outcome \"Baseline\", then one row per `feedback_history` entry at Round k+1. Newest round first, at most 8 rows.\
+      \ Asked is a short paraphrase \u2014 the reviewer's own words render beside this from `feedback_history`, so never pad\
+      \ it out to quote them. Outcome uses rule 7's Status vocabulary and nothing else \u2014 \"Applied\", \"Vetoed\", \"\
+      Unpriced\", \"Withdrawn\" or \"Baseline\" \u2014 so the same round reads the same in both tables. A round rule 3a withdrew\
+      \ reads \"Withdrawn\" here too, in both the row that asked for it and the row that took it back, exactly as rule 7 has\
+      \ it.\n`reformulation_rationale` = two or three sentences of ADVICE, not arithmetic. The tables already carry every\
+      \ number, so do not restate them. Say what the change does to the recipe, name the trade-off it creates, and give ONE\
+      \ concrete next step the reviewer could ask for. Where \"Batch Mass Check\" does not close, THIS is where the remedy\
+      \ goes: name how many grams are out and which line is large enough to give them up, without applying it \u2014 never\
+      \ rebalance a line the reviewer did not ask about. A dearer line worth attacking next, or a compliant alternative to\
+      \ a refused ask, serve the same purpose. This and \"Formulation Advice\" are the only two facts where your judgement\
+      \ belongs, and they must agree with each other; rates and verdicts stay copied. `trial_note` = under 20 words as a formulator's\
+      \ note; it is written to the recipe row.\n12. Copy BATCH_SIZE_G, PACKAGING_COST_INR, LABOUR_OVERHEAD_INR and TARGET_COGS_INR\
+      \ into `batch_size_g`, `packaging_cost_inr`, `labour_overhead_inr` and `target_cogs_inr` as bare numbers: a fork inherits\
+      \ nothing.\nCopy every rate and quantity digit for digit. Compute only rule 6's figures, taking its fit band from the\
+      \ thresholds given there and nowhere else. Claim verdicts come from CANDS and BANS \u2014 never form one yourself.\n"
+    key_data:
+    - title: What this round changed
+      summary: The ingredients this round acted on, their live rate per kg, and the line-level cost effect
+      views:
+      - view: table
+        from: change_impact
+        columns:
+        - Round
+        - Change Requested
+        - Component Role
+        - Quantity (g)
+        - Live Rate (INR/kg)
+        - Previous Cost (INR)
+        - New Cost (INR)
+        - Line Savings (INR)
+        - Status
+        - AI Suggestion
+      - view: markdown
+        from: proposed_change
+    - title: Where it leaves the COGS
+      summary: This round's projection against the baseline and the target
+      views:
+      - view: table
+        from: cost_projection
+        columns:
+        - Live COGS (INR)
+        - Projected COGS (INR)
+        - Total Savings (INR)
+        - Target COGS (INR)
+        - Target Fit Band
+        - Batch Mass Check
+        - Formulation Advice
+      - view: markdown
+        from: reformulation_rationale
+  - id: approve_version
+    name: Approve This Version for Trial
+    type: human
+    after: reformulate_on_feedback
+    description: 'The loop''s gate. Approving forks this version to InTrial in DIM_RECIPE and its brief to Development in
+      DIM_IDEA; asking for a change instead re-runs the re-formulation; rejecting holds it with nothing written.
+
+      '
+    instruction: "Recommend APPROVE or REJECT for the version named in `focus_recipe`, as it stands after `iteration_no` rounds\
+      \ of formulation.\nRead `claim_verdict`, `cogs_summary`, `driver_summary`, `applied_rounds`, `withdrawn_rounds` and\
+      \ `feedback_history` \u2014 they are short enough to arrive whole. `feedback_history` is the reviewer's own words for\
+      \ each round in order: answer what it actually asked for.\nNAME WHICH ROUNDS ARE IN AND WHICH ARE OUT, from `applied_rounds`\
+      \ and `withdrawn_rounds`, as in \"Rounds 2 and 4 are in; round 3 was withdrawn\". Approving writes exactly the rounds\
+      \ in `applied_rounds` and nothing else, so this is the reviewer's last chance to check that set against what they meant\
+      \ \u2014 and the only reliable one, because the two tables below reach you as fragments while these two facts arrive\
+      \ whole.\n`cost_projection` arrives verdicts-first, so trust its \"Target Fit Band\", \"Batch Mass Check\" and \"Formulation\
+      \ Advice\" and do not go looking for its later figures.\n`change_impact`, `iteration_ledger`, `formulation_context`,\
+      \ `recipe_versions` and `priced_lines` reach you as FRAGMENTS \u2014 every fact is shortened before you see it, and\
+      \ these are the long ones. All of them render in full for the reviewer in the cards beside this recommendation, so never\
+      \ read, quote, total or second-guess them. A number you half read is worse than one you leave to the card.\nYour verdict\
+      \ must follow EVERYTHING the recommendation says. APPROVE only when ALL of these hold: `claim_verdict` is CLEAR; `cost_projection`'s\
+      \ \"Target Fit Band\" is INSIDE or MARGINAL; its \"Batch Mass Check\" closes; its \"Formulation Advice\" does not begin\
+      \ \"Not advised\"; and no thesis rule failed.\nREJECT when ANY ONE of them fails, and say which: a VETO (name the rule\
+      \ and that the substitution was not applied); a band reading OVER; a batch that no longer closes; advice reading \"\
+      Not advised\" \u2014 a cheaper, compliant version that stops being the product it is meant to be is a REJECT, and the\
+      \ advice is the reason to give; a failed thesis rule; or any fact reading TRUNCATED or SCOPE_UNRESOLVED. Never recommend\
+      \ APPROVE while telling the reviewer the change is not advised.\nClose by telling the reviewer that describing a change\
+      \ under \"Tell what to do instead\" re-prices it and returns here, and that APPROVE ends the loop and writes.\nSay plainly,\
+      \ in that same closing line, that there are TWO ways to take a change back and they do the same thing: rejecting its\
+      \ row with the \u2717 in the table, or describing it under \"Tell what to do instead\" \u2014 as in \"drop the gram\
+      \ flour swap\". Either way the next pass re-prices without it. A reviewer who has just ticked \u2717 needs telling that\
+      \ it registered, because the round stays in the table reading Withdrawn rather than disappearing.\nCite the id, PROJECTED_COGS_INR\
+      \ against TARGET_COGS_INR, and the fit band. State no number that is not in the facts above.\n"
+    decision_options:
+    - APPROVE
+    - REJECT
+    rationale_from: reformulation_rationale
+    key_data:
+    - title: Live COGS vs this round's projection
+      summary: What the version costs today, what this round projects it to, and whether it still fits target
+      views:
+      - view: table
+        from: cost_projection
+        columns:
+        - Live COGS (INR)
+        - Projected COGS (INR)
+        - Total Savings (INR)
+        - Target COGS (INR)
+        - Target Fit Band
+        - Batch Mass Check
+        - Formulation Advice
+      - view: table
+        from: focus_recipe
+        columns:
+        - RECIPE_ID
+        - RECIPE_NAME
+        - VERSION_NO
+        - STATUS
+        - IS_FULLY_COSTED
+      - view: markdown
+        from: cogs_summary
+    - title: Ingredients asked for, and what they cost
+      summary: Every ingredient named across the rounds, its live rate per kg, and what it did to that line
+      views:
+      - view: table
+        from: change_impact
+        columns:
+        - Round
+        - Change Requested
+        - Component Role
+        - Quantity (g)
+        - Live Rate (INR/kg)
+        - Previous Cost (INR)
+        - New Cost (INR)
+        - Line Savings (INR)
+        - Status
+        - AI Suggestion
+      - view: markdown
+        from: claim_verdict
+    - title: Rounds so far, and what was asked
+      summary: The round-by-round history, and under it the reviewer's own words for each round
+      views:
+      - view: table
+        from: iteration_ledger
+        columns:
+        - Round
+        - Asked
+        - Outcome
+        - Projected COGS (INR)
+        - Target Fit Band
+      - view: markdown
+        from: feedback_history
+  - id: write_final_bom
+    name: Confirm the Approved BOM
+    type: foreach
+    after: approve_version
+    for_each: proposed_lines
+    group_by: RECIPE_ID
+    condition: '{{proposed_recipe_id}} != "NONE"'
+    instruction: "{{RECIPE_ID}} was approved. Confirm to write its {{ROLE}} line \u2014 {{QTY_NET_G}} g of ingredient {{INGREDIENT_ID}}\
+      \ at {{LOSS_PCT}}% loss \u2014 and every other line of this version, to MAP_RECIPE_INGREDIENT.\n"
+    decision_options:
+    - APPROVE
+    produces:
+    - lines_written
+    - lines_skipped
+    key_data:
+    - title: The approved version's BOM
+      views:
+      - view: table
+        from: foreach_rows
+        columns:
+        - RECIPE_LINE_ID
+        - INGREDIENT_ID
+        - ROLE
+        - QTY_NET_G
+        - LOSS_PCT
+        - NOTES
+    action:
+      type: context_graph
+      name: write_recipe_line
+      config:
+        type: dataset_upsert
+        source_table: MAP_RECIPE_INGREDIENT
+        dataset: ctx_upside_master_data
+        key_column: RECIPE_LINE_ID
+        numeric_columns:
+        - QTY_NET_G
+        - QTY_AUTHORED
+        - LOSS_PCT
+        row:
+          RECIPE_LINE_ID: '{{RECIPE_LINE_ID}}'
+          RECIPE_ID: '{{RECIPE_ID}}'
+          INGREDIENT_ID: '{{INGREDIENT_ID}}'
+          ROLE: '{{ROLE}}'
+          QTY_NET_G: '{{QTY_NET_G}}'
+          QTY_AUTHORED: '{{QTY_AUTHORED}}'
+          UOM: '{{UOM}}'
+          LOSS_PCT: '{{LOSS_PCT}}'
+          NOTES: '{{NOTES}}'
+  related_kpis:
+  - MarginPct
+  metadata:
+    version: 3
+    effective_from: 2026-08-24
+    priority: 2
+    requires_human_approval: true
+    run_steps_before_gate: true
+    run_actions_on_decision: true
+    resolve_targets:
+      entity: Recipe
+      role: recipe
+      where:
+      - field: status
+        op: in
+        value:
+        - Draft
+        - InTrial
+      limit: 50
+    tools:
+      skills: []
+      connectors: []
+      allow_unlisted_skills: false
+    context_package:
+    - key: scheduled_at
+      source: event
+      required: false
+    - key: focus_recipe
+      required: true
+      gather:
+        base:
+          entity: Recipe
+          dataset: V_RECIPE_FORMULATION_CONTEXT
+          columns:
+          - RECIPE_ID
+          - RECIPE_NAME
+          - IDEA_ID
+          - SKU
+          - VERSION_NO
+          - STATUS
+          - TARGET_FIT
+          - IS_FULLY_COSTED
+          - RECIPE_COGS_INR
+          - TARGET_COGS_INR
+          - PARENT_RECIPE_ID
+          - AUTHOR
+          limit: 1
+          where:
+          - field: status
+            op: eq
+            value: __scope_unresolved__
+      post:
+        resolve:
+        - field: IDEA_ID
+          type: Idea
+          as: IDEA_NAME
+    actions:
+    - name: fork_and_promote_final_version
+      decision: APPROVE
+      connector: context_graph
+      config:
+        type: dataset_upsert
+        entity_type: Recipe
+        source_table: DIM_RECIPE
+        dataset: ctx_upside_master_data
+        key_column: RECIPE_ID
+        numeric_columns:
+        - BATCH_SIZE_G
+        - PACKAGING_COST_INR
+        - LABOUR_OVERHEAD_INR
+        - TARGET_COGS_INR
+        row:
+          RECIPE_ID: '{{facts.final_recipe_id}}'
+          PARENT_RECIPE_ID: '{{facts.fork_parent_id}}'
+          RECIPE_NAME: '{{facts.final_recipe_name}}'
+          SKU: '{{facts.focus_sku}}'
+          IDEA_ID: '{{facts.focus_idea_id}}'
+          STATUS: InTrial
+          BATCH_SIZE_G: '{{facts.batch_size_g}}'
+          PACKAGING_COST_INR: '{{facts.packaging_cost_inr}}'
+          LABOUR_OVERHEAD_INR: '{{facts.labour_overhead_inr}}'
+          TARGET_COGS_INR: '{{facts.target_cogs_inr}}'
+          NOTES: '{{facts.trial_note}}'
+    - name: advance_idea_to_development
+      decision: APPROVE
+      connector: context_graph
+      config:
+        type: dataset_upsert
+        entity_type: Product
+        source_table: DIM_IDEA
+        dataset: ctx_upside_master_data
+        key_column: IDEA_ID
+        row:
+          IDEA_ID: '{{facts.focus_idea_id}}'
+          STAGE: Development
+    - name: report_outcome
+      decision: APPROVE
+      connector: notify
+      config:
+        type: notify
+        recipient: npd_team
+        message: '{{facts.final_recipe_id}} moved to InTrial in DIM_RECIPE after {{facts.iteration_no}} formulation round(s),
+          and its brief to Development in DIM_IDEA.'
+    - name: log_version_held
+      decision: REJECT
+      connector: simulated
+      config:
+        type: simulated
+        note: "Version held \u2014 left as it was in DIM_RECIPE, and its brief's stage unchanged."
+  related_signals_events:
+  - NPD_EmergingIngredientTrend
+  - NPD_EmergingFlavorTrend
+  - NPD_CompetitorFormulationChange
+  - NPD_NewIngredientTechnologyInnovation
+  - FIN_CommodityPriceMovement
+  - FIN_FXRateMovement
+  - FIN_InflationMovement
+  - OPS_IndustryWideShortage
+  - PROC_CommodityPriceSpike
+  - PROC_CommodityFuturesMovement
+  - PROC_MarketMaterialShortage
+  - PROC_NewAlternativeSupplierIdentified
+  - PROC_IndustryInputCostMovement
+  - CMI_CompetitorFormulationChange
