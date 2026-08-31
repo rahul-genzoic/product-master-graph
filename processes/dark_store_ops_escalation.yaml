@@ -129,7 +129,7 @@ processes:
       required: true
       gather:
         base:
-          entity: Store
+          entity: Channel
           dataset: CUSTOMER_COMPLAINT_EVENTS
           columns:
           - EVENT_ID
@@ -328,7 +328,7 @@ processes:
       gather:
         collect:
         - as: complaints
-          entity: Store
+          entity: Channel
           dataset: CUSTOMER_COMPLAINT_EVENTS
           columns:
           - EVENT_ID
@@ -428,7 +428,7 @@ processes:
             drop:
             - _days_out
         - as: store_counts
-          entity: Store
+          entity: Channel
           dataset: CUSTOMER_COMPLAINT_EVENTS
           columns:
           - EVENT_ID

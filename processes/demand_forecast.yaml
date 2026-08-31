@@ -195,7 +195,7 @@ processes:
       gather:
         collect:
         - as: forecast
-          entity: Store
+          entity: Channel
           dataset: gold.FORECAST_RESULTS_UPDATE
           columns:
           - SKU_ID
@@ -232,7 +232,7 @@ processes:
                 op: sum
                 col: PREDICTED_SALES_QUANTITY
         - as: inventory
-          entity: Store
+          entity: Channel
           dataset: STORE_INVENTORY_DAILY
           columns:
           - store_id

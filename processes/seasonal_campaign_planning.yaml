@@ -660,7 +660,7 @@ processes:
       required: true
       gather:
         base:
-          entity: Store
+          entity: Channel
           dataset: V_STORE_CAMPAIGN_HISTORY
           columns:
           - MASTER_STORE_ID
@@ -692,7 +692,7 @@ processes:
       required: true
       gather:
         base:
-          entity: Store
+          entity: Channel
           dataset: V_SEGMENT_BUDGET
           columns:
           - MASTER_STORE_ID

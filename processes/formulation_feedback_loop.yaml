@@ -65,7 +65,7 @@ processes:
 
       '
     fetch:
-      entity_type: Store
+      entity_type: Channel
       source_table: V_REVIEW_COMPLAINT_CANDIDATES
       columns:
       - S
@@ -201,7 +201,7 @@ processes:
       name: create_reformulation_brief
       config:
         type: dataset_upsert
-        entity_type: Product
+        entity_type: Products
         source_table: DIM_IDEA
         dataset: ctx_upside_master_data
         key_column: IDEA_ID
@@ -254,7 +254,7 @@ processes:
       source: dataset_search
       required: false
       query:
-        entity_type: Product
+        entity_type: Products
         dataset: V_PRODUCT_FAMILY_NAMES
         columns:
         - ID
@@ -265,7 +265,7 @@ processes:
       required: false
       gather:
         base:
-          entity: Store
+          entity: Channel
           dataset: V_REVIEW_COMPLAINT_CANDIDATES
           columns:
           - P

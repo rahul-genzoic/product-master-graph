@@ -562,39 +562,7 @@ datasets:
   - IS_FULLY_COSTED
   - TARGET_FIT
 widgets:
-- entity_type: Recipe
-  type: number
-  dataset: V_RECIPE_COGS
-  title: "Live COGS (\u20B9/pack)"
-  position: 0
-  config:
-    aggregation: max
-    column: RECIPE_COGS_INR
-- entity_type: Recipe
-  type: number
-  dataset: V_RECIPE_COGS
-  title: "Variance vs master COGS (\u20B9)"
-  position: 1
-  config:
-    aggregation: max
-    column: MASTER_VARIANCE_INR
-- entity_type: Recipe
-  type: table
-  dataset: V_RECIPE_LINE_COST
-  title: Cost by ingredient
-  position: 2
-  config:
-    columns:
-    - INGREDIENT_NAME
-    - ROLE
-    - QTY_NET_G
-    - PRICE_INR_PER_KG
-    - LINE_COST_INR
-    - COST_SHARE_PCT
-    order_by: LINE_COST_INR
-    order_dir: desc
-    limit: 50
-- entity_type: Store
+- entity_type: Channel
   type: number
   dataset: CUSTOMER_REVIEW_EVENTS
   title: Avg review rating
@@ -602,7 +570,7 @@ widgets:
   config:
     aggregation: avg
     column: STAR_RATING
-- entity_type: Store
+- entity_type: Channel
   type: number
   dataset: CUSTOMER_COMPLAINT_EVENTS
   title: Complaints
@@ -610,7 +578,7 @@ widgets:
   config:
     aggregation: count
     column: MASTER_STORE_ID
-- entity_type: Store
+- entity_type: Channel
   type: table
   dataset: CUSTOMER_REVIEW_EVENTS
   title: Recent reviews
@@ -624,7 +592,7 @@ widgets:
     order_by: REVIEW_DATE
     order_dir: desc
     limit: 20
-- entity_type: Store
+- entity_type: Channel
   type: table
   dataset: STORE_INVENTORY_DAILY
   title: Inventory (latest snapshot)
@@ -633,7 +601,7 @@ widgets:
     QUALIFY snapshot_date = MAX(snapshot_date) OVER ()
 
     '
-- entity_type: Store
+- entity_type: Channel
   type: table
   dataset: V_STORE_CAMPAIGN_CURRENT
   title: Running campaigns (this month)
@@ -651,7 +619,7 @@ widgets:
     order_by: AD_SPEND_RS
     order_dir: desc
     limit: 50
-- entity_type: Store
+- entity_type: Channel
   type: table
   dataset: silver.BUSINESS_ANALYTICS
   title: Sales by SKU
@@ -660,7 +628,7 @@ widgets:
     \ AS quantity, SUM(TOTAL) AS revenue\nFROM `gen-lang-client-0520145261.silver.BUSINESS_ANALYTICS`\
     \ WHERE STORE_ID = {{entity_id}} AND ORDER_STATE <> 'Cancelled'\n  AND ORDER_DATE\
     \ >= DATE_TRUNC(CURRENT_DATE(), MONTH)\nGROUP BY SKU_ID ORDER BY revenue DESC\n"
-- entity_type: Product
+- entity_type: Products
   type: table
   dataset: STORE_INVENTORY_DAILY
   title: Available quantity by store
@@ -670,7 +638,7 @@ widgets:
     \  WHERE product_sku = {{entity_id}}\n  QUALIFY snapshot_date = MAX(snapshot_date)\
     \ OVER (PARTITION BY store_id)\n) GROUP BY store_id ORDER BY available_quantity\
     \ DESC\n"
-- entity_type: Product
+- entity_type: Products
   type: table
   dataset: V_STOCKED_AT
   title: Stock by store
@@ -685,7 +653,7 @@ widgets:
     order_by: TOTAL_STOCK
     order_dir: desc
     limit: 50
-- entity_type: Product
+- entity_type: Products
   type: table
   dataset: gold.FORECAST_RESULTS_UPDATE
   title: Forecast quantity by store (next 1-3 days)
@@ -696,7 +664,7 @@ widgets:
     BY MASTER_STORE_ID ORDER BY forecast_qty DESC
 
     '
-- entity_type: Product
+- entity_type: Products
   type: number
   dataset: silver.BUSINESS_ANALYTICS
   title: Quantity sold (this month)
@@ -704,7 +672,7 @@ widgets:
   query: "SELECT SUM(QUANTITY) AS VALUE FROM `gen-lang-client-0520145261.silver.BUSINESS_ANALYTICS`\
     \ WHERE SKU_ID = {{entity_id}} AND ORDER_STATE <> 'Cancelled'\n  AND ORDER_DATE\
     \ >= DATE_TRUNC(CURRENT_DATE(), MONTH)\n"
-- entity_type: Product
+- entity_type: Products
   type: number
   dataset: silver.BUSINESS_ANALYTICS
   title: Revenue (overall)
@@ -713,7 +681,7 @@ widgets:
     WHERE SKU_ID = {{entity_id}} AND ORDER_STATE <> ''Cancelled''
 
     '
-- entity_type: Product
+- entity_type: Products
   type: table
   dataset: V_RECIPE_COGS
   title: Recipe versions & live COGS
@@ -731,7 +699,7 @@ widgets:
     order_by: VERSION_NO
     order_dir: desc
     limit: 20
-- entity_type: CustomerSegment
+- entity_type: Consumers
   type: table
   dataset: V_SEGMENT_BUDGET
   title: Budget by store

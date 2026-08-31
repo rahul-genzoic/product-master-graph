@@ -53,7 +53,7 @@ processes:
 
       '
     fetch:
-      entity_type: Product
+      entity_type: Products
       source_table: V_PIPELINE_PRIORITY_CANDIDATES
       columns:
       - SRC
@@ -435,7 +435,7 @@ processes:
       name: advance_idea_to_pipeline
       config:
         type: dataset_upsert
-        entity_type: Product
+        entity_type: Products
         source_table: DIM_IDEA
         dataset: ctx_upside_master_data
         key_column: IDEA_ID
@@ -524,7 +524,7 @@ processes:
       source: dataset_search
       required: true
       query:
-        entity_type: Product
+        entity_type: Products
         dataset: V_IDEA_PRIORITY_INPUTS
         columns:
         - IDEA_ID
@@ -555,7 +555,7 @@ processes:
       source: dataset_search
       required: false
       query:
-        entity_type: Product
+        entity_type: Products
         dataset: V_CATEGORY_MARKET_SIGNAL
         columns:
         - CATEGORY_NAME
@@ -573,7 +573,7 @@ processes:
       source: dataset_search
       required: false
       query:
-        entity_type: Category
+        entity_type: Products
         dataset: DIM_CATEGORY
         columns:
         - CATEGORY_ID

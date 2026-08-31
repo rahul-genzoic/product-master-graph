@@ -64,7 +64,7 @@ processes:
     after: summarise_regulatory_changes
     description: Identify which SKUs in the portfolio the change actually affects.
     fetch:
-      entity_type: Product
+      entity_type: Products
       source_table: V_PRODUCT_ENRICHED
       columns:
       - SKU

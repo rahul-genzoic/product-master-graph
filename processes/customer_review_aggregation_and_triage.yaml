@@ -242,7 +242,7 @@ processes:
       gather:
         collect:
         - as: complaints
-          entity: Store
+          entity: Channel
           dataset: CUSTOMER_COMPLAINT_EVENTS
           columns:
           - EVENT_ID
@@ -268,7 +268,7 @@ processes:
             drop:
             - _days_out
         - as: sales
-          entity: Store
+          entity: Channel
           dataset: silver.BUSINESS_ANALYTICS
           columns:
           - ONLINE_ORDER_ID
@@ -294,7 +294,7 @@ processes:
             drop:
             - _days_out
         - as: inventory
-          entity: Store
+          entity: Channel
           dataset: STORE_INVENTORY_DAILY
           columns:
           - store_id
@@ -433,7 +433,7 @@ processes:
       required: false
       gather:
         base:
-          entity: Store
+          entity: Channel
           dataset: CUSTOMER_REVIEW_EVENTS
           columns:
           - REVIEW_ID

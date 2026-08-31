@@ -78,7 +78,7 @@ processes:
     description: Map each relevant regulatory change to the affected SKUs, ingredients
       and suppliers.
     fetch:
-      entity_type: Product
+      entity_type: Products
       source_table: V_PRODUCT_ENRICHED
       columns:
       - SKU
@@ -304,7 +304,7 @@ processes:
     - key: product_portfolio
       source: dataset_search
       query:
-        entity_type: Product
+        entity_type: Products
         dataset: V_PRODUCT_ENRICHED
         columns:
         - SKU
@@ -316,7 +316,7 @@ processes:
     - key: product_ingredients
       gather:
         base:
-          entity: Product
+          entity: Products
           dataset: V_PRODUCT_ENRICHED
           columns:
           - SKU

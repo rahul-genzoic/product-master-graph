@@ -105,7 +105,7 @@ processes:
 
       '
     fetch:
-      entity_type: Recipe
+      entity_type: Products
       source_table: V_RECIPE_WORKBENCH
       columns:
       - SRC
@@ -170,7 +170,7 @@ processes:
 
       '
     fetch:
-      entity_type: Recipe
+      entity_type: Products
       source_table: V_RECIPE_WORKBENCH
       columns:
       - SRC
@@ -232,7 +232,7 @@ processes:
 
       '
     fetch:
-      entity_type: Recipe
+      entity_type: Products
       source_table: V_RECIPE_FORMULATION_CONTEXT
       columns:
       - RECIPE_ID
@@ -730,7 +730,7 @@ processes:
     run_steps_before_gate: true
     run_actions_on_decision: true
     resolve_targets:
-      entity: Recipe
+      entity: Products
       role: recipe
       where:
       - field: status
@@ -751,7 +751,7 @@ processes:
       required: true
       gather:
         base:
-          entity: Recipe
+          entity: Products
           dataset: V_RECIPE_FORMULATION_CONTEXT
           columns:
           - RECIPE_ID
@@ -782,7 +782,7 @@ processes:
       connector: context_graph
       config:
         type: dataset_upsert
-        entity_type: Recipe
+        entity_type: Products
         source_table: DIM_RECIPE
         dataset: ctx_upside_master_data
         key_column: RECIPE_ID
@@ -808,7 +808,7 @@ processes:
       connector: context_graph
       config:
         type: dataset_upsert
-        entity_type: Product
+        entity_type: Products
         source_table: DIM_IDEA
         dataset: ctx_upside_master_data
         key_column: IDEA_ID
