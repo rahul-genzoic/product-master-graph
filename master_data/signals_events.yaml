@@ -4200,6 +4200,7 @@ signals_events:
   - Google Trends API
 external_feeds:
 - id: FssaiRegulatoryGazetteFeed
+  category: Compliance & Regulatory
   name: FSSAI Regulatory Gazette Feed
   source: fssai.gov.in
   owner: compliance_team
@@ -4236,6 +4237,7 @@ external_feeds:
   - QA_ScientificSafetyFinding
   - QA_InternationalFoodSafetyAlert
 - id: StateComplianceParserFeed
+  category: Compliance & Regulatory
   name: State-Level Compliance Portal Feed
   source: State FSSAI / food-safety authority portals (per state, provider not yet decided)
   owner: compliance_team
@@ -4255,6 +4257,7 @@ external_feeds:
   produces_signals_events:
   - COMP_DraftRegulationPublished
 - id: RegulatoryCompetitorNewsFeed
+  category: Compliance & Regulatory
   name: Regulatory & Competitor Enforcement News Feed
   source: News site (provider not yet decided)
   owner: compliance_team
@@ -4282,6 +4285,7 @@ external_feeds:
   - QA_RegulatorFoodSafetyAlert
   - QA_SupplierPublicSafetyAlert
 - id: ComplianceOpsMessagingFeed
+  category: Compliance & Regulatory
   name: Compliance Ops Inbox (Email / WhatsApp)
   source: Email / WhatsApp
   owner: compliance_team
@@ -4301,6 +4305,7 @@ external_feeds:
   - COMP_SupplierCOAExpiry
   - COMP_SupplierCertificationExpiry
 - id: DtcCustomerMessagingFeed
+  category: Marketing & Consumer
   name: DTC Customer Messaging Feed
   source: Email / WhatsApp / SMS
   owner: marketing_team
@@ -4319,6 +4324,7 @@ external_feeds:
   - QA_PublicComplaintTrend
   - MKT_DTCConversionBelowTarget
 - id: MarketplaceBrowserAutomationFeed
+  category: Competitive & Market Intelligence
   name: Marketplace Browser Automation Feed
   source: Zomato, Swiggy, Blinkit, Instamart
   owner: sales_team
@@ -4353,6 +4359,7 @@ external_feeds:
   - CMI_CompetitorChannelExpansion
   - CMI_NewChallengerBrandEmerging
 - id: MarketplaceChannelApiFeed
+  category: Sales & Channels
   name: Marketplace Channel API Feed
   source: Blinkit, Zomato, Swiggy, Shopify
   owner: sales_team
@@ -4383,6 +4390,7 @@ external_feeds:
   - SALES_MarketplacePolicyChange
   - SALES_NewDistributionOpportunity
 - id: ErpNextFeed
+  category: Operations & Supply Chain
   name: ERPNext Integration Feed
   source: ERPNext
   owner: supply_chain_team
@@ -4413,6 +4421,7 @@ external_feeds:
   - PROC_NewAlternativeSupplierIdentified
   - PROC_IndustryInputCostMovement
 - id: PetpoojaPosFeed
+  category: Operations & Supply Chain
   name: Petpooja POS Feed
   source: Petpooja
   owner: supply_chain_team
@@ -4430,6 +4439,7 @@ external_feeds:
   - OPS_RegionalDisruption
   - OPS_InfrastructureDisruption
 - id: AdPlatformFeed
+  category: Marketing & Consumer
   name: Ad Platform Feed (Meta Ads / Google Ads)
   source: Meta Ads, Google Ads
   owner: marketing_team
@@ -4451,6 +4461,7 @@ external_feeds:
   - MKT_CampaignBudgetThresholdReached
   - MKT_CampaignOptimizationReviewDue
 - id: ReviewAggregationFeed
+  category: Quality & Food Safety
   name: Customer Review & Marketplace Feedback Feed
   source: Email, Swiggy, Zomato, Amazon.in
   owner: cx_team
@@ -4478,6 +4489,7 @@ external_feeds:
   - QA_CategoryQualityIssue
   - QA_ProductReturnsAboveThreshold
 - id: ExternalMarketDataProviderFeed
+  category: NPD & Innovation
   name: External Market Data Provider Feed
   source: External data provider (not yet decided)
   owner: npd_team
