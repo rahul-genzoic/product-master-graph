@@ -361,7 +361,7 @@ processes:
           type: Store
           as: store_name
         - field: product_sku
-          type: Product
+          type: Products
           as: product_name
         - field: nearest_store_id
           type: Store

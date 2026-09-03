@@ -22,7 +22,7 @@ processes:
   inputs:
   - name: supplier
     type: reference
-    references: Supplier
+    references: Suppliers
     required: false
   outputs:
   - name: renewal_decision

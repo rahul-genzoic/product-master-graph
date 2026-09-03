@@ -324,7 +324,7 @@ processes:
           limit: 500
         links:
         - from: SKU
-          from_type: Product
+          from_type: Products
           via: contains_ingredient
           direction: out
           bring_target:

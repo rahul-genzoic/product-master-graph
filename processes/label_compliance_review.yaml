@@ -25,7 +25,7 @@ processes:
   inputs:
   - name: sku
     type: reference
-    references: Product
+    references: Products
     required: true
   - name: change_kind
     type: enum
@@ -409,7 +409,7 @@ processes:
     - key: product_label_facts
       source: dataset
       query:
-        entity: product
+        entity: Products
         dataset: V_PRODUCT_ENRICHED
         columns:
         - SKU

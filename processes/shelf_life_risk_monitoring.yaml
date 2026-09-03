@@ -137,7 +137,7 @@ processes:
           limit: 2000
         links:
         - from: product_sku
-          from_type: Product
+          from_type: Products
           via: stock_config_for
           direction: out
           match: store_id
@@ -225,7 +225,7 @@ processes:
           type: Store
           as: store_name
         - field: product_sku
-          type: Product
+          type: Products
           as: product_name
     - key: scheduled_at
       source: event

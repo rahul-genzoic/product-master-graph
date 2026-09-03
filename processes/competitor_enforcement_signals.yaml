@@ -22,7 +22,7 @@ processes:
   inputs:
   - name: product
     type: reference
-    references: Product
+    references: Products
     required: false
   outputs:
   - name: exposure_decision

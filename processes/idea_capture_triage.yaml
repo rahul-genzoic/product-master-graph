@@ -619,7 +619,7 @@ processes:
           value: true
         resolve:
         - field: SKU
-          type: Product
+          type: Products
           as: DISPLAY_NAME
     - key: active_competitors
       source: dataset_search

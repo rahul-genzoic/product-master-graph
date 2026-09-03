@@ -351,7 +351,7 @@ processes:
           how: left
         links:
         - from: SKU_ID
-          from_type: Product
+          from_type: Products
           via: stock_config_for
           direction: out
           match: STORE_ID
@@ -427,7 +427,7 @@ processes:
           type: Store
           as: Store_name
         - field: SKU_ID
-          type: Product
+          type: Products
           as: Product_name
     - key: store_reviews
       required: false

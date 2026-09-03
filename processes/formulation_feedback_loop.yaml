@@ -284,5 +284,5 @@ processes:
           value: ''
         resolve:
         - field: P
-          type: Product
+          type: Products
           as: Product_name
