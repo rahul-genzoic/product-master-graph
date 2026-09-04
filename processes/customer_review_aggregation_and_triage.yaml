@@ -424,7 +424,7 @@ processes:
         sort_by: Complaint_date
         resolve:
         - field: MASTER_STORE_ID
-          type: Store
+          type: Channel
           as: Store_name
         - field: SKU_ID
           type: Products
@@ -472,7 +472,7 @@ processes:
         sort_by: Review_date
         resolve:
         - field: MASTER_STORE_ID
-          type: Store
+          type: Channel
           as: Store_name
     - key: scheduled_at
       source: event

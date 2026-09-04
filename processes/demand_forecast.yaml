@@ -289,7 +289,7 @@ processes:
           how: outer
         links:
         - from: store_id
-          from_type: Store
+          from_type: Channel
           via: transfer_route
           direction: out
           pick:
@@ -358,13 +358,13 @@ processes:
         sort_by: days_to_expiry
         resolve:
         - field: store_id
-          type: Store
+          type: Channel
           as: store_name
         - field: product_sku
           type: Products
           as: product_name
         - field: nearest_store_id
-          type: Store
+          type: Channel
           as: nearest_store_name
     - key: scheduled_at
       source: event

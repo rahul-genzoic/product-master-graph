@@ -624,7 +624,7 @@ processes:
       post:
         resolve:
         - field: MASTER_STORE_ID
-          type: Store
+          type: Channel
           as: store_name
     - key: campaign_history
       required: false
@@ -646,7 +646,7 @@ processes:
       post:
         resolve:
         - field: MASTER_STORE_ID
-          type: Store
+          type: Channel
           as: store_name
     - key: segment_budget
       required: true
@@ -664,7 +664,7 @@ processes:
       post:
         resolve:
         - field: MASTER_STORE_ID
-          type: Store
+          type: Channel
           as: store_name
     - key: scheduled_at
       source: event

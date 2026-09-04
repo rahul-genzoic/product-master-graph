@@ -321,7 +321,7 @@ processes:
         sort_by: _neg_ops
         resolve:
         - field: MASTER_STORE_ID
-          type: Store
+          type: Channel
           as: Store_name
     - key: ops_complaints
       required: true
@@ -549,7 +549,7 @@ processes:
         sort_by: Complaint_date
         resolve:
         - field: MASTER_STORE_ID
-          type: Store
+          type: Channel
           as: Store_name
     - key: scheduled_at
       source: event

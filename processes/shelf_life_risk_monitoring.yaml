@@ -222,7 +222,7 @@ processes:
         sort_by: days_to_expiry
         resolve:
         - field: store_id
-          type: Store
+          type: Channel
           as: store_name
         - field: product_sku
           type: Products
